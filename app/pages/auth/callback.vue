@@ -8,11 +8,13 @@
 </template>
 
 <script setup lang="ts">
+  import type { FetchOptions } from 'ofetch'
+  type ApiClient = <T>(request: string, options?: FetchOptions<'json'>) => Promise<T>
   definePageMeta({ layout: 'auth' })
 
   const route = useRoute()
   const router = useRouter()
-  const { $api } = useNuxtApp()
+  const { $api } = useNuxtApp() as unknown as { $api: ApiClient }
 
   onMounted(async () => {
     const code = route.query.code as string

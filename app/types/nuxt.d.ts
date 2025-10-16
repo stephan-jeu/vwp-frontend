@@ -1,16 +1,17 @@
 export {}
 
+import type { FetchOptions } from 'ofetch'
+
+type ApiClient = <T>(request: string, options?: FetchOptions<'json'>) => Promise<T>
+
 declare module '#app' {
   interface NuxtApp {
-    $api: typeof import('ofetch').ofetch
+    $api: ApiClient
   }
 }
 
 declare module 'vue' {
   interface ComponentCustomProperties {
-    $api: typeof import('ofetch').ofetch
+    $api: ApiClient
   }
 }
-
-
-

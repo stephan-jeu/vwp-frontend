@@ -33,3 +33,7 @@
 :root {
   --ui-primary: var(--ui-color-primary-700);
 }
+
+.dark {
+  --ui-primary: var(--ui-color-primary-400);
+}
