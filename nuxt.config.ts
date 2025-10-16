@@ -8,18 +8,16 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  runtimeConfig: {
+    public: {
+      // NUXT_PUBLIC_API_BASE env var will override this at runtime automatically
+      apiBase: 'http://localhost:8000'
+    }
+  },
+
   routeRules: {
     '/': { prerender: true }
   },
 
-  compatibilityDate: '2025-01-15',
-
-  eslint: {
-    config: {
-      stylistic: {
-        commaDangle: 'never',
-        braceStyle: '1tbs'
-      }
-    }
-  }
+  compatibilityDate: '2025-01-15'
 })
