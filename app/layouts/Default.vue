@@ -10,20 +10,17 @@
       <template #left>
         <NuxtLink to="/"> <AppLogo class="max-h-2/4 w-24" /> </NuxtLink>
       </template>
-
-      <ClientOnly>
-        <UNavigationMenu :items="menuItems" class="w-full justify-center" />
-      </ClientOnly>
+      <UNavigationMenu :items="menuItems" class="w-full justify-center" />
 
       <template #body>
-        <ClientOnly>
-          <UNavigationMenu :items="menuItems" orientation="vertical" class="-mx-2.5" />
-        </ClientOnly>
+        <UNavigationMenu :items="menuItems" orientation="vertical" class="-mx-2.5" />
       </template>
     </UHeader>
-    <UMain>
-      <slot />
-    </UMain>
+    <div class="min-h-screen bg-gray-100 flex flex-col">
+      <UMain class="container mx-auto px-4 flex-grow">
+        <slot />
+      </UMain>
+    </div>
   </UApp>
 </template>
 
