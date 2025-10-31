@@ -56,7 +56,7 @@ export const useProjectsStore = defineStore('projects', {
     },
     async remove(id: number) {
       const { $api } = useNuxtApp()
-      await $api<void>(`/projects/${id}`, { method: 'DELETE' })
+      await $api<unknown>(`/projects/${id}`, { method: 'DELETE' })
       this.projects = this.projects.filter((p) => p.id !== id)
       if (this.selected?.id === id) this.selected = null
     }

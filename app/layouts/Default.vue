@@ -16,7 +16,7 @@
         <UNavigationMenu :items="menuItems" orientation="vertical" class="-mx-2.5" />
       </template>
     </UHeader>
-    <div class="min-h-screen bg-gray-100 flex flex-col">
+    <div class="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col">
       <UMain class="container mx-auto px-4 flex-grow">
         <slot />
       </UMain>

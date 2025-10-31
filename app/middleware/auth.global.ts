@@ -6,7 +6,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   }
 
   // Run only on client since tokens are stored in localStorage
-  if (process.server) return
+  if (import.meta.server) return
 
   const accessToken = localStorage.getItem('access_token')
   if (!accessToken) {

@@ -20,6 +20,7 @@
               v-model="form.google_drive_folder"
               placeholder="Optioneel"
               data-testid="input-gdrive"
+              class="w-72"
             />
           </UFormField>
         </div>

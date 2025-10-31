@@ -1,5 +1,5 @@
 export default defineNuxtRouteMiddleware(async () => {
-  if (process.server) return
+  if (import.meta.server) return
 
   const token = localStorage.getItem('access_token')
   if (!token) return navigateTo('/login')

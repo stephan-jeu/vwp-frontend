@@ -1,6 +1,6 @@
-export {}
-
 import type { FetchOptions } from 'ofetch'
+
+export {}
 
 type ApiClient = <T>(request: string, options?: FetchOptions<'json'>) => Promise<T>
 
