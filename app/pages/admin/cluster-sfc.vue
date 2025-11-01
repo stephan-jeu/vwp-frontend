@@ -54,7 +54,7 @@
                 :icon="expanded.has(cluster.id) ? 'i-lucide-minus' : 'i-lucide-plus'"
                 @click="toggleCluster(cluster.id)"
               />
-              <span class="text-sm text-gray-700">
+              <span class="text-sm text-gray-700 dark:text-gray-400">
                 Cluster {{ cluster.cluster_number }}, {{ cluster.address }} ({{
                   cluster.visits.length
                 }}
@@ -121,7 +121,7 @@
               <UCard v-for="visit in cluster.visits" :key="visit.id" class="my-3">
                 <template #header>
                   <div class="flex items-center justify-between">
-                    <div class="text-sm text-gray-700 font-semibold">
+                    <div class="text-sm text-gray-700 dark:text-gray-400 font-semibold">
                       Bezoek #{{ visit.visit_nr }} · {{ formatDate(visit.from_date) }} –
                       {{ formatDate(visit.to_date) }}
                     </div>
@@ -251,13 +251,6 @@
         </div>
       </div>
     </UCard>
-
-    <UCard class="mt-4">
-      <div class="text-xs text-gray-500">Clusters: {{ clusters.length }}</div>
-      <pre class="text-xs overflow-auto max-h-64">{{
-        JSON.stringify(clusters.slice(0, 1), null, 2)
-      }}</pre>
-    </UCard>
   </UContainer>
 </template>
 
@@ -374,7 +367,7 @@
     if (!canCreate.value) return
     creating.value = true
     try {
-      await $api('/clusters', {
+      const res = await $api<{ warnings?: string[] } & Cluster>('/clusters', {
         method: 'POST',
         body: {
           project_id: selectedProject.value?.value,
@@ -384,6 +377,11 @@
           species_ids: selectedSpeciesItems.value.map((o) => o.value)
         }
       })
+      if (res && Array.isArray(res.warnings) && res.warnings.length > 0) {
+        for (const w of res.warnings) {
+          toast.add({ title: w, color: 'warning' })
+        }
+      }
       clusterNumber.value = null
       await loadClusters()
     } finally {
