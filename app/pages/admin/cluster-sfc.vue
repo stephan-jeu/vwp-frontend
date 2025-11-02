@@ -36,7 +36,26 @@
     </UCard>
 
     <UCard>
-      <div v-if="clusters.length === 0" class="p-4 text-sm text-gray-500">
+        <UCard v-if="showMergeConfirm" class="my-4">
+          <div class="text-base font-medium">Dit cluster bestaat al</div>
+          <div class="mt-2 text-sm text-gray-600 dark:text-gray-300">Weet je zeker dat je bezoeken wilt toevoegen?</div>
+          <div class="mt-4 flex justify-end gap-2">
+            <UButton color="neutral" variant="soft" @click="showMergeConfirm = false">Annuleren</UButton>
+            <UButton color="primary" :loading="creating" @click="onConfirmMerge">Bevestigen</UButton>
+          </div>
+        </UCard>
+      <template #header>
+        <div v-if="selectedProject && currentProject">
+          <div class="text-base font-semibold">
+            Project {{ currentProject.code }}
+            <span v-if="currentProject.location" class="text-gray-500">· {{ currentProject.location }}</span>
+          </div>
+        </div>
+      </template>
+      <div v-if="!selectedProject" class="p-4 text-sm text-gray-500">
+        Selecteer een project om de clusters te bekijken.
+      </div>
+      <div v-else-if="clusters.length === 0" class="p-4 text-sm text-gray-500">
         Geen clusters om te tonen
       </div>
       <div v-else class="space-y-3">
@@ -124,6 +143,9 @@
                     <div class="text-sm text-gray-700 dark:text-gray-400 font-semibold">
                       Bezoek #{{ visit.visit_nr }} · {{ formatDate(visit.from_date) }} –
                       {{ formatDate(visit.to_date) }}
+                      <span v-if="visit.preferred_researcher?.full_name" class="ml-2 text-gray-500">
+                        · Voorkeur: {{ visit.preferred_researcher.full_name }}
+                      </span>
                     </div>
                     <div class="flex items-center gap-2">
                       <UModal title="Bezoek verwijderen">
@@ -174,9 +196,15 @@
                     <label class="block text-xs mb-1">Aantal onderzoekers</label>
                     <UInput v-model.number="visit.required_researchers" type="number" />
                   </div>
-                  <div>
-                    <label class="block text-xs mb-1">Bezoek nr</label>
-                    <UInput v-model.number="visit.visit_nr" type="number" />
+                  <div class="md:col-start-2">
+                    <label class="block text-xs mb-1">Voorkeursonderzoeker</label>
+                    <USelectMenu
+                      :model-value="researcherOptions.find((o) => o.value === visit.preferred_researcher_id)"
+                      :items="researcherOptions"
+                      searchable
+                      placeholder="Kies onderzoeker"
+                      @update:model-value="(opt) => (visit.preferred_researcher_id = opt?.value ?? null)"
+                    />
                   </div>
 
                   <div>
@@ -186,6 +214,11 @@
                   <div>
                     <label class="block text-xs mb-1">Tot</label>
                     <UInput v-model="visit.to_date" type="date" />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs mb-1">Bezoek nr</label>
+                    <UInput v-model.number="visit.visit_nr" type="number" />
                   </div>
 
                   <div>
@@ -234,6 +267,7 @@
                     <UCheckbox v-model="visit.fiets" label="Fiets" />
                     <UCheckbox v-model="visit.hup" label="HuP" />
                     <UCheckbox v-model="visit.dvp" label="DvP" />
+                    <UCheckbox v-model="visit.priority" label="Prioriteit" />
                   </div>
 
                   <div class="md:col-span-2">
@@ -267,10 +301,14 @@
 
   const creating = ref(false)
   const loading = ref(false)
+  const showMergeConfirm = ref(false)
+  const pendingCreatePayload = ref<null | { project_id: number; address: string; cluster_number: number; function_ids: number[]; species_ids: number[] }>(null)
 
   const projectOptions = ref<Option[]>([])
+  const projectsList = ref<Array<{ id: number; code: string; location?: string | null }>>([])
   const functionOptions = ref<Option[]>([])
   const speciesOptions = ref<Option[]>([])
+  const researcherOptions = ref<Option[]>([])
 
   type CompactVisit = {
     id: number
@@ -297,6 +335,31 @@
     start_time_text?: string | null
     part_of_day?: string | null
     start_time?: number | null
+    priority?: boolean
+    preferred_researcher_id?: number | null
+    preferred_researcher?: { id: number; full_name?: string | null } | null
+  }
+
+  async function onConfirmMerge(): Promise<void> {
+    if (!pendingCreatePayload.value) {
+      showMergeConfirm.value = false
+      return
+    }
+    creating.value = true
+    try {
+      const res = await $api<Cluster>('/clusters', {
+        method: 'POST',
+        body: pendingCreatePayload.value
+      })
+      showMergeConfirm.value = false
+      pendingCreatePayload.value = null
+      await loadClusters()
+      if (res?.id) {
+        expanded.value = new Set([res.id])
+      }
+    } finally {
+      creating.value = false
+    }
   }
 
   type Cluster = {
@@ -309,6 +372,11 @@
 
   const clusters = ref<Cluster[]>([])
   const expanded = ref<Set<number>>(new Set())
+  const currentProject = computed(() => {
+    const sel = selectedProject.value
+    if (!sel) return null
+    return projectsList.value.find((p) => p.id === sel.value) || null
+  })
   const partOfDayOptions = [
     { label: 'Ochtend', value: 'Ochtend' },
     { label: 'Dag', value: 'Dag' },
@@ -334,14 +402,19 @@
   )
 
   async function loadOptions(): Promise<void> {
-    const [projects, functions, species] = await Promise.all([
-      $api<{ id: number; code: string }[]>('/projects'),
+    const [projects, functions, species, users] = await Promise.all([
+      $api<{ id: number; code: string; location?: string | null }[]>('/projects'),
       $api<{ id: number; name: string }[]>('/admin/functions'),
-      $api<{ id: number; name: string; abbreviation?: string | null }[]>('/admin/species')
+      $api<{ id: number; name: string; abbreviation?: string | null }[]>('/admin/species'),
+      $api<{ id: number; full_name: string | null }[]>('/admin/users')
     ])
+    projectsList.value = projects
     projectOptions.value = projects.map((p) => ({ label: p.code, value: p.id }))
     functionOptions.value = functions.map((f) => ({ label: f.name, value: f.id }))
     speciesOptions.value = species.map((s) => ({ label: s.abbreviation ?? s.name, value: s.id }))
+    researcherOptions.value = users
+      .map((u) => ({ label: u.full_name ?? `Gebruiker #${u.id}`, value: u.id }))
+      .sort((a, b) => a.label.localeCompare(b.label))
   }
 
   watch(selectedProject, async (opt) => {
@@ -352,38 +425,51 @@
   async function loadClusters(): Promise<void> {
     loading.value = true
     try {
-      const data = selectedProject.value
-        ? await $api<Cluster[]>(`/clusters`, {
-            query: { project_id: selectedProject.value.value }
-          })
-        : await $api<Cluster[]>(`/clusters`)
+      if (!selectedProject.value) {
+        clusters.value = []
+        return
+      }
+      const data = await $api<Cluster[]>(`/clusters`, {
+        query: { project_id: selectedProject.value.value }
+      })
       clusters.value = data
     } finally {
       loading.value = false
     }
   }
-
   async function onCreate(): Promise<void> {
     if (!canCreate.value) return
+    const exists = !!clusters.value.find(
+      (c) => c.project_id === selectedProject.value!.value && c.cluster_number === clusterNumber.value
+    )
+    if (exists) {
+      pendingCreatePayload.value = {
+        project_id: selectedProject.value!.value,
+        address: address.value,
+        cluster_number: clusterNumber.value!,
+        function_ids: selectedFunctionItems.value.map((i) => i.value as number),
+        species_ids: selectedSpeciesItems.value.map((i) => i.value as number)
+      }
+      showMergeConfirm.value = true
+      return
+    }
     creating.value = true
     try {
-      const res = await $api<{ warnings?: string[] } & Cluster>('/clusters', {
+      const res = await $api<Cluster>('/clusters', {
         method: 'POST',
         body: {
-          project_id: selectedProject.value?.value,
+          project_id: selectedProject.value!.value,
           address: address.value,
-          cluster_number: clusterNumber.value,
-          function_ids: selectedFunctionItems.value.map((o) => o.value),
-          species_ids: selectedSpeciesItems.value.map((o) => o.value)
+          cluster_number: clusterNumber.value!,
+          function_ids: selectedFunctionItems.value.map((i) => i.value as number),
+          species_ids: selectedSpeciesItems.value.map((i) => i.value as number)
         }
       })
-      if (res && Array.isArray(res.warnings) && res.warnings.length > 0) {
-        for (const w of res.warnings) {
-          toast.add({ title: w, color: 'warning' })
-        }
-      }
       clusterNumber.value = null
       await loadClusters()
+      if (res?.id) {
+        expanded.value = new Set([res.id])
+      }
     } finally {
       creating.value = false
     }
@@ -422,7 +508,9 @@
       remarks_field: visit.remarks_field,
       function_ids: visit.function_ids,
       species_ids: visit.species_ids,
-      part_of_day: visit.part_of_day
+      part_of_day: visit.part_of_day,
+      priority: visit.priority,
+      preferred_researcher_id: visit.preferred_researcher_id
       // no start_time minutes in UI
     }
     await $api(`/visits/${visit.id}`, { method: 'PUT', body: payload })

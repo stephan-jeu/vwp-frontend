@@ -1,0 +1,46 @@
+---
+trigger: always_on
+description:
+globs:
+---
+
+# Nuxt 4 & Nuxt UI 4 Project Rules
+
+- All generated code **MUST** be compatible with the packages and versions defined in `package.json`.
+
+## 1. Project Structure & Conventions
+
+- **Directory-Based:** Strictly follow Nuxt's auto-importing directory structure:
+  - Pages go in `pages/`.
+  - Reusable components go in `components/`.
+  - Layouts go in `layouts/`.
+  - Reusable logic (composables) go in `composables/`.
+- **Component Naming:** All component files MUST be named in `PascalCase` (e.g., `UserProfileCard.vue`).
+- **Composition API:** All new Vue components MUST use the `<script setup>` syntax for the Composition API.
+- Runtime config values passed to composables must match expected types (wrap in computed when a Ref is required).
+
+## 2. State Management
+
+- **Pinia for Global State:** All application-wide state MUST be managed using Pinia.
+- **Store Location:** Pinia stores must be defined in the `stores/` directory. Do not use local `useState` for state that needs to be shared across multiple pages or complex components.
+- Keep store state strongly typed; actions return typed results.
+- Normalize collections and expose typed getters.
+
+## 3. Data Fetching
+
+- **Use Nuxt Composables:** You MUST use the built-in `useFetch` or `useAsyncData` composables for all data fetching that needs to work with server-side rendering (SSR). This ensures data is fetched correctly on the server and hydrated on the client.
+- **Always type API responses**
+- **Handle AsyncData safely**, null/undefined states, don’t access fields without optional chaining.
+
+## 4. UI Components & Styling
+
+- **Nuxt UI First:** Prioritize using components from **Nuxt UI** (e.g., `<UButton>`, `<UInput>`, `<UCard>`) over creating custom ones for common elements.
+- **Global Theming:** To customize Nuxt UI components, modify the theme in the `app.config.ts` file. Avoid applying one-off, scoped styles to override the UI library when a global theme change is more appropriate.
+- **Tailwind CSS:** Use Tailwind CSS utility classes for all custom styling.
+
+## 5. Code Style & Quality
+
+- **TypeScript:** All new code, including composables and component scripts, MUST be written in TypeScript and be strongly typed.
+- **Linter & Formatter:** All generated code MUST adhere to the project's configured ESLint and Prettier rules.
+- **No any.** Prefer precise types or unknown with narrowing.
+- Exported functions/interfaces must be explicitly typed.
