@@ -179,7 +179,9 @@
                       :model-value="mapIdsToOptions(visit.function_ids, functionOptions)"
                       :items="functionOptions"
                       multiple
+                      class="w-2xs"
                       @update:model-value="(sel) => (visit.function_ids = sel.map((o) => o.value))"
+
                     />
                   </div>
                   <div>
@@ -188,6 +190,7 @@
                       :model-value="mapIdsToOptions(visit.species_ids, speciesOptions)"
                       :items="speciesOptions"
                       multiple
+                      class="w-3xs"
                       @update:model-value="(sel) => (visit.species_ids = sel.map((o) => o.value))"
                     />
                   </div>
@@ -222,8 +225,8 @@
                   </div>
 
                   <div>
-                    <label class="block text-xs mb-1">Starttijd (tekst)</label>
-                    <UInput v-model="visit.start_time_text" disabled />
+                    <label class="block text-xs mb-1">Starttijd</label>
+                    <UInput v-model="visit.start_time_text" />
                   </div>
 
                   <div>
@@ -509,6 +512,7 @@
       function_ids: visit.function_ids,
       species_ids: visit.species_ids,
       part_of_day: visit.part_of_day,
+      start_time_text: visit.start_time_text,
       priority: visit.priority,
       preferred_researcher_id: visit.preferred_researcher_id
       // no start_time minutes in UI
