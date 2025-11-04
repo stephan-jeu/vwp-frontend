@@ -263,9 +263,17 @@
                     <label class="block text-xs mb-1">Max neerslag</label>
                     <UInput v-model="visit.max_precipitation" />
                   </div>
+                  <div>
+                    <label class="block text-xs mb-1">Ervaring</label>
+                    <USelectMenu
+                      :model-value="selectedExperienceOption(visit.expertise_level)"
+                      :items="experienceLevelOptionsArr"
+                      placeholder="Kies niveau"
+                      @update:model-value="(opt: StringOption | undefined) => (visit.expertise_level = opt?.value ?? null)"
+                    />
+                  </div>
 
-                  <div class="col-span-1 md:col-span-2 grid grid-cols-2 md:grid-cols-6 gap-3">
-                    <UCheckbox v-model="visit.expertise_level" label="Expertise" />
+                  <div class="col-span-1 md:col-span-2 grid grid-cols-2 md:grid-cols-5 gap-3">
                     <UCheckbox v-model="visit.wbc" label="WBC" />
                     <UCheckbox v-model="visit.fiets" label="Fiets" />
                     <UCheckbox v-model="visit.hup" label="HuP" />
@@ -293,6 +301,7 @@
 
 <script setup lang="ts">
   type Option = { label: string; value: number }
+  type StringOption = { label: string; value: string }
 
   const { $api } = useNuxtApp()
 
@@ -313,6 +322,17 @@
   const speciesOptions = ref<Option[]>([])
   const researcherOptions = ref<Option[]>([])
 
+  const experienceLevelOptionsArr: StringOption[] = [
+    { label: 'Nieuw', value: 'Nieuw' },
+    { label: 'Junior', value: 'Junior' },
+    { label: 'Senior', value: 'Senior' },
+    { label: 'GZ', value: 'GZ' }
+  ]
+
+  function selectedExperienceOption(v: string | null | undefined): StringOption | undefined {
+    return experienceLevelOptionsArr.find((o) => o.value === v)
+  }
+
   type CompactVisit = {
     id: number
     cluster_id: number
@@ -328,7 +348,7 @@
     min_temperature_celsius?: number | null
     max_wind_force_bft?: number | null
     max_precipitation?: string | null
-    expertise_level?: boolean
+    expertise_level?: string | null
     wbc?: boolean
     fiets?: boolean
     hup?: boolean
@@ -502,7 +522,7 @@
       min_temperature_celsius: visit.min_temperature_celsius,
       max_wind_force_bft: visit.max_wind_force_bft,
       max_precipitation: visit.max_precipitation,
-      expertise_level: visit.expertise_level,
+      expertise_level: visit.expertise_level ?? null,
       wbc: visit.wbc,
       fiets: visit.fiets,
       hup: visit.hup,
