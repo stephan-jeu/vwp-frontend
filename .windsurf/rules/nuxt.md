@@ -1,12 +1,11 @@
 ---
 trigger: always_on
-description:
-globs:
 ---
 
 # Nuxt 4 & Nuxt UI 4 Project Rules
 
 - All generated code **MUST** be compatible with the packages and versions defined in `package.json`.
+- SSR is disabled for this project (ssr: false in nuxt config)
 
 ## 1. Project Structure & Conventions
 
