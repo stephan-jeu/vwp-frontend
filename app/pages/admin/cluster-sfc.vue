@@ -1,8 +1,6 @@
 <template>
   <UContainer>
-    <div class="flex items-end justify-between mb-4">
-      <h1 class="text-2xl font-semibold">Cluster SFC</h1>
-    </div>
+    <UPageHeader title="Cluster SFC" />
 
     <UCard class="mb-6">
       <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -73,7 +71,7 @@
                 :icon="expanded.has(cluster.id) ? 'i-lucide-minus' : 'i-lucide-plus'"
                 @click="toggleCluster(cluster.id)"
               />
-              <span class="text-sm text-gray-700 dark:text-gray-400">
+              <span class="text-sm text-gray-700 dark:text-gray-400" @click="toggleCluster(cluster.id)">
                 Cluster {{ cluster.cluster_number }}, {{ cluster.address }} ({{
                   cluster.visits.length
                 }}
