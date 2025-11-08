@@ -33,6 +33,7 @@
         <UCheckbox v-model="createForm.fiets" label="Fiets" />
         <UCheckbox v-model="createForm.hup" label="HUP" />
         <UCheckbox v-model="createForm.dvp" label="DVP" />
+        <UCheckbox v-model="createForm.vrfg" label="VR/FG" />
         <UCheckbox v-model="createForm.vleermuis" label="Vleermuis" />
         <UCheckbox v-model="createForm.roofvogel" label="Roofvogel" />
         <UCheckbox v-model="createForm.zwaluw" label="Zwaluw" />
@@ -97,6 +98,7 @@
               <UCheckbox v-model="u.fiets" label="Fiets" />
               <UCheckbox v-model="u.hup" label="HUP" />
               <UCheckbox v-model="u.dvp" label="DVP" />
+              <UCheckbox v-model="u.vrfg" label="VRFG" />
               <UCheckbox v-model="u.vleermuis" label="Vleermuis" />
               <UCheckbox v-model="u.roofvogel" label="Roofvogel" />
               <UCheckbox v-model="u.zwaluw" label="Zwaluw" />
@@ -171,6 +173,7 @@
     fiets: boolean
     hup: boolean
     dvp: boolean
+    vrfg: boolean
     vleermuis: boolean
     zwaluw: boolean
     vlinder: boolean
@@ -221,6 +224,7 @@
     fiets: false,
     hup: false,
     dvp: false,
+    vrfg: false,
     vleermuis: false,
     zwaluw: false,
     vlinder: false,
@@ -245,6 +249,7 @@
     if (u.fiets) tags.push('Fiets')
     if (u.hup) tags.push('HUP')
     if (u.dvp) tags.push('DVP')
+    if (u.vrfg) tags.push('VRFG')
     if (u.vleermuis) tags.push('Vleermuis')
     if (u.roofvogel) tags.push('Roofvogel')
     if (u.zwaluw) tags.push('Zwaluw')
@@ -299,6 +304,7 @@
         fiets: false,
         hup: false,
         dvp: false,
+        vrfg: false,
         vleermuis: false,
         zwaluw: false,
         vlinder: false,

@@ -50,13 +50,13 @@ definePageMeta({ middleware: 'admin' });
 
 // 1. CAPACITY DATA (Hierarchical)
 // UTable will look for the 'children' key automatically.
-type SlotType = 'evening' | 'morning' | 'flex';
+type SlotType = 'evening' | 'morning' | 'daytime' | 'flex';
 type WeekKey = `week${number}`;
 type CellMap = Record<WeekKey, number>;
 interface AvailabilityChild { id: string; type: SlotType; data: CellMap }
 interface UserRow { id: string; name: string; children: AvailabilityChild[] }
 
-interface ApiAvailabilityCompact { week: number; morning_days: number; nighttime_days: number; flex_days: number }
+interface ApiAvailabilityCompact { week: number; morning_days: number; daytime_days: number; nighttime_days: number; flex_days: number }
 interface ApiUserAvailability { id: number; name: string; availability: ApiAvailabilityCompact[] }
 interface ApiAvailabilityListResponse { users: ApiUserAvailability[] }
 
@@ -97,16 +97,18 @@ async function fetchAvailability() {
   }
   const nextUsers: UserRow[] = [];
   for (const u of payload?.users ?? []) {
-    const childRows: [AvailabilityChild, AvailabilityChild, AvailabilityChild] = [
+    const childRows: [AvailabilityChild, AvailabilityChild, AvailabilityChild, AvailabilityChild] = [
       { id: `${u.id}-night`, type: 'evening', data: {} as CellMap },
       { id: `${u.id}-morn`, type: 'morning', data: {} as CellMap },
+      { id: `${u.id}-day`, type: 'daytime', data: {} as CellMap },
       { id: `${u.id}-flex`, type: 'flex', data: {} as CellMap }
     ];
     for (const wk of u.availability ?? []) {
       const key = `week${wk.week}` as WeekKey;
       childRows[0].data[key] = wk.nighttime_days ?? 0;
       childRows[1].data[key] = wk.morning_days ?? 0;
-      childRows[2].data[key] = wk.flex_days ?? 0;
+      childRows[2].data[key] = wk.daytime_days ?? 0;
+      childRows[3].data[key] = wk.flex_days ?? 0;
     }
     nextUsers.push({ id: String(u.id), name: u.name, children: childRows });
   }
@@ -136,7 +138,7 @@ function scheduleSave(row: FlatChildRow, colId: WeekKey) {
   if (savingTimers.has(key)) window.clearTimeout(savingTimers.get(key));
   const handle = window.setTimeout(async () => {
     savingTimers.delete(key);
-    const slot = row.slot === 'evening' ? 'nighttime' : row.slot; // map to API slot
+    const slot = row.slot === 'evening' ? 'nighttime' : row.slot; // map to API slot (daytime maps directly)
     const value = clamp07(row.data[colId]);
     row.data[colId] = value; // ensure clamped in UI
     const { $api } = useNuxtApp();
@@ -166,11 +168,12 @@ function onCellBlur(row: FlatChildRow, colId: WeekKey) {
 }
 
 
-// Build flat rows: a parent display row and three child rows per user
+// Build flat rows: a parent display row and four child rows per user
 const flatRows = computed(() => {
   const labelMap = {
     evening: 'Avond',
     morning: 'Ochtend',
+    daytime: 'Dag',
     flex: 'Flex'
   };
 
