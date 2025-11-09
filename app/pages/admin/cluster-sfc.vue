@@ -276,6 +276,7 @@
                     <UCheckbox v-model="visit.fiets" label="Fiets" />
                     <UCheckbox v-model="visit.hup" label="HuP" />
                     <UCheckbox v-model="visit.dvp" label="DvP" />
+                    <UCheckbox v-model="visit.sleutel" label="Sleutel" />
                     <UCheckbox v-model="visit.priority" label="Prioriteit" />
                   </div>
 
@@ -351,6 +352,7 @@
     fiets?: boolean
     hup?: boolean
     dvp?: boolean
+    sleutel?: boolean
     remarks_planning?: string | null
     remarks_field?: string | null
     start_time_text?: string | null
@@ -525,6 +527,7 @@
       fiets: visit.fiets,
       hup: visit.hup,
       dvp: visit.dvp,
+      sleutel: visit.sleutel,
       remarks_planning: visit.remarks_planning,
       remarks_field: visit.remarks_field,
       function_ids: visit.function_ids,

@@ -6,8 +6,11 @@
       <div class="flex flex-col gap-4">
         <div class="flex items-end gap-3">
           <UInput v-model.number="week" type="number" :min="1" :max="53" label="Week (ISO)" class="w-32" />
-          <UButton icon="i-heroicons-arrow-path" color="neutral" variant="soft" :loading="loading" @click="load">
-            Vernieuwen
+          <UButton icon="i-heroicons-sparkles" color="primary" variant="solid" :loading="loading" @click="runPlanning">
+            Genereer planning
+          </UButton>
+          <UButton icon="i-heroicons-trash" color="error" variant="soft" :loading="clearing" @click="clearResearchers">
+            Leeg onderzoekers
           </UButton>
         </div>
 
@@ -53,6 +56,7 @@
 
   const items = ref<PlanningVisit[]>([])
   const loading = ref(false)
+  const clearing = ref(false)
   const week = ref<number>(currentIsoWeek())
 
   function currentIsoWeek(): number {
@@ -73,6 +77,28 @@
       items.value = await $api<PlanningVisit[]>(`/planning${w ? `?week=${w}` : ''}`)
     } finally {
       loading.value = false
+    }
+  }
+
+  async function runPlanning(): Promise<void> {
+    loading.value = true
+    try {
+      const w = week.value
+      await $api(`/planning/generate`, { method: 'POST', body: { week: w } })
+      await load()
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function clearResearchers(): Promise<void> {
+    clearing.value = true
+    try {
+      const w = week.value
+      await $api(`/planning/clear`, { method: 'POST', body: { week: w } })
+      await load()
+    } finally {
+      clearing.value = false
     }
   }
 
