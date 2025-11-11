@@ -31,7 +31,7 @@
         <UCheckbox v-model="createForm.wbc" label="WBC" />
         <UCheckbox v-model="createForm.smp" label="SMP" />
         <UCheckbox v-model="createForm.fiets" label="Fiets" />
-        <UCheckbox v-model="createForm.hup" label="HUP" />
+        <UCheckbox v-model="createForm.hub" label="HUB" />
         <UCheckbox v-model="createForm.dvp" label="DVP" />
         <UCheckbox v-model="createForm.vrfg" label="VR/FG" />
         <UCheckbox v-model="createForm.vleermuis" label="Vleermuis" />
@@ -96,7 +96,7 @@
               <UCheckbox v-model="u.wbc" label="WBC" />
               <UCheckbox v-model="u.smp" label="SMP" />
               <UCheckbox v-model="u.fiets" label="Fiets" />
-              <UCheckbox v-model="u.hup" label="HUP" />
+              <UCheckbox v-model="u.hub" label="HUB" />
               <UCheckbox v-model="u.dvp" label="DVP" />
               <UCheckbox v-model="u.vrfg" label="VRFG" />
               <UCheckbox v-model="u.vleermuis" label="Vleermuis" />
@@ -171,7 +171,7 @@
     roofvogel: boolean
     wbc: boolean
     fiets: boolean
-    hup: boolean
+    hub: boolean
     dvp: boolean
     vrfg: boolean
     vleermuis: boolean
@@ -222,7 +222,7 @@
     roofvogel: false,
     wbc: false,
     fiets: false,
-    hup: false,
+    hub: false,
     dvp: false,
     vrfg: false,
     vleermuis: false,
@@ -247,7 +247,7 @@
     if (u.wbc) tags.push('WBC')
     if (u.smp) tags.push('SMP')
     if (u.fiets) tags.push('Fiets')
-    if (u.hup) tags.push('HUP')
+    if (u.hub) tags.push('HUB')
     if (u.dvp) tags.push('DVP')
     if (u.vrfg) tags.push('VRFG')
     if (u.vleermuis) tags.push('Vleermuis')
@@ -302,7 +302,7 @@
         roofvogel: false,
         wbc: false,
         fiets: false,
-        hup: false,
+        hub: false,
         dvp: false,
         vrfg: false,
         vleermuis: false,

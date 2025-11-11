@@ -274,7 +274,7 @@
                   <div class="col-span-1 md:col-span-2 grid grid-cols-2 md:grid-cols-5 gap-3">
                     <UCheckbox v-model="visit.wbc" label="WBC" />
                     <UCheckbox v-model="visit.fiets" label="Fiets" />
-                    <UCheckbox v-model="visit.hup" label="HuP" />
+                    <UCheckbox v-model="visit.hub" label="HUB" />
                     <UCheckbox v-model="visit.dvp" label="DvP" />
                     <UCheckbox v-model="visit.sleutel" label="Sleutel" />
                     <UCheckbox v-model="visit.priority" label="Prioriteit" />
@@ -350,7 +350,7 @@
     expertise_level?: string | null
     wbc?: boolean
     fiets?: boolean
-    hup?: boolean
+    hub?: boolean
     dvp?: boolean
     sleutel?: boolean
     remarks_planning?: string | null
@@ -525,7 +525,7 @@
       expertise_level: visit.expertise_level ?? null,
       wbc: visit.wbc,
       fiets: visit.fiets,
-      hup: visit.hup,
+      hub: visit.hub,
       dvp: visit.dvp,
       sleutel: visit.sleutel,
       remarks_planning: visit.remarks_planning,
