@@ -13,40 +13,72 @@
         />
         <UInput v-model="address" placeholder="Adres" />
         <UInput v-model.number="clusterNumber" type="number" placeholder="Cluster nummer" />
-        <UInputMenu
-          v-model="selectedFunctionItems"
-          :items="functionOptions"
-          multiple
-          searchable
-          placeholder="Functies"
-        />
-        <UInputMenu
-          v-model="selectedSpeciesItems"
-          :items="speciesOptions"
-          multiple
-          searchable
-          placeholder="Soorten"
-        />
+        <!-- empty grid cells reserved for layout symmetry -->
+        <div />
+        <div />
       </div>
+      <USeparator class="mt-4" />
       <div class="mt-4">
+        <div v-for="(row, idx) in comboRows" :key="idx">
+          <div>
+            <USelectMenu
+              :model-value="row.functions"
+              :items="functionOptions"
+              multiple
+              searchable
+              placeholder="Functies"
+              class="w-xs mr-8"
+              @update:model-value="(sel) => (row.functions = sel as Option[])"
+            />
+
+            <USelectMenu
+              :model-value="row.species"
+              :items="speciesOptions"
+              multiple
+              searchable
+              placeholder="Soorten"
+              @update:model-value="(sel) => (row.species = sel as Option[])"
+            />
+          </div>
+          <div class="md:col-span-1 flex justify-end">
+            <UButton color="neutral" variant="soft" icon="i-lucide-trash" @click="removeCombo(idx)">
+              Verwijder
+            </UButton>
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <UButton icon="i-lucide-plus" variant="soft" @click="addCombo">SFC toevoegen</UButton>
+          <div v-if="comboRows.length === 0" class="text-xs text-gray-500 self-center">
+            Voeg minimaal één combinatie toe
+          </div>
+        </div>
+      </div>
+      <div class="mt-8">
         <UButton :loading="creating" :disabled="!canCreate" @click="onCreate">Toevoegen</UButton>
       </div>
     </UCard>
 
     <UCard>
-        <UCard v-if="showMergeConfirm" class="my-4">
-          <div class="text-base font-medium">Dit cluster bestaat al</div>
-          <div class="mt-2 text-sm text-gray-600 dark:text-gray-300">Weet je zeker dat je bezoeken wilt toevoegen?</div>
-          <div class="mt-4 flex justify-end gap-2">
-            <UButton color="neutral" variant="soft" @click="showMergeConfirm = false">Annuleren</UButton>
-            <UButton color="primary" :loading="creating" @click="onConfirmMerge">Bevestigen</UButton>
-          </div>
-        </UCard>
+      <UCard v-if="showMergeConfirm" class="my-4">
+        <div class="text-base font-medium">Dit cluster bestaat al</div>
+        <div class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+          Weet je zeker dat je bezoeken wilt toevoegen?
+        </div>
+        <div class="mt-4 flex justify-end gap-2">
+          <UButton color="neutral" variant="soft" @click="showMergeConfirm = false"
+            >Annuleren</UButton
+          >
+          <UButton color="primary" :loading="creating" @click="onConfirmMerge">Bevestigen</UButton>
+        </div>
+      </UCard>
       <template #header>
         <div v-if="selectedProject && currentProject">
           <div class="text-base font-semibold">
             Project {{ currentProject.code }}
-            <span v-if="currentProject.location" class="text-gray-500">· {{ currentProject.location }}</span>
+            <span v-if="currentProject.location" class="text-gray-500"
+              >· {{ currentProject.location }}</span
+            >
           </div>
         </div>
       </template>
@@ -71,7 +103,10 @@
                 :icon="expanded.has(cluster.id) ? 'i-lucide-minus' : 'i-lucide-plus'"
                 @click="toggleCluster(cluster.id)"
               />
-              <span class="text-sm text-gray-700 dark:text-gray-400" @click="toggleCluster(cluster.id)">
+              <span
+                class="text-sm text-gray-700 dark:text-gray-400"
+                @click="toggleCluster(cluster.id)"
+              >
                 Cluster {{ cluster.cluster_number }}, {{ cluster.address }} ({{
                   cluster.visits.length
                 }}
@@ -179,7 +214,6 @@
                       multiple
                       class="w-2xs"
                       @update:model-value="(sel) => (visit.function_ids = sel.map((o) => o.value))"
-
                     />
                   </div>
                   <div>
@@ -200,11 +234,15 @@
                   <div class="md:col-start-2">
                     <label class="block text-xs mb-1">Voorkeursonderzoeker</label>
                     <USelectMenu
-                      :model-value="researcherOptions.find((o) => o.value === visit.preferred_researcher_id)"
+                      :model-value="
+                        researcherOptions.find((o) => o.value === visit.preferred_researcher_id)
+                      "
                       :items="researcherOptions"
                       searchable
                       placeholder="Kies onderzoeker"
-                      @update:model-value="(opt) => (visit.preferred_researcher_id = opt?.value ?? null)"
+                      @update:model-value="
+                        (opt) => (visit.preferred_researcher_id = opt?.value ?? null)
+                      "
                     />
                   </div>
 
@@ -267,7 +305,10 @@
                       :model-value="selectedExperienceOption(visit.expertise_level)"
                       :items="experienceLevelOptionsArr"
                       placeholder="Kies niveau"
-                      @update:model-value="(opt: StringOption | undefined) => (visit.expertise_level = opt?.value ?? null)"
+                      @update:model-value="
+                        (opt: StringOption | undefined) =>
+                          (visit.expertise_level = opt?.value ?? null)
+                      "
                     />
                   </div>
 
@@ -307,13 +348,18 @@
   const selectedProject = ref<Option | undefined>(undefined)
   const address = ref('')
   const clusterNumber = ref<number | null>(null)
-  const selectedFunctionItems = ref<Option[]>([])
-  const selectedSpeciesItems = ref<Option[]>([])
+  type ComboRow = { functions: Option[]; species: Option[] }
+  const comboRows = ref<ComboRow[]>([])
 
   const creating = ref(false)
   const loading = ref(false)
   const showMergeConfirm = ref(false)
-  const pendingCreatePayload = ref<null | { project_id: number; address: string; cluster_number: number; function_ids: number[]; species_ids: number[] }>(null)
+  const pendingCreatePayload = ref<null | {
+    project_id: number
+    address: string
+    cluster_number: number
+    combos: { function_ids: number[]; species_ids: number[] }[]
+  }>(null)
 
   const projectOptions = ref<Option[]>([])
   const projectsList = ref<Array<{ id: number; code: string; location?: string | null }>>([])
@@ -420,9 +466,12 @@
 
   // no table columns needed
 
-  const canCreate = computed(
-    () => selectedProject.value !== undefined && !!address.value && clusterNumber.value !== null
-  )
+  const canCreate = computed(() => {
+    if (selectedProject.value === undefined || !address.value || clusterNumber.value === null)
+      return false
+    if (comboRows.value.length === 0) return false
+    return comboRows.value.every((r) => r.functions.length > 0 && r.species.length > 0)
+  })
 
   async function loadOptions(): Promise<void> {
     const [projects, functions, species, users] = await Promise.all([
@@ -463,15 +512,18 @@
   async function onCreate(): Promise<void> {
     if (!canCreate.value) return
     const exists = !!clusters.value.find(
-      (c) => c.project_id === selectedProject.value!.value && c.cluster_number === clusterNumber.value
+      (c) =>
+        c.project_id === selectedProject.value!.value && c.cluster_number === clusterNumber.value
     )
     if (exists) {
       pendingCreatePayload.value = {
         project_id: selectedProject.value!.value,
         address: address.value,
         cluster_number: clusterNumber.value!,
-        function_ids: selectedFunctionItems.value.map((i) => i.value as number),
-        species_ids: selectedSpeciesItems.value.map((i) => i.value as number)
+        combos: comboRows.value.map((r) => ({
+          function_ids: r.functions.map((o) => o.value as number),
+          species_ids: r.species.map((o) => o.value as number)
+        }))
       }
       showMergeConfirm.value = true
       return
@@ -484,8 +536,10 @@
           project_id: selectedProject.value!.value,
           address: address.value,
           cluster_number: clusterNumber.value!,
-          function_ids: selectedFunctionItems.value.map((i) => i.value as number),
-          species_ids: selectedSpeciesItems.value.map((i) => i.value as number)
+          combos: comboRows.value.map((r) => ({
+            function_ids: r.functions.map((o) => o.value as number),
+            species_ids: r.species.map((o) => o.value as number)
+          }))
         }
       })
       clusterNumber.value = null
@@ -496,6 +550,14 @@
     } finally {
       creating.value = false
     }
+  }
+
+  function addCombo(): void {
+    comboRows.value.push({ functions: [], species: [] })
+  }
+
+  function removeCombo(idx: number): void {
+    comboRows.value.splice(idx, 1)
   }
 
   // Helpers to map between Option[] and id arrays for per-row multiselects
