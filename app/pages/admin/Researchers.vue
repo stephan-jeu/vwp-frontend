@@ -29,7 +29,9 @@
       </div>
       <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
         <UCheckbox v-model="createForm.wbc" label="WBC" />
-        <UCheckbox v-model="createForm.smp" label="SMP" />
+        <UCheckbox v-model="createForm.smp_huismus" label="SMP huismus" />
+        <UCheckbox v-model="createForm.smp_vleermuis" label="SMP vleermuis" />
+        <UCheckbox v-model="createForm.smp_gierzwaluw" label="SMP gierzwaluw" />
         <UCheckbox v-model="createForm.fiets" label="Fiets" />
         <UCheckbox v-model="createForm.hub" label="HUB" />
         <UCheckbox v-model="createForm.dvp" label="DVP" />
@@ -37,7 +39,9 @@
         <UCheckbox v-model="createForm.vleermuis" label="Vleermuis" />
         <UCheckbox v-model="createForm.roofvogel" label="Roofvogel" />
         <UCheckbox v-model="createForm.zwaluw" label="Zwaluw" />
-        <UCheckbox v-model="createForm.vlinder" label="Vlinder" />
+        <UCheckbox v-model="createForm.grote_vos" label="Grote vos" />
+        <UCheckbox v-model="createForm.iepenpage" label="Iepenpage" />
+        <UCheckbox v-model="createForm.teunisbloempijlstaart" label="Teunisbloempijlstaart" />
         <UCheckbox v-model="createForm.zangvogel" label="Zangvogel" />
         <UCheckbox v-model="createForm.langoor" label="Langoor" />
         <UCheckbox v-model="createForm.pad" label="Pad" />
@@ -94,7 +98,9 @@
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
               <UCheckbox v-model="u.wbc" label="WBC" />
-              <UCheckbox v-model="u.smp" label="SMP" />
+              <UCheckbox v-model="u.smp_huismus" label="SMP huismus" />
+              <UCheckbox v-model="u.smp_vleermuis" label="SMP vleermuis" />
+              <UCheckbox v-model="u.smp_gierzwaluw" label="SMP gierzwaluw" />
               <UCheckbox v-model="u.fiets" label="Fiets" />
               <UCheckbox v-model="u.hub" label="HUB" />
               <UCheckbox v-model="u.dvp" label="DVP" />
@@ -102,7 +108,9 @@
               <UCheckbox v-model="u.vleermuis" label="Vleermuis" />
               <UCheckbox v-model="u.roofvogel" label="Roofvogel" />
               <UCheckbox v-model="u.zwaluw" label="Zwaluw" />
-              <UCheckbox v-model="u.vlinder" label="Vlinder" />
+              <UCheckbox v-model="u.grote_vos" label="Grote vos" />
+              <UCheckbox v-model="u.iepenpage" label="Iepenpage" />
+              <UCheckbox v-model="u.teunisbloempijlstaart" label="Teunisbloempijlstaart" />
               <UCheckbox v-model="u.zangvogel" label="Zangvogel" />
               <UCheckbox v-model="u.langoor" label="Langoor" />
               <UCheckbox v-model="u.pad" label="Pad" />
@@ -165,7 +173,9 @@
     city: string | null
     contract: 'Intern' | 'Flex' | 'ZZP' | undefined
     experience_bat: 'Nieuw' | 'Junior' | 'Medior' | 'Senior' | undefined
-    smp: boolean
+    smp_huismus: boolean
+    smp_vleermuis: boolean
+    smp_gierzwaluw: boolean
     pad: boolean
     langoor: boolean
     roofvogel: boolean
@@ -176,7 +186,9 @@
     vrfg: boolean
     vleermuis: boolean
     zwaluw: boolean
-    vlinder: boolean
+    grote_vos: boolean
+    iepenpage: boolean
+    teunisbloempijlstaart: boolean
     zangvogel: boolean
     biggenkruid: boolean
     schijfhoren: boolean
@@ -216,7 +228,9 @@
     city: '',
     contract: undefined,
     experience_bat: undefined,
-    smp: false,
+    smp_huismus: false,
+    smp_vleermuis: false,
+    smp_gierzwaluw: false,
     pad: false,
     langoor: false,
     roofvogel: false,
@@ -227,7 +241,9 @@
     vrfg: false,
     vleermuis: false,
     zwaluw: false,
-    vlinder: false,
+    grote_vos: false,
+    iepenpage: false,
+    teunisbloempijlstaart: false,
     zangvogel: false,
     biggenkruid: false,
     schijfhoren: false
@@ -245,7 +261,9 @@
     const tags: string[] = []
     if (u.experience_bat) tags.push(u.experience_bat)
     if (u.wbc) tags.push('WBC')
-    if (u.smp) tags.push('SMP')
+    if (u.smp_huismus) tags.push('SMP huismus')
+    if (u.smp_vleermuis) tags.push('SMP vleermuis')
+    if (u.smp_gierzwaluw) tags.push('SMP gierzwaluw')
     if (u.fiets) tags.push('Fiets')
     if (u.hub) tags.push('HUB')
     if (u.dvp) tags.push('DVP')
@@ -253,7 +271,9 @@
     if (u.vleermuis) tags.push('Vleermuis')
     if (u.roofvogel) tags.push('Roofvogel')
     if (u.zwaluw) tags.push('Zwaluw')
-    if (u.vlinder) tags.push('Vlinder')
+    if (u.grote_vos) tags.push('Grote vos')
+    if (u.iepenpage) tags.push('Iepenpage')
+    if (u.teunisbloempijlstaart) tags.push('Teunisbloempijlstaart')
     if (u.zangvogel) tags.push('Zangvogel')
     if (u.langoor) tags.push('Langoor')
     if (u.pad) tags.push('Pad')
@@ -296,7 +316,9 @@
         city: '',
         contract: undefined,
         experience_bat: undefined,
-        smp: false,
+        smp_huismus: false,
+        smp_vleermuis: false,
+        smp_gierzwaluw: false,
         pad: false,
         langoor: false,
         roofvogel: false,
@@ -307,7 +329,9 @@
         vrfg: false,
         vleermuis: false,
         zwaluw: false,
-        vlinder: false,
+        grote_vos: false,
+        iepenpage: false,
+        teunisbloempijlstaart: false,
         zangvogel: false,
         biggenkruid: false,
         schijfhoren: false
