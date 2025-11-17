@@ -98,6 +98,17 @@
         </div>
 
         <div>
+          <label class="block text-xs mb-1">Onderzoekers</label>
+          <USelectMenu
+            :model-value="createResearchers"
+            :items="researcherOptions"
+            multiple
+            class="w-3xs"
+            @update:model-value="(sel) => (createResearcherIds = sel.map((o) => o.value))"
+          />
+        </div>
+
+        <div>
           <label class="block text-xs mb-1">Van</label>
           <UInput v-model="createFromDate" type="date" />
         </div>
@@ -191,9 +202,7 @@
           class="flex-1"
         >
           <template #status-cell="{ row }">
-            <span class="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800">
-              {{ statusLabel(row.original.status) }}
-            </span>
+            <UBadge :label="statusLabel(row.original.status)" variant="subtle" color="neutral" class="text-gray-600 dark:text-gray-200" />
           </template>
 
           <template #functions-cell="{ row }">
@@ -238,28 +247,28 @@
             <div v-if="!isAdmin" class="px-3 pb-3 text-sm space-y-2">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <span v-if="row.original.wbc" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
-                    >WBC</span
-                  >
-                  <span v-if="row.original.fiets" class="px-2 mx-1  py-0.5 rounded-full bg-gray-200"
-                    >Fiets</span
-                  >
-                  <span v-if="row.original.hub" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
-                    >HUB</span
-                  >
-                  <span v-if="row.original.dvp" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
-                    >DvP</span
-                  >
-                  <span v-if="row.original.sleutel" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
-                    >Sleutel</span
-                  >
-                  <span v-if="row.original.priority" class="px-2 mx-1 py-0.5 rounded-full bg-amber-200"
-                    >Prioriteit</span
-                  >
-                </div>
-                <div>
                   <span class="font-medium">Duur:</span>
                   {{ durationHours(row.original.duration) ?? '-' }} uur
+                </div>
+                <div>
+                  <UBadge v-if="row.original.wbc" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
+                    >WBC</UBadge
+                  >
+                  <UBadge v-if="row.original.fiets" class="px-2 mx-1  py-0.5 rounded-full bg-gray-200"
+                    >Fiets</UBadge
+                  >
+                  <UBadge v-if="row.original.hub" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
+                    >HUB</UBadge
+                  >
+                  <UBadge v-if="row.original.dvp" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
+                    >DvP</UBadge
+                  >
+                  <UBadge v-if="row.original.sleutel" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
+                    >Sleutel</UBadge
+                  >
+                  <UBadge v-if="row.original.priority" class="px-2 mx-1 py-0.5 rounded-full bg-amber-200"
+                    >Prioriteit</UBadge
+                  >
                 </div>
                 <div>
                   <span class="font-medium">Weercondities:</span>
@@ -268,7 +277,25 @@
                   {{ row.original.max_precipitation || '-' }}
                 </div>
                 <div>
-                  <span class="font-medium">Bezoek nr:</span> {{ row.original.visit_nr || '-' }}
+                  <span class="font-medium">Starttijd:</span>
+                  {{ row.original.start_time_text || '-' }}
+                </div>
+                <div>
+                  <span class="font-medium">Adres:</span>
+                  {{ row.original.cluster_address }}
+                </div>
+                <div>
+                  <span class="font-medium">Onderzoekers: </span>
+                  <span v-if="row.original.researchers.length > 0">
+                    {{
+                      row.original.researchers
+                        .map((r) => r.full_name || `Gebruiker #${r.id}`)
+                        .join(', ')
+                    }}
+                  </span>
+                  <span v-else>
+                    {{ row.original.required_researchers ?? '-' }}
+                  </span>
                 </div>
 
               </div>
@@ -287,6 +314,8 @@
                   </p>
                 </div>
               </div>
+
+              <VisitActivityLog :visit-id="row.original.id" />
             </div>
 
             <div v-else class="px-3 pb-3">
@@ -344,6 +373,29 @@
                 </div>
 
                 <div>
+                  <label class="block text-xs mb-1">Onderzoekers</label>
+                  <USelectMenu
+                    :model-value="mapIdsToOptions(row.original.researcher_ids ?? [], researcherOptions)"
+                    :items="researcherOptions"
+                    multiple
+                    class="w-3xs"
+                    @update:model-value="(sel) => {
+                      const ids = sel.map((o) => o.value)
+                      row.original.researcher_ids = ids
+                      row.original.researchers = ids.map((id) => {
+                        const opt = researcherOptions.find((o) => o.value === id)
+                        return { id, full_name: opt?.label ?? null }
+                      })
+                    }"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-xs mb-1">Bezoek nr</label>
+                  <UInput v-model.number="row.original.visit_nr" type="number" />
+                </div>
+
+                <div>
                   <label class="block text-xs mb-1">Van</label>
                   <UInput v-model="row.original.from_date" type="date" />
                 </div>
@@ -352,10 +404,6 @@
                   <UInput v-model="row.original.to_date" type="date" />
                 </div>
 
-                <div>
-                  <label class="block text-xs mb-1">Bezoek nr</label>
-                  <UInput v-model.number="row.original.visit_nr" type="number" />
-                </div>
 
                 <div>
                   <label class="block text-xs mb-1">Starttijd</label>
@@ -460,6 +508,8 @@
                   Opslaan
                 </UButton>
               </div>
+
+              <VisitActivityLog :visit-id="row.original.id" />
             </div>
           </template>
         </UTable>
@@ -540,6 +590,9 @@
     preferred_researcher_id: number | null
     preferred_researcher: UserName | null
     researchers: UserName[]
+    researcher_ids?: number[]
+    advertized: boolean
+    quote: boolean
   }
 
   type Option = { label: string; value: number }
@@ -591,11 +644,12 @@
     { accessorKey: 'project_code', header: 'Projectcode' },
     { accessorKey: 'project_location', header: 'Locatie' },
     { accessorKey: 'cluster_number', header: 'Cluster' },
+    { accessorKey: 'visit_nr', header: 'Bezoek nr' },
     { id: 'status', header: 'Status' },
     { id: 'functions', header: 'Functies' },
     { id: 'species', header: 'Soorten' },
     { id: 'period', header: 'Periode' },
-    { accessorKey: 'start_time_text', header: 'Starttijd' },
+    { accessorKey: 'part_of_day', header: 'Dagdeel' },
     { id: 'researchers', header: 'Onderzoekers' }
   ]
 
@@ -634,7 +688,10 @@
         query.statuses = selectedStatuses.value.map((s) => s.value)
 
       const data = await $api<VisitListResponse>('/visits', { query })
-      rows.value = data.items
+      rows.value = data.items.map((item) => ({
+        ...item,
+        researcher_ids: item.researchers.map((r) => r.id)
+      }))
       total.value = data.total
       page.value = data.page
       pageSize.value = data.page_size
@@ -757,6 +814,7 @@
   const createSpeciesIds = ref<number[]>([])
   const createRequiredResearchers = ref<number | null>(null)
   const createPreferredResearcherId = ref<number | null>(null)
+  const createResearcherIds = ref<number[]>([])
   const createFromDate = ref('')
   const createToDate = ref('')
   const createVisitNr = ref<number | null>(null)
@@ -782,6 +840,9 @@
   const createSpecies = computed(() =>
     mapIdsToOptions(createSpeciesIds.value, speciesOptions.value)
   )
+  const createResearchers = computed(() =>
+    mapIdsToOptions(createResearcherIds.value, researcherOptions.value)
+  )
   const preferredResearcherOption = computed(() =>
     createPreferredResearcherId.value == null
       ? undefined
@@ -796,6 +857,7 @@
     createSpeciesIds.value = []
     createRequiredResearchers.value = null
     createPreferredResearcherId.value = null
+    createResearcherIds.value = []
     createFromDate.value = ''
     createToDate.value = ''
     createVisitNr.value = null
@@ -859,7 +921,8 @@
         preferred_researcher_id: createPreferredResearcherId.value,
         function_ids: [...createFunctionIds.value],
         species_ids: [...createSpeciesIds.value],
-        researcher_ids: null
+        researcher_ids:
+          createResearcherIds.value.length > 0 ? [...createResearcherIds.value] : null
       }
 
       await $api('/visits', { method: 'POST', body: payload })
@@ -904,7 +967,8 @@
         start_time_text: row.start_time_text,
         preferred_researcher_id: row.preferred_researcher_id,
         function_ids: row.function_ids,
-        species_ids: row.species_ids
+        species_ids: row.species_ids,
+        researcher_ids: row.researcher_ids ?? row.researchers.map((r) => r.id)
       }
       await $api(`/visits/${row.id}`, { method: 'PUT', body: payload })
       toast.add({ title: 'Bezoek opgeslagen', color: 'success' })

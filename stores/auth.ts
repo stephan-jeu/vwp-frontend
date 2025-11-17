@@ -2,7 +2,9 @@ import { defineStore } from 'pinia'
 import type { FetchOptions } from 'ofetch'
 
 interface AuthIdentity {
+  id: number
   sub: string
+  full_name: string | null
   admin: boolean
 }
 
