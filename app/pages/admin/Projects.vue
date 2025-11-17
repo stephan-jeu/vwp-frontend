@@ -4,7 +4,7 @@
 
     <UCard class="mt-6">
       <UForm :state="form" :schema="schema" data-testid="project-form" @submit="onSubmit">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <UFormField label="Projectcode" name="code" required>
             <UInput v-model="form.code" placeholder="Bijv. P-001" data-testid="input-code" />
           </UFormField>
@@ -22,6 +22,9 @@
               data-testid="input-gdrive"
               class="w-72"
             />
+          </UFormField>
+          <UFormField label="Offerte" name="quote">
+            <UCheckbox v-model="form.quote" data-testid="input-quote" />
           </UFormField>
         </div>
         <div class="mt-4 flex gap-2">
@@ -52,6 +55,16 @@
         :global-filter="globalFilter"
         data-testid="projects-table"
       >
+        <template #quote-cell="{ row }">
+          <span class="inline-flex items-center">
+            <UIcon
+              v-if="row.original?.quote"
+              name="i-lucide-check"
+              class="text-green-600 size-4"
+            />
+            <UIcon v-else name="i-lucide-x" class="text-warning-800 size-4" />
+          </span>
+        </template>
         <template #google-cell="{ row }">
           <span class="inline-flex items-center">
             <UIcon
@@ -134,7 +147,8 @@
   const schema = z.object({
     code: z.string().min(1, 'Verplicht'),
     location: z.string().min(1, 'Verplicht'),
-    google_drive_folder: z.string().nullable().optional()
+    google_drive_folder: z.string().nullable().optional(),
+    quote: z.boolean().optional().default(false)
   })
 
   type FormState = {
@@ -142,14 +156,21 @@
     code: string
     location: string
     google_drive_folder: string | null
+    quote: boolean
   }
 
-  const form = reactive<FormState>({ code: '', location: '', google_drive_folder: null })
+  const form = reactive<FormState>({
+    code: '',
+    location: '',
+    google_drive_folder: null,
+    quote: false
+  })
   const isEditing = computed(() => !!form.id)
 
   const columns: TableColumn<Project>[] = [
     { accessorKey: 'code', header: 'Projectcode' },
     { accessorKey: 'location', header: 'Locatie' },
+    { id: 'quote', header: 'Offerte' },
     { id: 'google', header: 'Google Drive' },
     { id: 'actions', header: '' }
   ]
@@ -157,7 +178,13 @@
   const rows = computed(() => store.projects)
 
   function resetForm() {
-    Object.assign(form, { id: undefined, code: '', location: '', google_drive_folder: null })
+    Object.assign(form, {
+      id: undefined,
+      code: '',
+      location: '',
+      google_drive_folder: null,
+      quote: false
+    })
   }
 
   async function onSubmit() {
@@ -166,7 +193,8 @@
       const payload: ProjectCreate = {
         code: form.code,
         location: form.location,
-        google_drive_folder: form.google_drive_folder ?? null
+        google_drive_folder: form.google_drive_folder ?? null,
+        quote: form.quote ?? false
       }
       if (isEditing.value && form.id) {
         await store.update(form.id, payload)

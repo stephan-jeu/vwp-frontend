@@ -38,7 +38,8 @@
 
   const baseItems: NavigationMenuItem[] = [
     { label: 'Mijn bezoeken', to: '/', icon: 'i-lucide-bike' },
-    { label: 'Hulp gevraagd', to: '/advertised', icon: 'i-lucide-megaphone' }
+    { label: 'Hulp gevraagd', to: '/advertised', icon: 'i-lucide-megaphone' },
+    { label: 'Alle bezoeken', to: '/visits', icon: 'i-lucide-list' }
   ]
 
   const adminGroup: NavigationMenuItem = {
@@ -47,7 +48,7 @@
     children: [
       { label: 'Projecten', to: '/admin/projects', icon: 'i-lucide-bird' },
       { label: "Cluster SFC's", to: '/admin/cluster-sfc', icon: 'i-lucide-grape' },
-      { label: 'Bezoeken', to: '/admin/visits', icon: 'i-lucide-bike' },
+      { label: 'Bezoeken', to: '/visits', icon: 'i-lucide-bike' },
       { label: 'Planning', to: '/admin/planning', icon: 'i-lucide-list-check' },
       { label: 'Onderzoekers', to: '/admin/researchers', icon: 'i-lucide-users' },
       { label: 'Capaciteit', to: '/admin/availability', icon: 'i-lucide-calendar-days' },

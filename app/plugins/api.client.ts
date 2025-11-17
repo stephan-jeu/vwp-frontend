@@ -24,19 +24,39 @@ export default defineNuxtPlugin(() => {
       if (!err.response || err.response.status !== 401) throw error
 
       const refreshToken = localStorage.getItem('refresh_token')
-      if (!refreshToken) throw error
+      if (!refreshToken) {
+        // No refresh token -> force login
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        window.location.href = '/login'
+        throw error
+      }
 
       // Try refresh
-      const refreshed = await ofetch<{ access_token: string; token_type: string }>(
-        '/auth/refresh',
-        {
-          baseURL: String(config.public.apiBase || ''),
-          method: 'POST',
-          query: { refresh_token: refreshToken }
-        }
-      )
+      let refreshed: { access_token: string; token_type: string } | null = null
+      try {
+        refreshed = await ofetch<{ access_token: string; token_type: string }>(
+          '/auth/refresh',
+          {
+            baseURL: String(config.public.apiBase || ''),
+            method: 'POST',
+            query: { refresh_token: refreshToken }
+          }
+        )
+      } catch {
+        // Refresh failed -> force login
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        window.location.href = '/login'
+        throw error
+      }
 
-      if (!refreshed?.access_token) throw error
+      if (!refreshed?.access_token) {
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        window.location.href = '/login'
+        throw error
+      }
       localStorage.setItem('access_token', refreshed.access_token)
 
       const retryHeaders = new Headers((options?.headers as HeadersInit) || {})

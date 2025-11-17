@@ -1,6 +1,6 @@
 <template>
   <div>
-    <UPageHero title="Bezoeken" />
+    <UPageHeader title="Bezoeken" />
     <UCard class="mt-4">
       <p>Bezoeken beheer (coming soon).</p>
     </UCard>
@@ -8,5 +8,5 @@
 </template>
 
 <script setup lang="ts">
-  definePageMeta({ middleware: 'admin' })
+
 </script>

@@ -169,6 +169,17 @@
           </div>
 
           <div v-if="expanded.has(cluster.id)" class="px-3 pb-3">
+            <div class="flex items-center gap-2 py-2">
+              <UInput v-model="tempAddresses[cluster.id]" placeholder="Adres" class="flex-1" />
+              <UButton
+                :loading="savingClusterId === cluster.id"
+                color="primary"
+                variant="soft"
+                icon="i-lucide-save"
+                @click="onSaveClusterAddress(cluster)"
+              />
+            </div>
+
             <div class="grid grid-cols-1 gap-3">
               <UCard v-for="visit in cluster.visits" :key="visit.id" class="my-3">
                 <template #header>
@@ -441,6 +452,8 @@
 
   const clusters = ref<Cluster[]>([])
   const expanded = ref<Set<number>>(new Set())
+  const tempAddresses = reactive<Record<number, string>>({})
+  const savingClusterId = ref<number | null>(null)
   const currentProject = computed(() => {
     const sel = selectedProject.value
     if (!sel) return null
@@ -505,6 +518,10 @@
         query: { project_id: selectedProject.value.value }
       })
       clusters.value = data
+      // initialize temp addresses for inline editing
+      for (const c of data) {
+        tempAddresses[c.id] = c.address
+      }
     } finally {
       loading.value = false
     }
@@ -573,6 +590,20 @@
   }
 
   const toast = useToast()
+
+  async function onSaveClusterAddress(cluster: Cluster): Promise<void> {
+    const newAddress = tempAddresses[cluster.id]?.trim() ?? ''
+    if (!newAddress) return
+    savingClusterId.value = cluster.id
+    try {
+      await $api(`/clusters/${cluster.id}`, { method: 'PATCH', body: { address: newAddress } })
+      toast.add({ title: 'Adres bijgewerkt', color: 'success' })
+      await loadClusters()
+      expanded.value.add(cluster.id)
+    } finally {
+      savingClusterId.value = null
+    }
+  }
 
   async function onSaveVisit(clusterId: number, visit: CompactVisit): Promise<void> {
     const payload = {

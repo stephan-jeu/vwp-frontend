@@ -10,41 +10,41 @@
 
     <UCard v-if="showCreate" class="mb-6">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <UInput v-model="createForm.email" label="E-mail" placeholder="email@example.com" />
-        <UInput v-model="createForm.full_name" label="Naam" placeholder="Volledige naam" />
+        <UInput v-model="createForm.email" placeholder="email@example.com" />
+        <UInput v-model="createForm.full_name" placeholder="Naam" />
         <USelect
           v-model="createForm.contract"
           :items="contractOptions"
           label="Contract"
-          placeholder="Kies..."
+          placeholder="Kies contract..."
         />
         <USelect
           v-model="createForm.experience_bat"
           :items="experienceOptions"
-          label="Ervaring (vleermuis)"
-          placeholder="Kies..."
+          placeholder="Kies ervaring..."
         />
-        <UCheckbox v-model="createForm.admin" label="Admin" />
-        <UInput v-model="createForm.city" label="Stad" placeholder="Plaats" />
+        <UInput v-model="createForm.city" placeholder="Plaats" />
+        <UInput v-model="createForm.address" placeholder="Straatnaam" />
       </div>
+      <div class="mt-4"><UCheckbox v-model="createForm.admin" label="Admin" /></div>
       <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-        <UCheckbox v-model="createForm.wbc" label="WBC" />
-        <UCheckbox v-model="createForm.smp_huismus" label="SMP huismus" />
-        <UCheckbox v-model="createForm.smp_vleermuis" label="SMP vleermuis" />
-        <UCheckbox v-model="createForm.smp_gierzwaluw" label="SMP gierzwaluw" />
+        <UCheckbox v-model="createForm.dvp" label="DVP" />
         <UCheckbox v-model="createForm.fiets" label="Fiets" />
         <UCheckbox v-model="createForm.hub" label="HUB" />
-        <UCheckbox v-model="createForm.dvp" label="DVP" />
+        <UCheckbox v-model="createForm.wbc" label="WBC" />
+        <UCheckbox v-model="createForm.smp_gierzwaluw" label="SMP gierzwaluw" />
+        <UCheckbox v-model="createForm.smp_huismus" label="SMP huismus" />
+        <UCheckbox v-model="createForm.smp_vleermuis" label="SMP vleermuis" />
         <UCheckbox v-model="createForm.vrfg" label="VR/FG" />
         <UCheckbox v-model="createForm.vleermuis" label="Vleermuis" />
         <UCheckbox v-model="createForm.roofvogel" label="Roofvogel" />
         <UCheckbox v-model="createForm.zwaluw" label="Zwaluw" />
+        <UCheckbox v-model="createForm.zangvogel" label="Huismus/Spreeuw" />
+        <UCheckbox v-model="createForm.langoor" label="Langoor" />
+        <UCheckbox v-model="createForm.pad" label="Rugstreeppad" />
         <UCheckbox v-model="createForm.grote_vos" label="Grote vos" />
         <UCheckbox v-model="createForm.iepenpage" label="Iepenpage" />
         <UCheckbox v-model="createForm.teunisbloempijlstaart" label="Teunisbloempijlstaart" />
-        <UCheckbox v-model="createForm.zangvogel" label="Zangvogel" />
-        <UCheckbox v-model="createForm.langoor" label="Langoor" />
-        <UCheckbox v-model="createForm.pad" label="Pad" />
         <UCheckbox v-model="createForm.biggenkruid" label="Biggenkruid" />
         <UCheckbox v-model="createForm.schijfhoren" label="Schijfhoren" />
       </div>
@@ -79,8 +79,8 @@
 
           <div v-if="expanded.has(u.id)" class="px-3 pb-3 space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <UInput v-model="u.email" label="E-mail" />
-              <UInput v-model="u.full_name" label="Naam" />
+              <UInput v-model="u.email" placeholder="E-mail" />
+              <UInput v-model="u.full_name" placeholder="Naam" />
               <USelect
                 v-model="u.contract"
                 :items="contractOptions"
@@ -93,27 +93,29 @@
                 label="Ervaring (vleermuis)"
                 placeholder="Kies..."
               />
-              <UCheckbox v-model="u.admin" label="Admin" />
-              <UInput v-model="u.city" label="Stad" />
+
+              <UInput v-model="u.city" placeholder="Stad" />
+              <UInput v-model="u.address" placeholder="Straat (optioneel)" />
             </div>
+            <div><UCheckbox v-model="u.admin" label="Admin" /></div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <UCheckbox v-model="u.wbc" label="WBC" />
-              <UCheckbox v-model="u.smp_huismus" label="SMP huismus" />
-              <UCheckbox v-model="u.smp_vleermuis" label="SMP vleermuis" />
-              <UCheckbox v-model="u.smp_gierzwaluw" label="SMP gierzwaluw" />
+              <UCheckbox v-model="u.dvp" label="DVP" />
               <UCheckbox v-model="u.fiets" label="Fiets" />
               <UCheckbox v-model="u.hub" label="HUB" />
-              <UCheckbox v-model="u.dvp" label="DVP" />
-              <UCheckbox v-model="u.vrfg" label="VRFG" />
+              <UCheckbox v-model="u.wbc" label="WBC" />
+              <UCheckbox v-model="u.smp_gierzwaluw" label="SMP gierzwaluw" />
+              <UCheckbox v-model="u.smp_huismus" label="SMP huismus" />
+              <UCheckbox v-model="u.smp_vleermuis" label="SMP vleermuis" />
+              <UCheckbox v-model="u.vrfg" label="VR/FG" />
               <UCheckbox v-model="u.vleermuis" label="Vleermuis" />
               <UCheckbox v-model="u.roofvogel" label="Roofvogel" />
               <UCheckbox v-model="u.zwaluw" label="Zwaluw" />
+              <UCheckbox v-model="u.zangvogel" label="Huismus/Spreeuw" />
+              <UCheckbox v-model="u.langoor" label="Langoor" />
+              <UCheckbox v-model="u.pad" label="Rugstreeppad" />
               <UCheckbox v-model="u.grote_vos" label="Grote vos" />
               <UCheckbox v-model="u.iepenpage" label="Iepenpage" />
               <UCheckbox v-model="u.teunisbloempijlstaart" label="Teunisbloempijlstaart" />
-              <UCheckbox v-model="u.zangvogel" label="Zangvogel" />
-              <UCheckbox v-model="u.langoor" label="Langoor" />
-              <UCheckbox v-model="u.pad" label="Pad" />
               <UCheckbox v-model="u.biggenkruid" label="Biggenkruid" />
               <UCheckbox v-model="u.schijfhoren" label="Schijfhoren" />
             </div>
@@ -171,6 +173,7 @@
     full_name: string | null
     admin: boolean
     city: string | null
+    address: string | null
     contract: 'Intern' | 'Flex' | 'ZZP' | undefined
     experience_bat: 'Nieuw' | 'Junior' | 'Medior' | 'Senior' | undefined
     smp_huismus: boolean
@@ -226,6 +229,7 @@
     full_name: '',
     admin: false,
     city: '',
+    address: '',
     contract: undefined,
     experience_bat: undefined,
     smp_huismus: false,
@@ -274,9 +278,9 @@
     if (u.grote_vos) tags.push('Grote vos')
     if (u.iepenpage) tags.push('Iepenpage')
     if (u.teunisbloempijlstaart) tags.push('Teunisbloempijlstaart')
-    if (u.zangvogel) tags.push('Zangvogel')
+    if (u.zangvogel) tags.push('Huismus/Spreeuw')
     if (u.langoor) tags.push('Langoor')
-    if (u.pad) tags.push('Pad')
+    if (u.pad) tags.push('Rugstreeppad')
     if (u.biggenkruid) tags.push('Biggenkruid')
     if (u.schijfhoren) tags.push('Schijfhoren')
     const name = u.full_name || u.email
@@ -314,6 +318,7 @@
         full_name: '',
         admin: false,
         city: '',
+        address: '',
         contract: undefined,
         experience_bat: undefined,
         smp_huismus: false,
@@ -338,11 +343,9 @@
       })
       showCreate.value = false
       toast.add({ title: 'Onderzoeker opgeslagen', color: 'success' })
-    }
-    catch {
+    } catch {
       toast.add({ title: 'Onderzoeker kon niet worden opgeslagen', color: 'error' })
-    }
-    finally {
+    } finally {
       creating.value = false
     }
   }

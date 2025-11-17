@@ -5,12 +5,14 @@ export interface Project {
   code: string
   location: string
   google_drive_folder: string | null
+  quote: boolean
 }
 
 export interface ProjectCreate {
   code: string
   location: string
   google_drive_folder?: string | null
+  quote?: boolean
 }
 
 interface State {
@@ -42,13 +44,19 @@ export const useProjectsStore = defineStore('projects', {
     },
     async create(payload: ProjectCreate) {
       const { $api } = useNuxtApp()
-      const created = await $api<Project>('/projects', { method: 'POST', body: payload })
+      const created = await $api<Project>('/projects', {
+        method: 'POST',
+        body: { ...payload, quote: payload.quote ?? false }
+      })
       this.projects.push(created)
       return created
     },
     async update(id: number, payload: ProjectCreate) {
       const { $api } = useNuxtApp()
-      const updated = await $api<Project>(`/projects/${id}`, { method: 'PUT', body: payload })
+      const updated = await $api<Project>(`/projects/${id}`, {
+        method: 'PUT',
+        body: { ...payload, quote: payload.quote ?? false }
+      })
       const idx = this.projects.findIndex((p) => p.id === id)
       if (idx !== -1) this.projects[idx] = updated
       if (this.selected?.id === id) this.selected = updated

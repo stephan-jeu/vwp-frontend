@@ -13,11 +13,17 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return navigateTo('/login')
   }
 
+  // For all routes, validate the token by loading identity. If invalid/expired,
+  // the $api plugin will attempt refresh and redirect to /login on failure.
+  const { useAuthStore } = await import('~~/stores/auth')
+  const auth = useAuthStore()
+  await auth.ensureLoaded()
+  if (!auth.isAuthenticated) {
+    return navigateTo('/login')
+  }
+
   // If navigating to admin routes, ensure the user is admin
   if (to.path.startsWith('/admin')) {
-    const { useAuthStore } = await import('~~/stores/auth')
-    const auth = useAuthStore()
-    await auth.ensureLoaded()
     if (!auth.isAdmin) {
       return navigateTo('/')
     }
