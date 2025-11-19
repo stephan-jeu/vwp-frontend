@@ -51,7 +51,7 @@
       { label: 'Planning', to: '/admin/planning', icon: 'i-lucide-list-check' },
       { label: 'Onderzoekers', to: '/admin/researchers', icon: 'i-lucide-users' },
       { label: 'Capaciteit', to: '/admin/availability', icon: 'i-lucide-calendar-days' },
-      { label: 'Controle', to: '/admin/validation', icon: 'i-lucide-list-checks' }
+      { label: 'Controle', to: '/admin/audit', icon: 'i-lucide-list-checks' }
     ]
   }
 

@@ -108,6 +108,20 @@
             </span>
           </div>
 
+          <div
+            v-if="visit.project_google_drive_folder"
+            class="mt-1 text-sm text-primary-600"
+          >
+            <a
+              :href="visit.project_google_drive_folder"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="underline"
+            >
+              Project Google drive
+            </a>
+          </div>
+
           <div class="mt-2">
             <span class="font-medium">Bijzonderheden:</span>
             <span class="ml-1">
@@ -209,6 +223,7 @@
     id: number
     project_code: string
     project_location: string
+    project_google_drive_folder: string | null
     cluster_id: number
     cluster_number: number
     cluster_address: string

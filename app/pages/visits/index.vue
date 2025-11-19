@@ -298,6 +298,17 @@
                   </span>
                 </div>
 
+                <div v-if="row.original.project_google_drive_folder" class="my-4">
+                  <a
+                    :href="row.original.project_google_drive_folder"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-sm text-primary-600 underline"
+                  >
+                    Project Google drive
+                  </a>
+                </div>
+
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -323,6 +334,17 @@
                 Project {{ row.original.project_code }} · Cluster
                 {{ row.original.cluster_number }} ·
                 {{ row.original.cluster_address }}
+              </div>
+
+              <div v-if="row.original.project_google_drive_folder" class="my-4">
+                <a
+                  :href="row.original.project_google_drive_folder"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-sm text-primary-600 underline"
+                >
+                  Project Google drive
+                </a>
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -560,6 +582,7 @@
     id: number
     project_code: string
     project_location: string
+    project_google_drive_folder: string | null
     cluster_id: number
     cluster_number: number
     cluster_address: string
