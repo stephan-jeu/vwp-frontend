@@ -32,15 +32,14 @@
         Nog geen resultaten. Kies een startdatum en genereer de simulatie.
       </div>
 
-      <div v-else class="space-y-3">
-        <div class="text-xs text-gray-600">
-          <span class="font-medium">Legenda:</span>
-          <span class="ml-2">groen = alle vraag ingevuld</span>
-          <span class="ml-2 text-red-600">rood = tekort</span>
-          <span class="ml-2 text-gray-500">grijs = geen vraag</span>
+      <div v-else class="my-3">
+        <div class="text-xs">
+          <span class="font-medium">Legenda: niet-inplanbaar (inplanbaar).</span>
+          <span class="ml-1">Kolommen zijn bezoek eind datums.</span>
+          <span class="ml-1 text-red-600">Rood = tekort (niet inplanbaar)</span>
         </div>
 
-        <div class="border border-gray-200 dark:border-gray-700 rounded-md bg-white">
+        <div class="border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900">
           <UTable :columns="columns" :data="rows" class="max-h-[600px]">
             <template #family-cell="{ row }">
               <span class="text-sm font-medium text-gray-800 dark:text-gray-100">
@@ -77,6 +76,7 @@
     required: number
     assigned: number
     shortfall: number
+    spare: number
   }
 
   type CapacitySimulationResponse = {
@@ -117,7 +117,17 @@
 
   const weekKeys = computed<string[]>(() => {
     const grid = response.value?.grid ?? {}
-    return Object.keys(grid).sort()
+    const weeks = new Set<string>()
+    
+    // Grid is Family -> Part -> DeadlineWeek -> Cell
+    for (const parts of Object.values(grid)) {
+      for (const deadlines of Object.values(parts)) {
+        for (const week of Object.keys(deadlines)) {
+          weeks.add(week)
+        }
+      }
+    }
+    return Array.from(weeks).sort()
   })
 
   const columns = computed(() => {
@@ -125,32 +135,48 @@
       { id: 'family', header: 'Soortfamilie' },
       { id: 'part', header: 'Dagdeel' }
     ]
-    const weekCols = weekKeys.value.map((wk) => ({ id: wk, header: wk }))
+    const weekCols = weekKeys.value.map((wk) => {
+      // wk is ISO date "YYYY-MM-DD" or "No Deadline"
+      if (wk === "No Deadline") return { id: wk, header: "Geen deadline" }
+      
+      try {
+        const [y, m, d] = wk.split('-')
+        if (y && m && d) {
+           return { id: wk, header: `${d}/${m}` }
+        }
+      } catch (e) {}
+      
+      return { id: wk, header: wk }
+    })
     return [...base, ...weekCols]
   })
 
   const rows = computed<GridRow[]>(() => {
     const grid = response.value?.grid ?? {}
-    const map = new Map<string, GridRow>()
+    const result: GridRow[] = []
 
-    const parts = ['Ochtend', 'Dag', 'Avond']
-
-    for (const [weekId, families] of Object.entries(grid)) {
-      for (const [family, byPart] of Object.entries(families)) {
-        for (const part of parts) {
-          const key = `${family}|${part}`
-          let row = map.get(key)
-          if (!row) {
-            row = { id: key, family, part, cells: {} }
-            map.set(key, row)
-          }
-          const cell = byPart[part] as FamilyDaypartCapacity | undefined
-          row.cells[weekId] = cell ?? null
+    // Grid is Family -> Part -> DeadlineWeek -> Cell
+    for (const [family, parts] of Object.entries(grid)) {
+      for (const [part, deadlines] of Object.entries(parts)) {
+        const row: GridRow = {
+          id: `${family}|${part}`,
+          family,
+          part,
+          cells: {}
+        }
+        
+        for (const [week, cell] of Object.entries(deadlines)) {
+          row.cells[week] = cell
+        }
+        
+        // Only add if there is some data
+        if (Object.keys(row.cells).length > 0) {
+          result.push(row)
         }
       }
     }
 
-    return Array.from(map.values()).sort((a, b) => {
+    return result.sort((a, b) => {
       if (a.family === b.family) return a.part.localeCompare(b.part)
       return a.family.localeCompare(b.family)
     })
@@ -164,7 +190,9 @@
 
   function formatCell(cell: GridCell): string {
     if (!cell || cell.required === 0) return ''
-    return `${cell.assigned}/${cell.required}`
+    // User requested: "nr of unplannable visits/nr of planned visits"
+    // mapped to: shortfall / assigned
+    return `${cell.shortfall} (${cell.assigned})`
   }
 
   function cellClass(cell: GridCell): string {
@@ -172,9 +200,10 @@
       return 'text-gray-400'
     }
     if (cell.shortfall > 0) {
-      return 'text-red-600 font-semibold'
+      return 'text-red-600 dark:text-red-400 font-bold'
     }
-    return 'text-emerald-700'
+    // Green if all unplannable is 0 (meaning all planned)
+    return 'text-green-800 dark:text-green-400'
   }
 
   async function runSimulation(): Promise<void> {

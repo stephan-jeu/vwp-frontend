@@ -1,5 +1,6 @@
 <template>
   <div class="space-y-4">
+    <UPageHeader title="Beschikbaarheid" />
     <div class="flex items-center gap-2">
       <UInput v-model.number="weekRange.start" type="number" placeholder="Start Week" />
       <span>to</span>
