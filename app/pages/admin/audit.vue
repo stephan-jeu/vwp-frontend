@@ -131,12 +131,12 @@
                     max wind {{ row.original.max_wind_force_bft ?? '-' }}, max neerslag
                     {{ row.original.max_precipitation || '-' }}
                   </div>
-                  <div v-if="row.original.project_google_drive_folder" class="mt-1">
+                  <div v-if="row.original.project_google_drive_folder" class="mt-2">
                     <a
                       :href="row.original.project_google_drive_folder"
                       target="_blank"
                       rel="noopener noreferrer"
-                      class="text-[11px] text-primary-600 underline"
+                      class="text-sm text-primary-600 underline"
                     >
                       Project Google drive
                     </a>
