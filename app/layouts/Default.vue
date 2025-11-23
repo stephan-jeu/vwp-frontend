@@ -36,6 +36,16 @@
     auth.ensureLoaded()
   })
 
+  type AdvertisedVisitSummary = { id: number }
+
+  const { $api } = useNuxtApp()
+
+  const { data: advertisedData } = useAsyncData('advertised-visits-layout', () =>
+    $api<AdvertisedVisitSummary[]>('/visits/advertised/list')
+  )
+
+  const advertisedCount = computed(() => advertisedData.value?.length ?? 0)
+
   const baseItems: NavigationMenuItem[] = [
     { label: 'Mijn bezoeken', to: '/my-visits', icon: 'i-lucide-bike' },
     { label: 'Hulp gevraagd', to: '/advertised', icon: 'i-lucide-megaphone' },
@@ -58,6 +68,15 @@
 
   const menuItems = computed<NavigationMenuItem[][]>(() => {
     const items: NavigationMenuItem[] = baseItems.map((i) => ({ ...i }))
+
+    const count = advertisedCount.value
+    if (count > 0) {
+      const advertisedItem = items.find((i) => i.to === '/advertised')
+      if (advertisedItem) {
+        advertisedItem.badge = String(count)
+      }
+    }
+
     if (isAdmin.value) {
       const clonedAdmin: NavigationMenuItem = {
         ...adminGroup,

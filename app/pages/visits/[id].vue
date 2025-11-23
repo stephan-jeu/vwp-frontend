@@ -41,7 +41,7 @@
           <div class="mt-3 flex items-center gap-2">
             <USwitch
               v-model="advertizedLocal"
-              :disabled="advertizedUpdating || !isAdmin"
+              :disabled="advertizedUpdating || !canEditAdvertised"
               @update:model-value="onToggleAdvertized"
             />
             <span class="text-sm text-gray-700 dark:text-gray-300">Vraag iemand anders</span>
@@ -298,6 +298,16 @@
         visit.value.priority)
   )
 
+  const canEditAdvertised = computed(() => {
+    if (!visit.value) return isAdmin.value
+    const userId = identity.value?.id
+    if (!userId) return isAdmin.value
+    return (
+      isAdmin.value ||
+      visit.value.researchers.some((r) => r.id === userId)
+    )
+  })
+
   const canEditStatus = computed(() => {
     if (!visit.value) return isAdmin.value
     const userId = identity.value?.id
@@ -399,12 +409,12 @@
   )
 
   async function onToggleAdvertized(val: boolean): Promise<void> {
-    if (!visit.value || !isAdmin.value) return
+    if (!visit.value || !canEditAdvertised.value) return
     advertizedUpdating.value = true
     const previous = !val
     try {
-      await $api(`/visits/${visit.value.id}`, {
-        method: 'PUT',
+      await $api(`/visits/${visit.value.id}/advertised`, {
+        method: 'POST',
         body: { advertized: val }
       })
       if (data.value) {

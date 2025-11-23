@@ -91,6 +91,12 @@
         return 'heeft het bezoek afgekeurd'
       case 'visit_cancelled':
         return 'heeft het bezoek geannuleerd'
+      case 'visit_advertised':
+        return 'heeft dit bezoek aangeboden ter overname'
+      case 'visit_advertised_cancelled':
+        return 'heeft het aanbod tot overname ingetrokken'
+      case 'visit_takeover_accepted':
+        return 'heeft het bezoek overgenomen'
       default:
         return action
     }

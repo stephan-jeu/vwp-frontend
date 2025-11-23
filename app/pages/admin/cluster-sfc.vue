@@ -21,7 +21,7 @@
       <div class="mt-4">
         <div v-for="(row, idx) in comboRows" :key="idx">
           <div>
-            <USelectMenu
+            <UInputMenu
               :model-value="row.functions"
               :items="functionOptions"
               multiple
@@ -31,7 +31,7 @@
               @update:model-value="(sel) => (row.functions = sel as Option[])"
             />
 
-            <USelectMenu
+            <UInputMenu
               :model-value="row.species"
               :items="speciesOptions"
               multiple
@@ -219,7 +219,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label class="block text-xs mb-1">Functies</label>
-                    <USelectMenu
+                    <UInputMenu
                       :model-value="mapIdsToOptions(visit.function_ids, functionOptions)"
                       :items="functionOptions"
                       multiple
@@ -229,7 +229,7 @@
                   </div>
                   <div>
                     <label class="block text-xs mb-1">Soorten</label>
-                    <USelectMenu
+                    <UInputMenu
                       :model-value="mapIdsToOptions(visit.species_ids, speciesOptions)"
                       :items="speciesOptions"
                       multiple

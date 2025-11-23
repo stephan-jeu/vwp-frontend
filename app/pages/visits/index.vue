@@ -63,7 +63,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <label class="block text-xs mb-1">Functies</label>
-          <USelectMenu
+          <UInputMenu
             :model-value="createFunctions"
             :items="functionOptions"
             multiple
@@ -73,7 +73,7 @@
         </div>
         <div>
           <label class="block text-xs mb-1">Soorten</label>
-          <USelectMenu
+          <UInputMenu
             :model-value="createSpecies"
             :items="speciesOptions"
             multiple
@@ -99,7 +99,7 @@
 
         <div>
           <label class="block text-xs mb-1">Onderzoekers</label>
-          <USelectMenu
+          <UInputMenu
             :model-value="createResearchers"
             :items="researcherOptions"
             multiple
@@ -350,7 +350,7 @@
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs mb-1">Functies</label>
-                  <USelectMenu
+                  <UInputMenu
                     :model-value="mapIdsToOptions(row.original.function_ids, functionOptions)"
                     :items="functionOptions"
                     multiple
@@ -362,7 +362,7 @@
                 </div>
                 <div>
                   <label class="block text-xs mb-1">Soorten</label>
-                  <USelectMenu
+                  <UInputMenu
                     :model-value="mapIdsToOptions(row.original.species_ids, speciesOptions)"
                     :items="speciesOptions"
                     multiple
@@ -396,7 +396,7 @@
 
                 <div>
                   <label class="block text-xs mb-1">Onderzoekers</label>
-                  <USelectMenu
+                  <UInputMenu
                     :model-value="mapIdsToOptions(row.original.researcher_ids ?? [], researcherOptions)"
                     :items="researcherOptions"
                     multiple
