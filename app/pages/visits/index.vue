@@ -109,6 +109,11 @@
         </div>
 
         <div>
+          <label class="block text-xs mb-1">Bezoek nr</label>
+          <UInput v-model.number="createVisitNr" type="number" />
+        </div>
+
+        <div>
           <label class="block text-xs mb-1">Van</label>
           <UInput v-model="createFromDate" type="date" />
         </div>
@@ -118,9 +123,11 @@
         </div>
 
         <div>
-          <label class="block text-xs mb-1">Bezoek nr</label>
-          <UInput v-model.number="createVisitNr" type="number" />
+          <label class="block text-xs mb-1">Gepland voor week</label>
+          <UInput v-model.number="createPlannedWeek" type="number" min="1" max="53" />
         </div>
+
+
 
         <div>
           <label class="block text-xs mb-1">Starttijd</label>
@@ -284,6 +291,10 @@
                   <span class="font-medium">Adres:</span>
                   {{ row.original.cluster_address }}
                 </div>
+                <div v-if="row.original.planned_week != null">
+                  <span class="font-medium">Gepland voor week:</span>
+                  {{ plannedWeekLabel(row.original) }}
+                </div>
                 <div>
                   <span class="font-medium">Onderzoekers: </span>
                   <span v-if="row.original.researchers.length > 0">
@@ -426,6 +437,15 @@
                   <UInput v-model="row.original.to_date" type="date" />
                 </div>
 
+                <div>
+                  <label class="block text-xs mb-1">Gepland voor week</label>
+                  <UInput
+                    v-model.number="row.original.planned_week"
+                    type="number"
+                    min="1"
+                    max="53"
+                  />
+                </div>
 
                 <div>
                   <label class="block text-xs mb-1">Starttijd</label>
@@ -573,6 +593,7 @@
     | 'approved'
     | 'rejected'
     | 'cancelled'
+    | 'missed'
 
   type CompactFunction = { id: number; name: string }
   type CompactSpecies = { id: number; name: string; abbreviation?: string | null }
@@ -593,6 +614,7 @@
     species: CompactSpecies[]
     required_researchers: number | null
     visit_nr: number | null
+    planned_week: number | null
     from_date: string | null
     to_date: string | null
     duration: number | null
@@ -654,6 +676,7 @@
     { label: 'Open', value: 'open' },
     { label: 'Gepland', value: 'planned' },
     { label: 'Verlopen', value: 'overdue' },
+    { label: 'Gemist', value: 'missed' },
     { label: 'Uitgevoerd', value: 'executed' },
     { label: 'Uitgevoerd (afwijking)', value: 'executed_with_deviation' },
     { label: 'Niet uitgevoerd', value: 'not_executed' },
@@ -696,6 +719,36 @@
   function durationHours(minutes: number | null | undefined): number | null {
     if (minutes == null) return null
     return Math.round((minutes / 60) * 10) / 10
+  }
+
+  function isoWeekRange(week: number | null): { start: Date; end: Date } | null {
+    if (week == null || !Number.isInteger(week) || week < 1 || week > 53) return null
+
+    const now = new Date()
+    const year = now.getFullYear()
+    const simple = new Date(year, 0, 1 + (week - 1) * 7)
+    const dow = simple.getDay() || 7
+    const monday = new Date(simple)
+    monday.setDate(simple.getDate() - (dow - 1))
+    const friday = new Date(monday)
+    friday.setDate(monday.getDate() + 4)
+
+    return { start: monday, end: friday }
+  }
+
+  function plannedWeekLabel(row: { planned_week: number | null }): string | null {
+    if (row.planned_week == null) return null
+    const range = isoWeekRange(row.planned_week)
+    if (!range) return String(row.planned_week)
+
+    const formatter = new Intl.DateTimeFormat('nl-NL', {
+      day: '2-digit',
+      month: 'short'
+    })
+
+    const start = formatter.format(range.start)
+    const end = formatter.format(range.end)
+    return `${row.planned_week} (${start} - ${end})`
   }
 
   async function loadVisits(): Promise<void> {
@@ -840,6 +893,7 @@
   const createResearcherIds = ref<number[]>([])
   const createFromDate = ref('')
   const createToDate = ref('')
+  const createPlannedWeek = ref<number | null>(null)
   const createVisitNr = ref<number | null>(null)
   const createStartTimeText = ref('')
   const createPartOfDay = ref<string | null>(null)
@@ -883,6 +937,7 @@
     createResearcherIds.value = []
     createFromDate.value = ''
     createToDate.value = ''
+    createPlannedWeek.value = null
     createVisitNr.value = null
     createStartTimeText.value = ''
     createPartOfDay.value = null
@@ -924,6 +979,7 @@
         cluster_id: selectedCluster.value.value,
         required_researchers: createRequiredResearchers.value,
         visit_nr: createVisitNr.value,
+        planned_week: createPlannedWeek.value,
         from_date: createFromDate.value || null,
         to_date: createToDate.value || null,
         duration: durationMinutes,
@@ -971,6 +1027,7 @@
       const payload = {
         required_researchers: row.required_researchers,
         visit_nr: row.visit_nr,
+        planned_week: row.planned_week,
         from_date: row.from_date,
         to_date: row.to_date,
         duration: row.duration,

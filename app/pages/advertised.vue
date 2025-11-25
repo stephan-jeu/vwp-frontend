@@ -133,6 +133,7 @@
     | 'approved'
     | 'rejected'
     | 'cancelled'
+    | 'missed'
 
   type CompactFunction = { id: number; name: string }
   type CompactSpecies = { id: number; name: string; abbreviation?: string | null }

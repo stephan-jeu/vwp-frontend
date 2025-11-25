@@ -214,6 +214,7 @@
     | 'approved'
     | 'rejected'
     | 'cancelled'
+    | 'missed'
 
   type CompactFunction = { id: number; name: string }
   type CompactSpecies = { id: number; name: string; abbreviation?: string | null }
@@ -339,6 +340,8 @@
         return 'Gepland'
       case 'overdue':
         return 'Verlopen'
+      case 'missed':
+        return 'Gemist'
       case 'executed':
         return 'Uitgevoerd'
       case 'executed_with_deviation':

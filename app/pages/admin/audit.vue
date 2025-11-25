@@ -294,6 +294,7 @@
     | 'approved'
     | 'rejected'
     | 'cancelled'
+    | 'missed'
 
   type CompactFunction = { id: number; name: string }
   type CompactSpecies = { id: number; name: string; abbreviation?: string | null }
@@ -420,7 +421,8 @@
       not_executed: 'Niet uitgevoerd',
       approved: 'Goedgekeurd',
       rejected: 'Afgekeurd',
-      cancelled: 'Geannuleerd'
+      cancelled: 'Geannuleerd',
+      missed: 'Gemist'
     }
     return map[code]
   }
