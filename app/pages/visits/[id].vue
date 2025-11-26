@@ -38,7 +38,7 @@
             </div>
           </div>
 
-          <div class="mt-3 flex items-center gap-2">
+          <div v-if="isVisitResearcher" class="mt-3 flex items-center gap-2">
             <USwitch
               v-model="advertizedLocal"
               :disabled="advertizedUpdating || !canEditAdvertised"
@@ -299,24 +299,18 @@
         visit.value.priority)
   )
 
-  const canEditAdvertised = computed(() => {
-    if (!visit.value) return isAdmin.value
+  const isVisitResearcher = computed(() => {
+    if (!visit.value) return false
     const userId = identity.value?.id
-    if (!userId) return isAdmin.value
-    return (
-      isAdmin.value ||
-      visit.value.researchers.some((r) => r.id === userId)
-    )
+    if (!userId) return false
+    return visit.value.researchers.some((r) => r.id === userId)
   })
+
+  const canEditAdvertised = computed(() => isVisitResearcher.value)
 
   const canEditStatus = computed(() => {
     if (!visit.value) return isAdmin.value
-    const userId = identity.value?.id
-    if (!userId) return isAdmin.value
-    return (
-      isAdmin.value ||
-      visit.value.researchers.some((r) => r.id === userId)
-    )
+    return isAdmin.value || isVisitResearcher.value
   })
 
   const statusActionOptions: StatusActionOption[] = [
