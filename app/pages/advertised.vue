@@ -120,6 +120,9 @@
 </template>
 
 <script setup lang="ts">
+  import { storeToRefs } from 'pinia'
+  import { useTestModeStore } from '~~/stores/testMode'
+
   definePageMeta({ layout: 'default' })
 
   type VisitStatusCode =
@@ -177,6 +180,19 @@
   const { $api } = useNuxtApp()
   const toast = useToast()
 
+  const testModeStore = useTestModeStore()
+  const { simulatedDate } = storeToRefs(testModeStore)
+
+  const runtimeConfig = useRuntimeConfig()
+
+  const testModeEnabled = computed<boolean>(() => {
+    const raw = runtimeConfig.public.testModeEnabled
+    if (typeof raw === 'string') {
+      return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
+
   const ICONS = [
     'hand-metal',
     'leafy-green',
@@ -210,7 +226,19 @@
     pending,
     error,
     refresh
-  } = useAsyncData('advertised-visits', () => $api<AdvertisedVisitRow[]>('/visits/advertised/list'))
+  } = useAsyncData(
+    'advertised-visits',
+    () => {
+      const query: Record<string, string> = {}
+      if (testModeEnabled.value && simulatedDate.value) {
+        query.simulated_today = simulatedDate.value
+      }
+      return $api<AdvertisedVisitRow[]>('/visits/advertised/list', { query })
+    },
+    {
+      watch: [() => simulatedDate.value, () => testModeEnabled.value]
+    }
+  )
 
   const visits = computed(() => data.value ?? [])
 

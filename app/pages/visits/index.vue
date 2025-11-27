@@ -31,7 +31,7 @@
     </div>
 
     <UCard v-if="isAdmin && showCreate" class="mt-4">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
           <label class="block text-xs mb-1">Project</label>
           <USelectMenu
@@ -127,8 +127,6 @@
           <UInput v-model.number="createPlannedWeek" type="number" min="1" max="53" />
         </div>
 
-
-
         <div>
           <label class="block text-xs mb-1">Starttijd</label>
           <UInput v-model="createStartTimeText" />
@@ -209,7 +207,12 @@
           class="flex-1"
         >
           <template #status-cell="{ row }">
-            <UBadge :label="statusLabel(row.original.status)" variant="subtle" color="neutral" class="text-gray-600 dark:text-gray-200" />
+            <UBadge
+              :label="statusLabel(row.original.status)"
+              variant="subtle"
+              color="neutral"
+              class="text-gray-600 dark:text-gray-200"
+            />
           </template>
 
           <template #functions-cell="{ row }">
@@ -261,7 +264,9 @@
                   <UBadge v-if="row.original.wbc" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
                     >WBC</UBadge
                   >
-                  <UBadge v-if="row.original.fiets" class="px-2 mx-1  py-0.5 rounded-full bg-gray-200"
+                  <UBadge
+                    v-if="row.original.fiets"
+                    class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
                     >Fiets</UBadge
                   >
                   <UBadge v-if="row.original.hub" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
@@ -270,10 +275,14 @@
                   <UBadge v-if="row.original.dvp" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
                     >DvP</UBadge
                   >
-                  <UBadge v-if="row.original.sleutel" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
+                  <UBadge
+                    v-if="row.original.sleutel"
+                    class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
                     >Sleutel</UBadge
                   >
-                  <UBadge v-if="row.original.priority" class="px-2 mx-1 py-0.5 rounded-full bg-amber-200"
+                  <UBadge
+                    v-if="row.original.priority"
+                    class="px-2 mx-1 py-0.5 rounded-full bg-amber-200"
                     >Prioriteit</UBadge
                   >
                 </div>
@@ -319,7 +328,6 @@
                     Project Google drive
                   </a>
                 </div>
-
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -408,18 +416,22 @@
                 <div>
                   <label class="block text-xs mb-1">Onderzoekers</label>
                   <UInputMenu
-                    :model-value="mapIdsToOptions(row.original.researcher_ids ?? [], researcherOptions)"
+                    :model-value="
+                      mapIdsToOptions(row.original.researcher_ids ?? [], researcherOptions)
+                    "
                     :items="researcherOptions"
                     multiple
                     class="w-3xs"
-                    @update:model-value="(sel) => {
-                      const ids = sel.map((o) => o.value)
-                      row.original.researcher_ids = ids
-                      row.original.researchers = ids.map((id) => {
-                        const opt = researcherOptions.find((o) => o.value === id)
-                        return { id, full_name: opt?.label ?? null }
-                      })
-                    }"
+                    @update:model-value="
+                      (sel) => {
+                        const ids = sel.map((o) => o.value)
+                        row.original.researcher_ids = ids
+                        row.original.researchers = ids.map((id) => {
+                          const opt = researcherOptions.find((o) => o.value === id)
+                          return { id, full_name: opt?.label ?? null }
+                        })
+                      }
+                    "
                   />
                 </div>
 
@@ -517,40 +529,49 @@
                   <label class="block text-xs mb-1">Opmerkingen veld</label>
                   <UTextarea v-model="row.original.remarks_field" class="w-xl" />
                 </div>
+
+
               </div>
+              <div class="my-4 flex gap-2">
+                  <UButton
+                    v-if="!['overdue', 'executed', 'approved'].includes(row.original.status)"
+                    size="xs"
+                    variant="soft"
+                    icon="i-lucide-calendar-clock"
+                    @click="onOpenAdminPlanning(row.original)"
+                  >
+                    {{ statusLabel(row.original.status)}} aanpassen
+                  </UButton>
+                  <UModal title="Bezoek verwijderen">
+                    <UButton color="error" variant="soft" size="xs">Verwijder</UButton>
+                    <template #content>
+                      <UCard>
+                        <div>Weet je zeker dat je dit bezoek wilt verwijderen?</div>
+                        <template #footer>
+                          <div class="flex justify-end gap-2">
+                            <UButton color="neutral" variant="ghost">Annuleer</UButton>
+                            <UButton
+                              color="error"
+                              :loading="deletingId === row.original.id"
+                              @click="onDeleteVisit(row.original.id)"
+                            >
+                              Verwijder
+                            </UButton>
+                          </div>
+                        </template>
+                      </UCard>
+                    </template>
+                  </UModal>
 
-              <div class="mt-3 flex justify-end gap-2">
-                <UModal title="Bezoek verwijderen">
-                  <UButton color="error" variant="soft" size="xs">Verwijder</UButton>
-                  <template #content>
-                    <UCard>
-                      <div>Weet je zeker dat je dit bezoek wilt verwijderen?</div>
-                      <template #footer>
-                        <div class="flex justify-end gap-2">
-                          <UButton color="neutral" variant="ghost">Annuleer</UButton>
-                          <UButton
-                            color="error"
-                            :loading="deletingId === row.original.id"
-                            @click="onDeleteVisit(row.original.id)"
-                          >
-                            Verwijder
-                          </UButton>
-                        </div>
-                      </template>
-                    </UCard>
-                  </template>
-                </UModal>
-
-                <UButton
-                  size="xs"
-                  color="primary"
-                  :loading="savingId === row.original.id"
-                  @click="onSaveVisit(row.original)"
-                >
-                  Opslaan
-                </UButton>
-              </div>
-
+                  <UButton
+                    size="xs"
+                    color="primary"
+                    :loading="savingId === row.original.id"
+                    @click="onSaveVisit(row.original)"
+                  >
+                    Opslaan
+                  </UButton>
+                </div>
               <VisitActivityLog :visit-id="row.original.id" />
             </div>
           </template>
@@ -574,6 +595,17 @@
         </div>
       </div>
     </UCard>
+
+    <AdminVisitPlanningStatusModal
+      v-if="adminPlanningVisitId != null && isAdmin"
+      v-model:open="adminPlanningModalOpen"
+      :visit-id="adminPlanningVisitId"
+      :initial-status="adminPlanningInitialStatus"
+      :initial-planned-week="adminPlanningInitialPlannedWeek"
+      :initial-researcher-ids="adminPlanningInitialResearcherIds"
+      :researcher-options="researcherOptions"
+      @saved="onAdminPlanningSaved"
+    />
   </div>
 </template>
 
@@ -581,6 +613,7 @@
   import type { TableColumn } from '#ui/types'
   import { storeToRefs } from 'pinia'
   import { useAuthStore } from '~~/stores/auth'
+  import { useTestModeStore } from '~~/stores/testMode'
 
   type VisitStatusCode =
     | 'created'
@@ -659,6 +692,19 @@
   const auth = useAuthStore()
   const { isAdmin } = storeToRefs(auth)
 
+  const testModeStore = useTestModeStore()
+  const { simulatedDate } = storeToRefs(testModeStore)
+
+  const runtimeConfig = useRuntimeConfig()
+
+  const testModeEnabled = computed<boolean>(() => {
+    const raw = runtimeConfig.public.testModeEnabled
+    if (typeof raw === 'string') {
+      return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
+
   const rows = ref<VisitListRow[]>([])
   const loading = ref(false)
   const page = ref(1)
@@ -666,6 +712,12 @@
   const total = ref(0)
 
   const search = ref('')
+
+  const adminPlanningModalOpen = ref(false)
+  const adminPlanningVisitId = ref<number | null>(null)
+  const adminPlanningInitialStatus = ref<VisitStatusCode>('created')
+  const adminPlanningInitialPlannedWeek = ref<number | null>(null)
+  const adminPlanningInitialResearcherIds = ref<number[]>([])
 
   type VisitStatusOption = { label: string; value: VisitStatusCode }
 
@@ -763,6 +815,10 @@
       if (selectedStatuses.value.length > 0)
         query.statuses = selectedStatuses.value.map((s) => s.value)
 
+      if (testModeEnabled.value && simulatedDate.value) {
+        query.simulated_today = simulatedDate.value
+      }
+
       const data = await $api<VisitListResponse>('/visits', { query })
       rows.value = data.items.map((item) => ({
         ...item,
@@ -800,6 +856,15 @@
   watch(
     () => selectedStatuses.value.map((s) => s.value),
     () => {
+      page.value = 1
+      void loadVisits()
+    }
+  )
+
+  watch(
+    () => simulatedDate.value,
+    () => {
+      if (!testModeEnabled.value) return
       page.value = 1
       void loadVisits()
     }
@@ -1000,8 +1065,7 @@
         preferred_researcher_id: createPreferredResearcherId.value,
         function_ids: [...createFunctionIds.value],
         species_ids: [...createSpeciesIds.value],
-        researcher_ids:
-          createResearcherIds.value.length > 0 ? [...createResearcherIds.value] : null
+        researcher_ids: createResearcherIds.value.length > 0 ? [...createResearcherIds.value] : null
       }
 
       await $api('/visits', { method: 'POST', body: payload })
@@ -1071,6 +1135,18 @@
     } finally {
       deletingId.value = null
     }
+  }
+
+  function onOpenAdminPlanning(row: VisitListRow): void {
+    adminPlanningVisitId.value = row.id
+    adminPlanningInitialStatus.value = row.status
+    adminPlanningInitialPlannedWeek.value = row.planned_week
+    adminPlanningInitialResearcherIds.value = (row.researcher_ids ?? []).slice()
+    adminPlanningModalOpen.value = true
+  }
+
+  async function onAdminPlanningSaved(): Promise<void> {
+    await loadVisits()
   }
 
   onMounted(async () => {

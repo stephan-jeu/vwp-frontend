@@ -12,6 +12,9 @@
         <div class="flex flex-col gap-2">
           <div class="flex items-start justify-between gap-3">
             <div class="flex-1">
+              <UBadge v-if="weekBadge(visit)" color="warning" class="mb-4">
+                {{ weekBadge(visit) }}
+              </UBadge>
               <div class="text-xs text-gray-700 dark:text-gray-300">Project</div>
               <div class="text-sm font-semibold text-gray-800">
                 {{ visit.project_code }} · {{ visit.project_location }}
@@ -24,17 +27,30 @@
               </div>
             </div>
             <div class="flex flex-col items-end gap-2">
-              <div v-if="canEditStatus">
-                <UButton size="sm" icon="i-lucide-shield-check" class="dark:text-gray-300" @click="openStatusModal">
-                  {{ statusLabel(visit.status) }}
+              <div class="flex items-center gap-2">
+                <div v-if="canResearcherEditStatus">
+                  <UButton
+                    size="sm"
+                    icon="i-lucide-shield-check"
+                    class="dark:text-gray-300"
+                    @click="openStatusModal"
+                  >
+                    Status aanpassen
+                  </UButton>
+                </div>
+                <div v-else>
+                  <UBadge>{{ statusLabel(visit.status) }}</UBadge>
+                </div>
+                <UButton
+                  v-if="canAdminEditStatus"
+                  size="xs"
+                  variant="ghost"
+                  icon="i-lucide-calendar-clock"
+                  @click="onOpenAdminPlanning"
+                >
+                  Status aanpassen
                 </UButton>
               </div>
-              <div v-else>
-                <UBadge>{{ statusLabel(visit.status) }}</UBadge>
-              </div>
-              <UBadge v-if="weekBadge(visit)" color="warning">
-                {{ weekBadge(visit) }}
-              </UBadge>
             </div>
           </div>
 
@@ -162,6 +178,7 @@
               :model-value="selectedStatusActionOption"
               :items="statusActionOptions"
               placeholder="Kies status"
+              class="w-xs"
               @update:model-value="onStatusActionSelect"
             />
           </div>
@@ -194,12 +211,24 @@
         </UButton>
       </template>
     </UModal>
+
+    <AdminVisitPlanningStatusModal
+      v-if="visit && isAdmin"
+      v-model:open="adminPlanningModalOpen"
+      :visit-id="visit.id"
+      :initial-status="visit.status"
+      :initial-planned-week="visit.planned_week"
+      :initial-researcher-ids="visit.researchers.map((r) => r.id)"
+      :researcher-options="adminPlanningResearcherOptions"
+      @saved="onAdminPlanningSaved"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
   import { storeToRefs } from 'pinia'
   import { useAuthStore } from '~~/stores/auth'
+  import { useTestModeStore } from '~~/stores/testMode'
 
   definePageMeta({ layout: 'default' })
 
@@ -235,6 +264,7 @@
     species: CompactSpecies[]
     required_researchers: number | null
     visit_nr: number | null
+    planned_week: number | null
     from_date: string | null
     to_date: string | null
     duration: number | null
@@ -259,6 +289,8 @@
     quote: boolean
   }
 
+  type ResearcherOption = { label: string; value: number }
+
   type StatusAction = 'executed' | 'executed_with_deviation' | 'not_executed' | null
   type StatusActionOption = { label: string; value: Exclude<StatusAction, null> }
 
@@ -269,6 +301,27 @@
   const auth = useAuthStore()
   const { isAdmin, identity } = storeToRefs(auth)
 
+  const testModeStore = useTestModeStore()
+  const { simulatedDate } = storeToRefs(testModeStore)
+
+  const runtimeConfig = useRuntimeConfig()
+
+  const testModeEnabled = computed<boolean>(() => {
+    const raw = runtimeConfig.public.testModeEnabled
+    if (typeof raw === 'string') {
+      return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
+
+  const effectiveToday = computed<Date>(() => {
+    if (testModeEnabled.value && simulatedDate.value) {
+      const dt = new Date(simulatedDate.value)
+      if (!Number.isNaN(dt.getTime())) return dt
+    }
+    return new Date()
+  })
+
   const visitId = computed(() => Number(route.params.id))
 
   const {
@@ -276,9 +329,19 @@
     pending,
     error,
     refresh
-  } = useAsyncData('visit-detail', () => $api<VisitDetailRow>(`/visits/${visitId.value}`), {
-    watch: [visitId]
-  })
+  } = useAsyncData(
+    'visit-detail',
+    () => {
+      const query: Record<string, string> = {}
+      if (testModeEnabled.value && simulatedDate.value) {
+        query.simulated_today = simulatedDate.value
+      }
+      return $api<VisitDetailRow>(`/visits/${visitId.value}`, { query })
+    },
+    {
+      watch: [visitId, () => simulatedDate.value, () => testModeEnabled.value]
+    }
+  )
 
   const visit = computed<VisitDetailRow | null>(() => data.value ?? null)
 
@@ -308,9 +371,14 @@
 
   const canEditAdvertised = computed(() => isVisitResearcher.value)
 
-  const canEditStatus = computed(() => {
-    if (!visit.value) return isAdmin.value
-    return isAdmin.value || isVisitResearcher.value
+  const canResearcherEditStatus = computed(() => {
+    if (!visit.value) return false
+    return visit.value.status === 'planned' && isVisitResearcher.value
+  })
+
+  const canAdminEditStatus = computed(() => {
+    if (!visit.value) return false
+    return ['missed', 'rejected', 'executed_with_deviation', 'not_executed'].includes(visit.value.status) && isAdmin.value
   })
 
   const statusActionOptions: StatusActionOption[] = [
@@ -365,10 +433,10 @@
     const dt = new Date(dateStr)
     if (Number.isNaN(dt.getTime())) return false
 
-    const now = new Date()
-    const monday = new Date(now)
-    const day = now.getDay() || 7 // Monday=1..Sunday=7
-    monday.setDate(now.getDate() - (day - 1))
+    const base = effectiveToday.value
+    const monday = new Date(base)
+    const day = base.getDay() || 7 // Monday=1..Sunday=7
+    monday.setDate(base.getDate() - (day - 1))
     const sunday = new Date(monday)
     sunday.setDate(monday.getDate() + 6)
 
@@ -376,8 +444,8 @@
   }
 
   function weekBadge(v: VisitDetailRow): string | null {
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const base = effectiveToday.value
+    const today = new Date(base.getFullYear(), base.getMonth(), base.getDate())
 
     if (v.from_date && isThisWeek(v.from_date)) {
       const from = new Date(v.from_date)
@@ -438,15 +506,20 @@
   const notExecutedReason = ref('')
   const statusSubmitting = ref(false)
 
+  const adminPlanningModalOpen = ref(false)
+  const adminPlanningResearcherOptions = ref<ResearcherOption[]>([])
+  const adminPlanningOptionsLoaded = ref(false)
+  const adminPlanningLoading = ref(false)
+
   function todayIso(): string {
-    const now = new Date()
-    const m = `${now.getMonth() + 1}`.padStart(2, '0')
-    const d = `${now.getDate()}`.padStart(2, '0')
-    return `${now.getFullYear()}-${m}-${d}`
+    const base = effectiveToday.value
+    const m = `${base.getMonth() + 1}`.padStart(2, '0')
+    const d = `${base.getDate()}`.padStart(2, '0')
+    return `${base.getFullYear()}-${m}-${d}`
   }
 
   function openStatusModal(): void {
-    if (!visit.value || !canEditStatus.value) return
+    if (!visit.value || !canResearcherEditStatus.value) return
     // Default selection based on current status if possible, otherwise "executed"
     if (visit.value.status === 'executed') {
       statusAction.value = 'executed'
@@ -476,7 +549,7 @@
   }
 
   async function onSubmitStatus(): Promise<void> {
-    if (!visit.value || !statusAction.value || !canEditStatus.value) return
+    if (!visit.value || !statusAction.value || !canResearcherEditStatus.value) return
 
     statusSubmitting.value = true
     try {
@@ -539,5 +612,37 @@
     } finally {
       statusSubmitting.value = false
     }
+  }
+
+  async function ensureAdminPlanningOptionsLoaded(): Promise<void> {
+    if (!isAdmin.value) return
+    if (adminPlanningOptionsLoaded.value || adminPlanningLoading.value) return
+
+    adminPlanningLoading.value = true
+    try {
+      const users = await $api<Array<{ id: number; full_name: string | null }>>(
+        '/admin/users'
+      )
+      adminPlanningResearcherOptions.value = users.map((u) => ({
+        value: u.id,
+        label: u.full_name ?? `Gebruiker #${u.id}`
+      }))
+      adminPlanningOptionsLoaded.value = true
+    } catch {
+      toast.add({ title: 'Kon onderzoekers niet laden', color: 'error' })
+    } finally {
+      adminPlanningLoading.value = false
+    }
+  }
+
+  async function onOpenAdminPlanning(): Promise<void> {
+    if (!visit.value || !isAdmin.value) return
+    await ensureAdminPlanningOptionsLoaded()
+    if (!adminPlanningOptionsLoaded.value) return
+    adminPlanningModalOpen.value = true
+  }
+
+  async function onAdminPlanningSaved(): Promise<void> {
+    await refresh()
   }
 </script>

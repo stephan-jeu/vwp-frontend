@@ -13,10 +13,10 @@
           </div>
         </template>
 
-        <div v-if="visitsPending" class="text-sm text-gray-500">
+        <div v-if="pendingVisitsPending" class="text-sm text-gray-500">
           Bezoeken worden geladen…
         </div>
-        <div v-else-if="visitsError" class="text-sm text-red-500">
+        <div v-else-if="pendingVisitsError" class="text-sm text-red-500">
           Kon bezoeken niet laden.
         </div>
         <div v-else-if="pendingVisitsPreview.length === 0" class="text-sm text-gray-500">
@@ -98,7 +98,7 @@
               <UButton
                 size="xs"
                 variant="ghost"
-                :disabled="pendingPage <= 1 || visitsPending"
+                :disabled="pendingPage <= 1 || pendingVisitsPending"
                 @click="onPendingPrev()"
               >
                 Vorige
@@ -106,7 +106,7 @@
               <UButton
                 size="xs"
                 variant="ghost"
-                :disabled="pendingPage >= pendingMaxPage || visitsPending"
+                :disabled="pendingPage >= pendingMaxPage || pendingVisitsPending"
                 @click="onPendingNext()"
               >
                 Volgende
@@ -212,11 +212,33 @@
 <script setup lang="ts">
   import { storeToRefs } from 'pinia'
   import { useAuthStore } from '~~/stores/auth'
+  import { useTestModeStore } from '~~/stores/testMode'
 
   definePageMeta({ layout: 'default' })
 
   const auth = useAuthStore()
   const { isAdmin, loaded } = storeToRefs(auth)
+
+  const testModeStore = useTestModeStore()
+  const { simulatedDate } = storeToRefs(testModeStore)
+
+  const runtimeConfig = useRuntimeConfig()
+
+  const testModeEnabled = computed<boolean>(() => {
+    const raw = runtimeConfig.public.testModeEnabled
+    if (typeof raw === 'string') {
+      return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
+
+  const effectiveToday = computed<Date>(() => {
+    if (testModeEnabled.value && simulatedDate.value) {
+      const dt = new Date(simulatedDate.value)
+      if (!Number.isNaN(dt.getTime())) return dt
+    }
+    return new Date()
+  })
 
   const authLoaded = computed(() => loaded.value)
 
@@ -304,7 +326,8 @@
     const actor = entry.actor?.full_name ?? 'Systeem'
     const action = entry.action
     const details = entry.details ?? {}
-    const when = formatActivityDate(entry.created_at)
+    const rawExecution = (details.execution_date as string | undefined) ?? null
+    const when = formatActivityDate(rawExecution ?? entry.created_at)
 
     if (action === 'planning_generated') {
       const week = (details.week as number | undefined) ?? null
@@ -408,6 +431,14 @@
     | 'cancelled'
     | 'missed'
 
+  const pendingStatusList: VisitStatusCode[] = [
+    'overdue',
+    'executed_with_deviation',
+    'not_executed',
+    'missed',
+    'rejected'
+  ]
+
   type CompactFunction = { id: number; name: string }
   type CompactSpecies = { id: number; name: string; abbreviation?: string | null }
   type UserName = { id: number; full_name: string | null }
@@ -440,13 +471,45 @@
     error: visitsError
   } = useAsyncData(
     'admin-dashboard-visits',
-    () =>
-      $api<VisitListResponse>('/visits', {
-        query: { page: 1, page_size: 200 }
-      })
+    () => {
+      const query: Record<string, string | number> = { page: 1, page_size: 200 }
+      if (testModeEnabled.value && simulatedDate.value) {
+        query.simulated_today = simulatedDate.value
+      }
+      return $api<VisitListResponse>('/visits', { query })
+    },
+    {
+      watch: [() => simulatedDate.value, () => testModeEnabled.value]
+    }
   )
 
   const allVisits = computed<VisitListRow[]>(() => visitsData.value?.items ?? [])
+
+  const {
+    data: pendingVisitsData,
+    pending: pendingVisitsPending,
+    error: pendingVisitsError
+  } = useAsyncData(
+    'admin-dashboard-pending-visits',
+    () => {
+      const query: Record<string, string | number | VisitStatusCode[]> = {
+        page: 1,
+        page_size: 200,
+        statuses: pendingStatusList
+      }
+      if (testModeEnabled.value && simulatedDate.value) {
+        query.simulated_today = simulatedDate.value
+      }
+      return $api<VisitListResponse>('/visits', { query })
+    },
+    {
+      watch: [() => simulatedDate.value, () => testModeEnabled.value]
+    }
+  )
+
+  const pendingVisitsAll = computed<VisitListRow[]>(
+    () => pendingVisitsData.value?.items ?? []
+  )
 
   function getIsoWeekNumber(date: Date): number {
     const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
@@ -457,7 +520,7 @@
     return Math.ceil((diff / 86400000 + 1) / 7)
   }
 
-  const currentWeekNumber = getIsoWeekNumber(new Date())
+  const currentWeekNumber = computed<number>(() => getIsoWeekNumber(effectiveToday.value))
 
   function visitWeekNumber(visit: VisitListRow): number {
     if (visit.planned_week && Number.isInteger(visit.planned_week)) {
@@ -471,11 +534,12 @@
       }
     }
 
-    return currentWeekNumber
+    return currentWeekNumber.value
   }
 
   const visitsThisWeek = computed<VisitListRow[]>(() => {
-    return allVisits.value.filter((v) => visitWeekNumber(v) === currentWeekNumber)
+    const weekNow = currentWeekNumber.value
+    return allVisits.value.filter((v) => visitWeekNumber(v) === weekNow)
   })
 
   const totalThisWeek = computed<number>(() => visitsThisWeek.value.length)
@@ -489,17 +553,7 @@
     visitsThisWeek.value.filter((v) => v.status === 'planned').length
   )
 
-  const pendingStatusList: VisitStatusCode[] = [
-    'overdue',
-    'executed_with_deviation',
-    'not_executed',
-    'missed',
-    'rejected'
-  ]
-
-  const pendingVisits = computed<VisitListRow[]>(() =>
-    allVisits.value.filter((v) => pendingStatusList.includes(v.status))
-  )
+  const pendingVisits = computed<VisitListRow[]>(() => pendingVisitsAll.value)
 
   const pendingPage = ref<number>(1)
   const pendingPageSize = 10

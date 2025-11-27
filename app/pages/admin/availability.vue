@@ -25,16 +25,26 @@
         </template>
 
         <template v-for="col in weekColumns" :key="col.id" #[`${col.id}-cell`]="{ row }">
-          <UInput
+          <div
             v-if="row.original?.kind === 'child'"
-            :key="row.id + '-' + col.id"
-            v-model.number="(row.original as FlatChildRow).data[col.id as WeekKey]"
-            type="text"
-            size="md"
-            class="w-8 text-center relative z-0"
-            @update:model-value="() => onCellInput(row.original as FlatChildRow, col.id as WeekKey)"
-            @blur="() => onCellBlur(row.original as FlatChildRow, col.id as WeekKey)"
-          />
+            class="flex items-center justify-center gap-1"
+          >
+            <UInput
+              :key="row.id + '-' + col.id"
+              v-model.number="(row.original as FlatChildRow).data[col.id as WeekKey]"
+              type="text"
+              size="md"
+              class="w-8 text-center relative z-0"
+              @update:model-value="() => onCellInput(row.original as FlatChildRow, col.id as WeekKey)"
+              @blur="() => onCellBlur(row.original as FlatChildRow, col.id as WeekKey)"
+            />
+            <span
+              v-if="showAssigned(row.original as FlatChildRow, col.id as WeekKey)"
+              class="text-[10px] text-gray-500"
+            >
+              {{ (row.original as FlatChildRow).assigned[col.id as WeekKey] }}
+            </span>
+          </div>
           <span v-else>&nbsp;</span>
         </template>
       </UTable>
@@ -54,10 +64,24 @@ definePageMeta({ middleware: 'admin' });
 type SlotType = 'evening' | 'morning' | 'daytime' | 'flex';
 type WeekKey = `week${number}`;
 type CellMap = Record<WeekKey, number>;
-interface AvailabilityChild { id: string; type: SlotType; data: CellMap }
+interface AvailabilityChild {
+  id: string;
+  type: SlotType;
+  data: CellMap;
+  assigned: CellMap;
+}
 interface UserRow { id: string; name: string; children: AvailabilityChild[] }
 
-interface ApiAvailabilityCompact { week: number; morning_days: number; daytime_days: number; nighttime_days: number; flex_days: number }
+interface ApiAvailabilityCompact {
+  week: number;
+  morning_days: number;
+  daytime_days: number;
+  nighttime_days: number;
+  flex_days: number;
+  assigned_morning: number;
+  assigned_daytime: number;
+  assigned_evening: number;
+}
 interface ApiUserAvailability { id: number; name: string; availability: ApiAvailabilityCompact[] }
 interface ApiAvailabilityListResponse { users: ApiUserAvailability[] }
 
@@ -99,10 +123,10 @@ async function fetchAvailability() {
   const nextUsers: UserRow[] = [];
   for (const u of payload?.users ?? []) {
     const childRows: [AvailabilityChild, AvailabilityChild, AvailabilityChild, AvailabilityChild] = [
-      { id: `${u.id}-night`, type: 'evening', data: {} as CellMap },
-      { id: `${u.id}-morn`, type: 'morning', data: {} as CellMap },
-      { id: `${u.id}-day`, type: 'daytime', data: {} as CellMap },
-      { id: `${u.id}-flex`, type: 'flex', data: {} as CellMap }
+      { id: `${u.id}-night`, type: 'evening', data: {} as CellMap, assigned: {} as CellMap },
+      { id: `${u.id}-morn`, type: 'morning', data: {} as CellMap, assigned: {} as CellMap },
+      { id: `${u.id}-day`, type: 'daytime', data: {} as CellMap, assigned: {} as CellMap },
+      { id: `${u.id}-flex`, type: 'flex', data: {} as CellMap, assigned: {} as CellMap }
     ];
     for (const wk of u.availability ?? []) {
       const key = `week${wk.week}` as WeekKey;
@@ -110,6 +134,12 @@ async function fetchAvailability() {
       childRows[1].data[key] = wk.morning_days ?? 0;
       childRows[2].data[key] = wk.daytime_days ?? 0;
       childRows[3].data[key] = wk.flex_days ?? 0;
+
+      childRows[0].assigned[key] = wk.assigned_evening ?? 0;
+      childRows[1].assigned[key] = wk.assigned_morning ?? 0;
+      childRows[2].assigned[key] = wk.assigned_daytime ?? 0;
+      // Flex has no assigned total
+      childRows[3].assigned[key] = 0;
     }
     nextUsers.push({ id: String(u.id), name: u.name, children: childRows });
   }
@@ -155,7 +185,7 @@ function scheduleSave(row: FlatChildRow, colId: WeekKey) {
   savingTimers.set(key, handle);
 }
 
-type FlatChildRow = { kind: 'child'; data: CellMap; userId: string; slot: SlotType };
+type FlatChildRow = { kind: 'child'; data: CellMap; assigned: CellMap; userId: string; slot: SlotType };
 
 function onCellInput(row: FlatChildRow, colId: WeekKey) {
   // Keep value clamped as user types
@@ -166,6 +196,12 @@ function onCellInput(row: FlatChildRow, colId: WeekKey) {
 
 function onCellBlur(row: FlatChildRow, colId: WeekKey) {
   scheduleSave(row, colId);
+}
+
+function showAssigned(row: FlatChildRow, colId: WeekKey): boolean {
+  if (row.slot === 'flex') return false;
+  const value = row.assigned[colId];
+  return typeof value === 'number' && value > 0;
 }
 
 
@@ -187,6 +223,7 @@ const flatRows = computed(() => {
         kind: 'child',
         label: labelMap[child.type] ?? child.type,
         data: child.data,
+        assigned: child.assigned,
         userId: u.id,
         slot: child.type
       });

@@ -116,6 +116,7 @@
 <script setup lang="ts">
   import { storeToRefs } from 'pinia'
   import { useAuthStore } from '~~/stores/auth'
+  import { useTestModeStore } from '~~/stores/testMode'
 
   definePageMeta({ layout: 'default' })
 
@@ -185,12 +186,37 @@
   const auth = useAuthStore()
   const { identity } = storeToRefs(auth)
 
+  const testModeStore = useTestModeStore()
+  const { simulatedDate } = storeToRefs(testModeStore)
+
+  const runtimeConfig = useRuntimeConfig()
+
+  const testModeEnabled = computed<boolean>(() => {
+    const raw = runtimeConfig.public.testModeEnabled
+    if (typeof raw === 'string') {
+      return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
+
+  const effectiveToday = computed<Date>(() => {
+    if (testModeEnabled.value && simulatedDate.value) {
+      const dt = new Date(simulatedDate.value)
+      if (!Number.isNaN(dt.getTime())) return dt
+    }
+    return new Date()
+  })
+
   const { data, pending, error } = useAsyncData('my-visits', async () => {
     await auth.ensureLoaded()
 
     const query: Record<string, unknown> = {
       page: 1,
       page_size: 200
+    }
+
+    if (testModeEnabled.value && simulatedDate.value) {
+      query.simulated_today = simulatedDate.value
     }
 
     const response = await $api<VisitListResponse>('/visits', { query })
@@ -208,8 +234,8 @@
   function isoWeekRange(week: number | null): { start: Date; end: Date } | null {
     if (week == null || !Number.isInteger(week) || week < 1 || week > 53) return null
 
-    const now = new Date()
-    const year = now.getFullYear()
+    const base = effectiveToday.value
+    const year = base.getFullYear()
     const simple = new Date(year, 0, 1 + (week - 1) * 7)
     const dow = simple.getDay() || 7
     const monday = new Date(simple)
@@ -243,7 +269,7 @@
     return Math.ceil((diff / 86400000 + 1) / 7)
   }
 
-  const currentWeekNumber = getIsoWeekNumber(new Date())
+  const currentWeekNumber = computed<number>(() => getIsoWeekNumber(effectiveToday.value))
 
   function visitWeekNumber(visit: VisitListRow): number {
     if (visit.planned_week && Number.isInteger(visit.planned_week)) {
@@ -257,7 +283,7 @@
       }
     }
 
-    return currentWeekNumber
+    return currentWeekNumber.value
   }
 
   type WeekTab = { label: string; value: string; week: number }
@@ -271,10 +297,10 @@
     const sortedWeeks = Array.from(weeks).sort((a, b) => a - b)
 
     const tabs: WeekTab[] = []
-    tabs.push({ label: 'Deze week', value: 'current', week: currentWeekNumber })
+    tabs.push({ label: 'Deze week', value: 'current', week: currentWeekNumber.value })
 
     for (const week of sortedWeeks) {
-      if (week === currentWeekNumber) continue
+      if (week === currentWeekNumber.value) continue
       const range = weekRangeLabel(week)
       const base = `Week ${week}`
       const label = range ? `${base} (${range})` : base
@@ -288,7 +314,7 @@
 
   const activeWeekNumber = computed<number>(() => {
     const tab = weekTabs.value.find((t) => t.value === selectedWeek.value)
-    return tab?.week ?? currentWeekNumber
+    return tab?.week ?? currentWeekNumber.value
   })
 
   const visitsForActiveWeek = computed<VisitListRow[]>(() => {
@@ -309,10 +335,10 @@
     const dt = new Date(dateStr)
     if (Number.isNaN(dt.getTime())) return false
 
-    const now = new Date()
-    const monday = new Date(now)
-    const day = now.getDay() || 7 // Monday=1..Sunday=7
-    monday.setDate(now.getDate() - (day - 1))
+    const base = effectiveToday.value
+    const monday = new Date(base)
+    const day = base.getDay() || 7 // Monday=1..Sunday=7
+    monday.setDate(base.getDate() - (day - 1))
     const sunday = new Date(monday)
     sunday.setDate(monday.getDate() + 6)
 
@@ -320,8 +346,8 @@
   }
 
   function weekBadge(visit: VisitListRow): string | null {
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const base = effectiveToday.value
+    const today = new Date(base.getFullYear(), base.getMonth(), base.getDate())
 
     if (visit.from_date && isThisWeek(visit.from_date)) {
       const from = new Date(visit.from_date)
