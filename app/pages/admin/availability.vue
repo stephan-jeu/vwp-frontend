@@ -7,7 +7,7 @@
       <UInput v-model.number="weekRange.end" type="number" placeholder="End Week" />
     </div>
 
-    <div class="border border-gray-200 dark:border-gray-700 rounded-md bg-white isolate">
+    <div class="border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 isolate">
       <UTable
         v-model:column-pinning="columnPinning"
         sticky

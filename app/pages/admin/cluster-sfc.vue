@@ -19,15 +19,19 @@
       </div>
       <USeparator class="mt-4" />
       <div class="mt-4">
-        <div v-for="(row, idx) in comboRows" :key="idx">
-          <div>
+        <div
+          v-for="(row, idx) in comboRows"
+          :key="idx"
+          class="flex items-center gap-3 flex-wrap md:flex-nowrap"
+        >
+          <div class="flex gap-3">
             <UInputMenu
               :model-value="row.functions"
               :items="functionOptions"
               multiple
               searchable
               placeholder="Functies"
-              class="w-xs mr-8"
+              class="w-xs"
               @update:model-value="(sel) => (row.functions = sel as Option[])"
             />
 
@@ -40,14 +44,18 @@
               @update:model-value="(sel) => (row.species = sel as Option[])"
             />
           </div>
-          <div class="md:col-span-1 flex justify-end">
-            <UButton color="neutral" variant="soft" icon="i-lucide-trash" @click="removeCombo(idx)">
-              Verwijder
-            </UButton>
-          </div>
+          <UButton
+            color="neutral"
+            variant="soft"
+            icon="i-lucide-trash"
+            class="md:ml-auto"
+            @click="removeCombo(idx)"
+          >
+            Verwijder
+          </UButton>
         </div>
 
-        <div class="flex gap-2">
+        <div class="flex gap-2 mt-4">
           <UButton icon="i-lucide-plus" variant="soft" @click="addCombo">SFC toevoegen</UButton>
           <div v-if="comboRows.length === 0" class="text-xs text-gray-500 self-center">
             Voeg minimaal één combinatie toe
@@ -91,6 +99,7 @@
       <div v-else class="space-y-3">
         <div
           v-for="cluster in clusters"
+          :id="'cluster-' + cluster.id"
           :key="cluster.id"
           class="border rounded-md border-gray-300"
         >
@@ -431,12 +440,20 @@
         method: 'POST',
         body: pendingCreatePayload.value
       })
+      toast.add({ title: 'Bezoeken toegevoegd aan cluster', color: 'success' })
       showMergeConfirm.value = false
       pendingCreatePayload.value = null
       await loadClusters()
       if (res?.id) {
-        expanded.value = new Set([res.id])
+        await expandAndScrollToCluster(res.id)
       }
+    } catch (error: unknown) {
+      const description = error instanceof Error ? error.message : 'Onbekende fout'
+      toast.add({
+        title: 'Fout bij toevoegen bezoeken aan cluster',
+        description,
+        color: 'error'
+      })
     } finally {
       creating.value = false
     }
@@ -559,11 +576,19 @@
           }))
         }
       })
+      toast.add({ title: 'Cluster aangemaakt', color: 'success' })
       clusterNumber.value = null
       await loadClusters()
       if (res?.id) {
-        expanded.value = new Set([res.id])
+        await expandAndScrollToCluster(res.id)
       }
+    } catch (error: unknown) {
+      const description = error instanceof Error ? error.message : 'Onbekende fout'
+      toast.add({
+        title: 'Fout bij aanmaken cluster',
+        description,
+        color: 'error'
+      })
     } finally {
       creating.value = false
     }
@@ -587,6 +612,15 @@
   function toggleCluster(id: number): void {
     if (expanded.value.has(id)) expanded.value.delete(id)
     else expanded.value.add(id)
+  }
+
+  async function expandAndScrollToCluster(id: number): Promise<void> {
+    expanded.value = new Set([id])
+    await nextTick()
+    const el = document.getElementById(`cluster-${id}`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
   }
 
   const toast = useToast()
