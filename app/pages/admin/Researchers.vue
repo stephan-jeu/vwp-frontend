@@ -42,8 +42,7 @@
         <UCheckbox v-model="createForm.zangvogel" label="Huismus/Spreeuw" />
         <UCheckbox v-model="createForm.langoor" label="Langoor" />
         <UCheckbox v-model="createForm.pad" label="Rugstreeppad" />
-        <UCheckbox v-model="createForm.grote_vos" label="Grote vos" />
-        <UCheckbox v-model="createForm.iepenpage" label="Iepenpage" />
+        <UCheckbox v-model="createForm.vlinder" label="Grote vos/Iepenpage" />
         <UCheckbox v-model="createForm.teunisbloempijlstaart" label="Teunisbloempijlstaart" />
         <UCheckbox v-model="createForm.biggenkruid" label="Biggenkruid" />
         <UCheckbox v-model="createForm.schijfhoren" label="Schijfhoren" />
@@ -113,8 +112,7 @@
               <UCheckbox v-model="u.zangvogel" label="Huismus/Spreeuw" />
               <UCheckbox v-model="u.langoor" label="Langoor" />
               <UCheckbox v-model="u.pad" label="Rugstreeppad" />
-              <UCheckbox v-model="u.grote_vos" label="Grote vos" />
-              <UCheckbox v-model="u.iepenpage" label="Iepenpage" />
+              <UCheckbox v-model="u.vlinder" label="Grote vos/Iepenpage" />
               <UCheckbox v-model="u.teunisbloempijlstaart" label="Teunisbloempijlstaart" />
               <UCheckbox v-model="u.biggenkruid" label="Biggenkruid" />
               <UCheckbox v-model="u.schijfhoren" label="Schijfhoren" />
@@ -189,8 +187,7 @@
     vrfg: boolean
     vleermuis: boolean
     zwaluw: boolean
-    grote_vos: boolean
-    iepenpage: boolean
+    vlinder: boolean
     teunisbloempijlstaart: boolean
     zangvogel: boolean
     biggenkruid: boolean
@@ -245,8 +242,7 @@
     vrfg: false,
     vleermuis: false,
     zwaluw: false,
-    grote_vos: false,
-    iepenpage: false,
+    vlinder: false,
     teunisbloempijlstaart: false,
     zangvogel: false,
     biggenkruid: false,
@@ -275,8 +271,7 @@
     if (u.vleermuis) tags.push('Vleermuis')
     if (u.roofvogel) tags.push('Roofvogel')
     if (u.zwaluw) tags.push('Zwaluw')
-    if (u.grote_vos) tags.push('Grote vos')
-    if (u.iepenpage) tags.push('Iepenpage')
+    if (u.vlinder) tags.push('Vlinder')
     if (u.teunisbloempijlstaart) tags.push('Teunisbloempijlstaart')
     if (u.zangvogel) tags.push('Huismus/Spreeuw')
     if (u.langoor) tags.push('Langoor')
