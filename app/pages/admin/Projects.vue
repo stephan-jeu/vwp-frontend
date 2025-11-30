@@ -200,10 +200,10 @@
         await store.update(form.id, payload)
         toast.add({ title: `Project ${payload.code} bewerkt.`, color: 'success' })
       } else {
-        const created = await store.create(payload)
+        await store.create(payload)
+        await store.fetchAll()
         // Reset form on successful create and show toast
-        const addedCode = created.code
-        toast.add({ title: `Project ${addedCode} toegevoegd.`, color: 'success' })
+        toast.add({ title: `Project ${payload.code} toegevoegd.`, color: 'success' })
       }
       resetForm()
     } finally {

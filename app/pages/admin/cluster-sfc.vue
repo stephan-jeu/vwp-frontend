@@ -521,6 +521,7 @@
 
   watch(selectedProject, async (opt) => {
     if (opt === undefined) return
+    address.value = ''
     await loadClusters()
   })
 
