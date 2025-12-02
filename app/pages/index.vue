@@ -329,6 +329,16 @@
     const rawExecution = (details.execution_date as string | undefined) ?? null
     const when = formatActivityDate(rawExecution ?? entry.created_at)
 
+    const projectCode = (details.project_code as string | undefined) ?? null
+    const clusterNumber = (details.cluster_number as number | undefined) ?? null
+    const visitNr = (details.visit_nr as number | undefined) ?? null
+    const visitLabelBase =
+      projectCode && clusterNumber != null
+        ? `${projectCode}-${clusterNumber}`
+        : 'het bezoek'
+    const visitLabel =
+      visitNr != null ? `${visitLabelBase} nr ${visitNr}` : visitLabelBase
+
     if (action === 'planning_generated') {
       const week = (details.week as number | undefined) ?? null
       const selected = (details.selected_visit_ids as unknown[] | undefined) ?? []
@@ -365,26 +375,46 @@
       return `${actor} heeft een cluster toegevoegd voor project ${projectCode} voor de functies ${functionsLabel} en de soorten ${speciesLabel} op ${when}`
     }
 
+    if (action === 'visit_status_cleared') {
+      const previousStatusRaw = (details.previous_status as string | undefined) ?? null
+      const modeRaw = (details.mode as string | undefined) ?? null
+      const previousLabel =
+        previousStatusRaw != null
+          ? statusLabel(previousStatusRaw as VisitStatusCode)
+          : null
+      const newLabel = modeRaw != null ? statusLabel(modeRaw as VisitStatusCode) : null
+
+      if (previousLabel && newLabel) {
+        return `${actor} heeft de status van bezoek ${visitLabel} aangepast van ${previousLabel} naar ${newLabel} op ${when}`
+      }
+
+      if (newLabel) {
+        return `${actor} heeft de status van bezoek ${visitLabel} aangepast naar ${newLabel} op ${when}`
+      }
+
+      return `${actor} heeft de status van bezoek ${visitLabel} aangepast op ${when}`
+    }
+
     switch (action) {
       case 'visit_executed':
-        return `${actor} heeft het bezoek uitgevoerd op ${when}`
+        return `${actor} heeft het bezoek ${visitLabel} uitgevoerd op ${when}`
       case 'visit_executed_with_deviation':
       case 'visit_executed_deviation':
-        return `${actor} heeft het bezoek uitgevoerd (met afwijking) op ${when}`
+        return `${actor} heeft het bezoek ${visitLabel} uitgevoerd (met afwijking) op ${when}`
       case 'visit_not_executed':
-        return `${actor} heeft het bezoek niet uitgevoerd op ${when}`
+        return `${actor} heeft het bezoek ${visitLabel} niet uitgevoerd op ${when}`
       case 'visit_approved':
-        return `${actor} heeft het bezoek goedgekeurd op ${when}`
+        return `${actor} heeft het bezoek ${visitLabel} goedgekeurd op ${when}`
       case 'visit_rejected':
-        return `${actor} heeft het bezoek afgekeurd op ${when}`
+        return `${actor} heeft het bezoek ${visitLabel} afgekeurd op ${when}`
       case 'visit_cancelled':
-        return `${actor} heeft het bezoek geannuleerd op ${when}`
+        return `${actor} heeft het bezoek ${visitLabel} geannuleerd op ${when}`
       case 'visit_advertised':
-        return `${actor} heeft dit bezoek aangeboden ter overname op ${when}`
+        return `${actor} heeft het bezoek ${visitLabel} aangeboden ter overname op ${when}`
       case 'visit_advertised_cancelled':
-        return `${actor} heeft het aanbod tot overname ingetrokken op ${when}`
+        return `${actor} heeft het aanbod tot overname voor bezoek ${visitLabel} ingetrokken op ${when}`
       case 'visit_takeover_accepted':
-        return `${actor} heeft het bezoek overgenomen op ${when}`
+        return `${actor} heeft het bezoek ${visitLabel} overgenomen op ${when}`
       case 'user_created': {
         const fullName = (details.full_name as string | undefined) ?? null
         const email = (details.email as string | undefined) ?? null

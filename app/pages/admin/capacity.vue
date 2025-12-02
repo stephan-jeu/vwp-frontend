@@ -118,7 +118,7 @@
   const weekKeys = computed<string[]>(() => {
     const grid = response.value?.grid ?? {}
     const weeks = new Set<string>()
-    
+
     // Grid is Family -> Part -> DeadlineWeek -> Cell
     for (const parts of Object.values(grid)) {
       for (const deadlines of Object.values(parts)) {
@@ -138,14 +138,12 @@
     const weekCols = weekKeys.value.map((wk) => {
       // wk is ISO date "YYYY-MM-DD" or "No Deadline"
       if (wk === "No Deadline") return { id: wk, header: "Geen deadline" }
-      
-      try {
-        const [y, m, d] = wk.split('-')
-        if (y && m && d) {
-           return { id: wk, header: `${d}/${m}` }
-        }
-      } catch (e) {}
-      
+
+      const [y, m, d] = wk.split('-')
+      if (y && m && d) {
+        return { id: wk, header: `${d}/${m}` }
+      }
+
       return { id: wk, header: wk }
     })
     return [...base, ...weekCols]
@@ -164,11 +162,11 @@
           part,
           cells: {}
         }
-        
+
         for (const [week, cell] of Object.entries(deadlines)) {
           row.cells[week] = cell
         }
-        
+
         // Only add if there is some data
         if (Object.keys(row.cells).length > 0) {
           result.push(row)

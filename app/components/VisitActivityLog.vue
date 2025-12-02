@@ -21,17 +21,59 @@
           {{ formatDateTime(item.created_at) }}
         </div>
         <div class="flex-1">
-          <div>
+          <div v-if="item.action !== 'visit_status_cleared'">
             <span class="font-medium">
               {{ item.actor?.full_name ?? 'Systeem' }}
             </span>
             <span class="ml-1">{{ actionLabel(item.action) }}</span>
+          </div>
+          <div v-else>
+            {{ formatStatusClearedSentence(item) }}
           </div>
           <div v-if="item.details?.comment" class="text-gray-600">
             "{{ item.details.comment }}"
           </div>
           <div v-else-if="item.details?.reason" class="text-gray-600">
             {{ item.details.reason }}
+          </div>
+          <div
+            v-if="item.action === 'visit_rejected' && hasAudit(item.details)"
+            class="mt-1 space-y-1 text-[11px] text-gray-600"
+          >
+            <div v-if="auditErrors(item.details).length">
+              <span class="font-medium">Gemaakte fout(en): </span>
+              <span>
+                {{ auditErrors(item.details).map((code) => errorLabel(code)).join(', ') }}
+              </span>
+            </div>
+            <div v-if="auditString(item.details, 'errors_comment')">
+              <span class="font-medium">Opmerking fouten: </span>
+              <span>{{ auditString(item.details, 'errors_comment') }}</span>
+            </div>
+            <div v-if="auditString(item.details, 'pg_hm_function')">
+              <span class="font-medium">PG: HM-functie: </span>
+              <span>{{ auditString(item.details, 'pg_hm_function') }}</span>
+            </div>
+            <div v-if="auditString(item.details, 'pg_vm_function')">
+              <span class="font-medium">PG: VM-functie: </span>
+              <span>{{ auditString(item.details, 'pg_vm_function') }}</span>
+            </div>
+            <div v-if="auditString(item.details, 'pg_gz_function')">
+              <span class="font-medium">PG: GZ-functie: </span>
+              <span>{{ auditString(item.details, 'pg_gz_function') }}</span>
+            </div>
+            <div v-if="auditString(item.details, 'pg_other_species')">
+              <span class="font-medium">PG: andere soort: </span>
+              <span>{{ auditString(item.details, 'pg_other_species') }}</span>
+            </div>
+            <div v-if="auditString(item.details, 'remarks_outside_pg')">
+              <span class="font-medium">Bijzonderheden buiten PG: </span>
+              <span>{{ auditString(item.details, 'remarks_outside_pg') }}</span>
+            </div>
+            <div v-if="auditString(item.details, 'remarks')">
+              <span class="font-medium">Opmerkingen: </span>
+              <span>{{ auditString(item.details, 'remarks') }}</span>
+            </div>
           </div>
         </div>
       </li>
@@ -52,6 +94,73 @@
     details: Record<string, unknown> | null
     batch_id: string | null
     actor: { id: number; full_name: string | null } | null
+  }
+
+  type ActivityDetails = Record<string, unknown> | null
+
+  type VisitStatusCode =
+    | 'created'
+    | 'open'
+    | 'planned'
+    | 'overdue'
+    | 'executed'
+    | 'executed_with_deviation'
+    | 'not_executed'
+    | 'approved'
+    | 'rejected'
+    | 'cancelled'
+    | 'missed'
+
+  type AuditErrorCode =
+    | 'visit_not_uploaded'
+    | 'visit_started_too_late'
+    | 'visit_stopped_too_early'
+    | 'no_encounter_photo'
+    | 'no_recordings'
+    | 'no_visit_summary'
+    | 'forgot_initials'
+    | 'outside_date_window'
+    | 'tracks_not_uploaded'
+    | 'wrong_cluster'
+    | 'weather_not_according_to_protocol'
+    | 'other'
+
+  type AuditStringField =
+    | 'errors_comment'
+    | 'pg_hm_function'
+    | 'pg_vm_function'
+    | 'pg_gz_function'
+    | 'pg_other_species'
+    | 'remarks_outside_pg'
+    | 'remarks'
+
+  const statusLabelMap: Record<VisitStatusCode, string> = {
+    created: 'Aangemaakt',
+    open: 'Open',
+    planned: 'Gepland',
+    overdue: 'Verlopen',
+    executed: 'Uitgevoerd',
+    executed_with_deviation: 'Uitgevoerd (afwijking)',
+    not_executed: 'Niet uitgevoerd',
+    approved: 'Goedgekeurd',
+    rejected: 'Afgekeurd',
+    cancelled: 'Geannuleerd',
+    missed: 'Gemist'
+  }
+
+  const errorLabelMap: Record<AuditErrorCode, string> = {
+    visit_not_uploaded: 'Bezoek niet geüpload',
+    visit_started_too_late: 'Bezoek te laat begonnen',
+    visit_stopped_too_early: 'Bezoek te vroeg gestopt',
+    no_encounter_photo: 'Geen foto geüpload van aangetroffen verblijfplaats/nest',
+    no_recordings: 'Geen opnamen geüpload',
+    no_visit_summary: 'Geen samenvatting bezoek',
+    forgot_initials: 'Initialen vergeten',
+    outside_date_window: 'Niet binnen datumgrenzen',
+    tracks_not_uploaded: 'Tracks niet geüpload',
+    wrong_cluster: 'Verkeerde cluster onderzocht',
+    weather_not_according_to_protocol: 'Weer voldeed niet aan protocol',
+    other: 'Overig, zie opmerkingen'
   }
 
   const { $api } = useNuxtApp()
@@ -100,5 +209,75 @@
       default:
         return action
     }
+  }
+
+  function visitLabelFromDetails(details: ActivityDetails): string | null {
+    if (!details) return null
+    const projectCode = details['project_code'] as string | undefined
+    const clusterNumber = details['cluster_number'] as number | undefined
+    const visitNr = details['visit_nr'] as number | undefined
+    if (!projectCode) return null
+    const base = clusterNumber != null ? `${projectCode}-${clusterNumber}` : projectCode
+    if (visitNr != null) return `${base} nr ${visitNr}`
+    return base
+  }
+
+  function statusLabelFromCode(code: string | null | undefined): string | null {
+    if (!code) return null
+    return statusLabelMap[code as VisitStatusCode] ?? code
+  }
+
+  function formatStatusClearedSentence(entry: ActivityLogEntry): string {
+    const details = entry.details as ActivityDetails
+    const actor = entry.actor?.full_name ?? 'Systeem'
+    const visitLabel = visitLabelFromDetails(details) ?? 'dit bezoek'
+    const previousStatusRaw =
+      (details && (details['previous_status'] as string | undefined)) ?? null
+    const modeRaw = (details && (details['mode'] as string | undefined)) ?? null
+
+    const previousLabel = statusLabelFromCode(previousStatusRaw)
+    const newLabel = statusLabelFromCode(modeRaw)
+
+    if (previousLabel && newLabel) {
+      return `${actor} heeft de status van bezoek ${visitLabel} aangepast van ${previousLabel} naar ${newLabel}`
+    }
+
+    if (newLabel) {
+      return `${actor} heeft de status van bezoek ${visitLabel} aangepast naar ${newLabel}`
+    }
+
+    return `${actor} heeft de status van een bezoek aangepast`
+  }
+
+  function getAudit(details: ActivityDetails): Record<string, unknown> | null {
+    if (!details) return null
+    const raw = (details as Record<string, unknown>)['audit']
+    if (!raw || typeof raw !== 'object') return null
+    return raw as Record<string, unknown>
+  }
+
+  function hasAudit(details: ActivityDetails): boolean {
+    return getAudit(details) !== null
+  }
+
+  function auditErrors(details: ActivityDetails): string[] {
+    const audit = getAudit(details)
+    if (!audit) return []
+    const raw = audit['errors']
+    if (!Array.isArray(raw)) return []
+    return raw.filter((value): value is string => typeof value === 'string')
+  }
+
+  function auditString(details: ActivityDetails, field: AuditStringField): string | null {
+    const audit = getAudit(details)
+    if (!audit) return null
+    const value = audit[field]
+    if (value == null) return null
+    if (typeof value === 'string') return value
+    return String(value)
+  }
+
+  function errorLabel(code: string): string {
+    return errorLabelMap[code as AuditErrorCode] ?? code
   }
 </script>

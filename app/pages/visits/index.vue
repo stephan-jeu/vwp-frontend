@@ -515,13 +515,15 @@
                     />
                   </div>
 
-                  <div class="col-span-1 md:col-span-2 grid grid-cols-2 md:grid-cols-5 gap-3">
-                    <UCheckbox v-model="row.original.wbc" label="WBC" />
-                    <UCheckbox v-model="row.original.fiets" label="Fiets" />
-                    <UCheckbox v-model="row.original.hub" label="HUB" />
-                    <UCheckbox v-model="row.original.dvp" label="DvP" />
-                    <UCheckbox v-model="row.original.sleutel" label="Sleutel" />
-                    <UCheckbox v-model="row.original.priority" label="Prioriteit" />
+                  <div class="col-span-1 md:col-span-2">
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                      <UCheckbox v-model="row.original.wbc" label="WBC" />
+                      <UCheckbox v-model="row.original.fiets" label="Fiets" />
+                      <UCheckbox v-model="row.original.hub" label="HUB" />
+                      <UCheckbox v-model="row.original.dvp" label="DvP" />
+                      <UCheckbox v-model="row.original.sleutel" label="Sleutel" />
+                      <UCheckbox v-model="row.original.priority" label="Prioriteit" />
+                    </div>
                   </div>
 
                   <div class="md:col-span-2">
@@ -710,7 +712,7 @@
   const rows = ref<VisitListRow[]>([])
   const loading = ref(false)
   const page = ref(1)
-  const pageSize = ref(25)
+  const pageSize = ref(50)
   const total = ref(0)
   const expandedVisitId = ref<number | null>(null)
 

@@ -250,7 +250,7 @@
                   </div>
                 </div>
 
-                <div class="mt-4 flex justify-end gap-2">
+                <div class="my-4 flex gap-2">
                   <UButton
                     size="xs"
                     color="success"
