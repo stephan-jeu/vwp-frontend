@@ -179,9 +179,32 @@
 </template>
 
 <script setup lang="ts">
+  import { storeToRefs } from 'pinia'
+  import { useTestModeStore } from '~~/stores/testMode'
+
   definePageMeta({ middleware: 'admin' })
 
   const { $api } = useNuxtApp()
+  const testModeStore = useTestModeStore()
+  const { simulatedDate } = storeToRefs(testModeStore)
+
+  const runtimeConfig = useRuntimeConfig()
+
+  const testModeEnabled = computed<boolean>(() => {
+    const raw = runtimeConfig.public.testModeEnabled
+    if (typeof raw === 'string') {
+      return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
+
+  const effectiveToday = computed<Date>(() => {
+    if (testModeEnabled.value && simulatedDate.value) {
+      const dt = new Date(simulatedDate.value)
+      if (!Number.isNaN(dt.getTime())) return dt
+    }
+    return new Date()
+  })
   type VisitStatusCode =
     | 'created'
     | 'open'
@@ -273,15 +296,15 @@
 
   const loading = ref(false)
   const clearing = ref(false)
-  const currentWeekNumber = currentIsoWeek()
-  const week = ref<number>(currentWeekNumber)
+  const currentWeekNumber = computed<number>(() => currentIsoWeek(effectiveToday.value))
+  const week = ref<number>(currentWeekNumber.value)
   const visits = ref<VisitListRow[]>([])
 
   type WeekTab = { label: string; value: string; week: number }
   const selectedWeek = ref<string>('current')
 
-  function currentIsoWeek(): number {
-    const d = new Date()
+  function currentIsoWeek(baseDate: Date): number {
+    const d = new Date(baseDate)
     const dayNr = (d.getDay() + 6) % 7
     d.setDate(d.getDate() - dayNr + 3)
     const firstThursday = new Date(d.getFullYear(), 0, 4)
@@ -298,7 +321,7 @@
     if (weekNumber == null || !Number.isInteger(weekNumber) || weekNumber < 1 || weekNumber > 53)
       return null
 
-    const now = new Date()
+    const now = effectiveToday.value
     const year = now.getFullYear()
     const simple = new Date(year, 0, 1 + (weekNumber - 1) * 7)
     const dow = simple.getDay() || 7
@@ -346,7 +369,7 @@
       }
     }
 
-    return currentWeekNumber
+    return currentWeekNumber.value
   }
 
   function weekRangeLabel(weekNumber: number): string | null {
@@ -377,7 +400,7 @@
       if (!hasResearchers || !isPlannedStatus) continue
 
       const weekNumber = visitWeekNumber(v)
-      if (weekNumber > currentWeekNumber) {
+      if (weekNumber > currentWeekNumber.value) {
         futureWeeks.add(weekNumber)
       }
     }
@@ -385,7 +408,7 @@
     const sortedFutureWeeks = Array.from(futureWeeks).sort((a, b) => a - b)
 
     const tabs: WeekTab[] = []
-    tabs.push({ label: 'Deze week', value: 'current', week: currentWeekNumber })
+    tabs.push({ label: 'Deze week', value: 'current', week: currentWeekNumber.value })
 
     for (const w of sortedFutureWeeks) {
       const rangeLabel = weekRangeLabel(w)
@@ -399,10 +422,10 @@
 
   const activeWeekNumber = computed<number>(() => {
     const tab = weekTabs.value.find((t) => t.value === selectedWeek.value)
-    return tab?.week ?? currentWeekNumber
+    return tab?.week ?? currentWeekNumber.value
   })
 
-  const isCurrentWeekTab = computed<boolean>(() => activeWeekNumber.value === currentWeekNumber)
+  const isCurrentWeekTab = computed<boolean>(() => activeWeekNumber.value === currentWeekNumber.value)
 
   function isInSelectedWeek(visit: VisitListRow): boolean {
     if (!weekRange.value) return false
@@ -432,6 +455,9 @@
         page: 1,
         page_size: 200,
         statuses
+      }
+      if (testModeEnabled.value && simulatedDate.value) {
+        query.simulated_today = simulatedDate.value
       }
       const response = await $api<VisitListResponse>('/visits', { query })
       visits.value = response.items
@@ -465,6 +491,14 @@
   watch(week, () => {
     // Week change only affects client-side filtering; no extra load needed.
   })
+
+  watch(
+    () => simulatedDate.value,
+    () => {
+      if (!testModeEnabled.value) return
+      void loadVisits()
+    }
+  )
 
   onMounted(() => {
     void loadVisits()

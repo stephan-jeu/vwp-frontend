@@ -188,6 +188,17 @@
   }
 
   async function onSubmit() {
+    const duplicate = store.projects.find(
+      (project) => project.code === form.code && (!isEditing.value || project.id !== form.id)
+    )
+    if (duplicate) {
+      toast.add({
+        title: `Projectcode ${form.code} bestaat al`,
+        color: 'warning'
+      })
+      return
+    }
+
     saving.value = true
     try {
       const payload: ProjectCreate = {

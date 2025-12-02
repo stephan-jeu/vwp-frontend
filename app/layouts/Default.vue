@@ -93,14 +93,14 @@
   const testModeUiEnabled = computed<boolean>(() => testModeEnabled.value && isAdmin.value)
 
   const simulatedDateLabel = computed<string>(() => {
-    if (!simulatedDate.value) return 'Simuleer vandaag'
+    if (!simulatedDate.value) return 'Simuleer: vandaag'
     const dt = new Date(simulatedDate.value)
-    if (Number.isNaN(dt.getTime())) return 'Simuleer vandaag'
+    if (Number.isNaN(dt.getTime())) return 'Simuleer: vandaag'
     const formatter = new Intl.DateTimeFormat('nl-NL', {
       day: '2-digit',
       month: 'short'
     })
-    return `Simuleer ${formatter.format(dt)}`
+    return `Simuleer: ${formatter.format(dt)}`
   })
 
   const testModeModalOpen = ref<boolean>(false)

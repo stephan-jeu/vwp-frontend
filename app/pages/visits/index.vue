@@ -238,7 +238,9 @@
           <template #researchers-cell="{ row }">
             <span class="text-xs text-gray-700 dark:text-gray-300">
               {{
-                row.original.researchers.map((r) => r.full_name || `Gebruiker #${r.id}`).join(', ')
+                row.original.researchers
+                  .map((r) => r.full_name || `Gebruiker #${r.id}`)
+                  .join(', ')
               }}
             </span>
           </template>
@@ -248,74 +250,112 @@
               variant="outline"
               color="neutral"
               size="xs"
-              :icon="row.getIsExpanded() ? 'i-lucide-minus' : 'i-lucide-plus'"
-              @click.stop="row.toggleExpanded()"
+              :icon="expandedVisitId === row.original.id ? 'i-lucide-minus' : 'i-lucide-plus'"
+              @click.stop="() => { row.toggleExpanded(); onToggleExpanded(row.original.id) }"
             />
           </template>
 
           <template #expanded="{ row }">
-            <div v-if="!isAdmin" class="px-3 pb-3 text-sm space-y-2">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <span class="font-medium">Duur:</span>
-                  {{ durationHours(row.original.duration) ?? '-' }} uur
+            <div v-if="expandedVisitId === row.original.id">
+              <div v-if="!isAdmin" class="px-3 pb-3 text-sm space-y-2">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <span class="font-medium">Duur:</span>
+                    {{ durationHours(row.original.duration) ?? '-' }} uur
+                  </div>
+                  <div>
+                    <UBadge v-if="row.original.wbc" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
+                      >WBC</UBadge
+                    >
+                    <UBadge
+                      v-if="row.original.fiets"
+                      class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
+                      >Fiets</UBadge
+                    >
+                    <UBadge v-if="row.original.hub" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
+                      >HUB</UBadge
+                    >
+                    <UBadge v-if="row.original.dvp" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
+                      >DvP</UBadge
+                    >
+                    <UBadge
+                      v-if="row.original.sleutel"
+                      class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
+                      >Sleutel</UBadge
+                    >
+                    <UBadge
+                      v-if="row.original.priority"
+                      class="px-2 mx-1 py-0.5 rounded-full bg-amber-200"
+                      >Prioriteit</UBadge
+                    >
+                  </div>
+                  <div>
+                    <span class="font-medium">Weercondities:</span>
+                    Min {{ row.original.min_temperature_celsius ?? '-' }} °C, max wind
+                    {{ row.original.max_wind_force_bft ?? '-' }}, max neerslag
+                    {{ row.original.max_precipitation || '-' }}
+                  </div>
+                  <div>
+                    <span class="font-medium">Starttijd:</span>
+                    {{ row.original.start_time_text || '-' }}
+                  </div>
+                  <div>
+                    <span class="font-medium">Adres:</span>
+                    {{ row.original.cluster_address }}
+                  </div>
+                  <div v-if="row.original.planned_week != null">
+                    <span class="font-medium">Gepland voor week:</span>
+                    {{ plannedWeekLabel(row.original) }}
+                  </div>
+                  <div>
+                    <span class="font-medium">Onderzoekers: </span>
+                    <span v-if="row.original.researchers.length > 0">
+                      {{
+                        row.original.researchers
+                          .map((r) => r.full_name || `Gebruiker #${r.id}`)
+                          .join(', ')
+                      }}
+                    </span>
+                    <span v-else>
+                      {{ row.original.required_researchers ?? '-' }}
+                    </span>
+                  </div>
+
+                  <div v-if="row.original.project_google_drive_folder" class="my-4">
+                    <a
+                      :href="row.original.project_google_drive_folder"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="text-sm text-primary-600 underline"
+                    >
+                      Project Google drive
+                    </a>
+                  </div>
                 </div>
-                <div>
-                  <UBadge v-if="row.original.wbc" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
-                    >WBC</UBadge
-                  >
-                  <UBadge
-                    v-if="row.original.fiets"
-                    class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
-                    >Fiets</UBadge
-                  >
-                  <UBadge v-if="row.original.hub" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
-                    >HUB</UBadge
-                  >
-                  <UBadge v-if="row.original.dvp" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
-                    >DvP</UBadge
-                  >
-                  <UBadge
-                    v-if="row.original.sleutel"
-                    class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
-                    >Sleutel</UBadge
-                  >
-                  <UBadge
-                    v-if="row.original.priority"
-                    class="px-2 mx-1 py-0.5 rounded-full bg-amber-200"
-                    >Prioriteit</UBadge
-                  >
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <div class="font-medium mb-1">Opmerkingen planning</div>
+                    <p class="text-xs whitespace-pre-line">
+                      {{ row.original.remarks_planning || 'Geen opmerkingen' }}
+                    </p>
+                  </div>
+                  <div>
+                    <div class="font-medium mb-1">Opmerkingen veld</div>
+                    <p class="text-xs whitespace-pre-line">
+                      {{ row.original.remarks_field || 'Geen opmerkingen' }}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <span class="font-medium">Weercondities:</span>
-                  Min {{ row.original.min_temperature_celsius ?? '-' }} °C, max wind
-                  {{ row.original.max_wind_force_bft ?? '-' }}, max neerslag
-                  {{ row.original.max_precipitation || '-' }}
-                </div>
-                <div>
-                  <span class="font-medium">Starttijd:</span>
-                  {{ row.original.start_time_text || '-' }}
-                </div>
-                <div>
-                  <span class="font-medium">Adres:</span>
+
+                <VisitActivityLog :visit-id="row.original.id" />
+              </div>
+
+              <div v-else class="px-3 pb-3">
+                <div class="text-xs mb-2 text-gray-500">
+                  Project {{ row.original.project_code }} · Cluster
+                  {{ row.original.cluster_number }} ·
                   {{ row.original.cluster_address }}
-                </div>
-                <div v-if="row.original.planned_week != null">
-                  <span class="font-medium">Gepland voor week:</span>
-                  {{ plannedWeekLabel(row.original) }}
-                </div>
-                <div>
-                  <span class="font-medium">Onderzoekers: </span>
-                  <span v-if="row.original.researchers.length > 0">
-                    {{
-                      row.original.researchers
-                        .map((r) => r.full_name || `Gebruiker #${r.id}`)
-                        .join(', ')
-                    }}
-                  </span>
-                  <span v-else>
-                    {{ row.original.required_researchers ?? '-' }}
-                  </span>
                 </div>
 
                 <div v-if="row.original.project_google_drive_folder" class="my-4">
@@ -328,211 +368,172 @@
                     Project Google drive
                   </a>
                 </div>
-              </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <div class="font-medium mb-1">Opmerkingen planning</div>
-                  <p class="text-xs whitespace-pre-line">
-                    {{ row.original.remarks_planning || 'Geen opmerkingen' }}
-                  </p>
-                </div>
-                <div>
-                  <div class="font-medium mb-1">Opmerkingen veld</div>
-                  <p class="text-xs whitespace-pre-line">
-                    {{ row.original.remarks_field || 'Geen opmerkingen' }}
-                  </p>
-                </div>
-              </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs mb-1">Functies</label>
+                    <UInputMenu
+                      :model-value="mapIdsToOptions(row.original.function_ids, functionOptions)"
+                      :items="functionOptions"
+                      multiple
+                      class="w-2xs"
+                      @update:model-value="
+                        (sel) => (row.original.function_ids = sel.map((o) => o.value))
+                      "
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1">Soorten</label>
+                    <UInputMenu
+                      :model-value="mapIdsToOptions(row.original.species_ids, speciesOptions)"
+                      :items="speciesOptions"
+                      multiple
+                      class="w-3xs"
+                      @update:model-value="
+                        (sel) => (row.original.species_ids = sel.map((o) => o.value))
+                      "
+                    />
+                  </div>
 
-              <VisitActivityLog :visit-id="row.original.id" />
-            </div>
+                  <div>
+                    <label class="block text-xs mb-1">Aantal onderzoekers</label>
+                    <UInput v-model.number="row.original.required_researchers" type="number" />
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1">Voorkeursonderzoeker</label>
+                    <USelectMenu
+                      :model-value="
+                        researcherOptions.find(
+                          (o) => o.value === row.original.preferred_researcher_id
+                        )
+                      "
+                      :items="researcherOptions"
+                      searchable
+                      placeholder="Kies onderzoeker"
+                      @update:model-value="
+                        (opt) => (row.original.preferred_researcher_id = opt?.value ?? null)
+                      "
+                    />
+                  </div>
 
-            <div v-else class="px-3 pb-3">
-              <div class="text-xs mb-2 text-gray-500">
-                Project {{ row.original.project_code }} · Cluster
-                {{ row.original.cluster_number }} ·
-                {{ row.original.cluster_address }}
-              </div>
+                  <div>
+                    <label class="block text-xs mb-1">Onderzoekers</label>
+                    <UInputMenu
+                      :model-value="
+                        mapIdsToOptions(row.original.researcher_ids ?? [], researcherOptions)
+                      "
+                      :items="researcherOptions"
+                      multiple
+                      class="w-3xs"
+                      @update:model-value="
+                        (sel) => {
+                          const ids = sel.map((o) => o.value)
+                          row.original.researcher_ids = ids
+                          row.original.researchers = ids.map((id) => {
+                            const opt = researcherOptions.find((o) => o.value === id)
+                            return { id, full_name: opt?.label ?? null }
+                          })
+                        }
+                      "
+                    />
+                  </div>
 
-              <div v-if="row.original.project_google_drive_folder" class="my-4">
-                <a
-                  :href="row.original.project_google_drive_folder"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="text-sm text-primary-600 underline"
-                >
-                  Project Google drive
-                </a>
-              </div>
+                  <div>
+                    <label class="block text-xs mb-1">Bezoek nr</label>
+                    <UInput v-model.number="row.original.visit_nr" type="number" />
+                  </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs mb-1">Functies</label>
-                  <UInputMenu
-                    :model-value="mapIdsToOptions(row.original.function_ids, functionOptions)"
-                    :items="functionOptions"
-                    multiple
-                    class="w-2xs"
-                    @update:model-value="
-                      (sel) => (row.original.function_ids = sel.map((o) => o.value))
-                    "
-                  />
-                </div>
-                <div>
-                  <label class="block text-xs mb-1">Soorten</label>
-                  <UInputMenu
-                    :model-value="mapIdsToOptions(row.original.species_ids, speciesOptions)"
-                    :items="speciesOptions"
-                    multiple
-                    class="w-3xs"
-                    @update:model-value="
-                      (sel) => (row.original.species_ids = sel.map((o) => o.value))
-                    "
-                  />
-                </div>
+                  <div>
+                    <label class="block text-xs mb-1">Van</label>
+                    <UInput v-model="row.original.from_date" type="date" />
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1">Tot</label>
+                    <UInput v-model="row.original.to_date" type="date" />
+                  </div>
 
-                <div>
-                  <label class="block text-xs mb-1">Aantal onderzoekers</label>
-                  <UInput v-model.number="row.original.required_researchers" type="number" />
-                </div>
-                <div>
-                  <label class="block text-xs mb-1">Voorkeursonderzoeker</label>
-                  <USelectMenu
-                    :model-value="
-                      researcherOptions.find(
-                        (o) => o.value === row.original.preferred_researcher_id
-                      )
-                    "
-                    :items="researcherOptions"
-                    searchable
-                    placeholder="Kies onderzoeker"
-                    @update:model-value="
-                      (opt) => (row.original.preferred_researcher_id = opt?.value ?? null)
-                    "
-                  />
-                </div>
+                  <div>
+                    <label class="block text-xs mb-1">Gepland voor week</label>
+                    <UInput
+                      v-model.number="row.original.planned_week"
+                      type="number"
+                      min="1"
+                      max="53"
+                    />
+                  </div>
 
-                <div>
-                  <label class="block text-xs mb-1">Onderzoekers</label>
-                  <UInputMenu
-                    :model-value="
-                      mapIdsToOptions(row.original.researcher_ids ?? [], researcherOptions)
-                    "
-                    :items="researcherOptions"
-                    multiple
-                    class="w-3xs"
-                    @update:model-value="
-                      (sel) => {
-                        const ids = sel.map((o) => o.value)
-                        row.original.researcher_ids = ids
-                        row.original.researchers = ids.map((id) => {
-                          const opt = researcherOptions.find((o) => o.value === id)
-                          return { id, full_name: opt?.label ?? null }
-                        })
-                      }
-                    "
-                  />
-                </div>
+                  <div>
+                    <label class="block text-xs mb-1">Starttijd</label>
+                    <UInput v-model="row.original.start_time_text" />
+                  </div>
 
-                <div>
-                  <label class="block text-xs mb-1">Bezoek nr</label>
-                  <UInput v-model.number="row.original.visit_nr" type="number" />
-                </div>
+                  <div>
+                    <label class="block text-xs mb-1">Dagdeel</label>
+                    <USelectMenu
+                      :model-value="
+                        partOfDayOptions.find((o) => o.value === row.original.part_of_day)
+                      "
+                      :items="partOfDayOptions"
+                      placeholder="Kies dagdeel"
+                      @update:model-value="(opt) => (row.original.part_of_day = opt?.value ?? null)"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1">Duur (uur)</label>
+                    <UInput
+                      :model-value="durationHours(row.original.duration)"
+                      type="number"
+                      step="0.5"
+                      @update:model-value="
+                        (h: number | null) =>
+                          (row.original.duration = h == null ? null : Math.round(h * 60))
+                      "
+                    />
+                  </div>
 
-                <div>
-                  <label class="block text-xs mb-1">Van</label>
-                  <UInput v-model="row.original.from_date" type="date" />
-                </div>
-                <div>
-                  <label class="block text-xs mb-1">Tot</label>
-                  <UInput v-model="row.original.to_date" type="date" />
-                </div>
+                  <div>
+                    <label class="block text-xs mb-1">Min temp (°C)</label>
+                    <UInput v-model.number="row.original.min_temperature_celsius" type="number" />
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1">Max wind (Bft)</label>
+                    <UInput v-model.number="row.original.max_wind_force_bft" type="number" />
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1">Max neerslag</label>
+                    <UInput v-model="row.original.max_precipitation" />
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1">Ervaring</label>
+                    <USelectMenu
+                      :model-value="selectedExperienceOption(row.original.expertise_level)"
+                      :items="experienceLevelOptionsArr"
+                      placeholder="Kies niveau"
+                      @update:model-value="
+                        (opt) => (row.original.expertise_level = opt?.value ?? null)
+                      "
+                    />
+                  </div>
 
-                <div>
-                  <label class="block text-xs mb-1">Gepland voor week</label>
-                  <UInput
-                    v-model.number="row.original.planned_week"
-                    type="number"
-                    min="1"
-                    max="53"
-                  />
-                </div>
+                  <div class="col-span-1 md:col-span-2 grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <UCheckbox v-model="row.original.wbc" label="WBC" />
+                    <UCheckbox v-model="row.original.fiets" label="Fiets" />
+                    <UCheckbox v-model="row.original.hub" label="HUB" />
+                    <UCheckbox v-model="row.original.dvp" label="DvP" />
+                    <UCheckbox v-model="row.original.sleutel" label="Sleutel" />
+                    <UCheckbox v-model="row.original.priority" label="Prioriteit" />
+                  </div>
 
-                <div>
-                  <label class="block text-xs mb-1">Starttijd</label>
-                  <UInput v-model="row.original.start_time_text" />
+                  <div class="md:col-span-2">
+                    <label class="block text-xs mb-1">Opmerkingen planning</label>
+                    <UTextarea v-model="row.original.remarks_planning" class="w-xl" />
+                  </div>
+                  <div class="md:col-span-2">
+                    <label class="block text-xs mb-1">Opmerkingen veld</label>
+                    <UTextarea v-model="row.original.remarks_field" class="w-xl" />
+                  </div>
                 </div>
-
-                <div>
-                  <label class="block text-xs mb-1">Dagdeel</label>
-                  <USelectMenu
-                    :model-value="
-                      partOfDayOptions.find((o) => o.value === row.original.part_of_day)
-                    "
-                    :items="partOfDayOptions"
-                    placeholder="Kies dagdeel"
-                    @update:model-value="(opt) => (row.original.part_of_day = opt?.value ?? null)"
-                  />
-                </div>
-                <div>
-                  <label class="block text-xs mb-1">Duur (uur)</label>
-                  <UInput
-                    :model-value="durationHours(row.original.duration)"
-                    type="number"
-                    step="0.5"
-                    @update:model-value="
-                      (h: number | null) =>
-                        (row.original.duration = h == null ? null : Math.round(h * 60))
-                    "
-                  />
-                </div>
-
-                <div>
-                  <label class="block text-xs mb-1">Min temp (°C)</label>
-                  <UInput v-model.number="row.original.min_temperature_celsius" type="number" />
-                </div>
-                <div>
-                  <label class="block text-xs mb-1">Max wind (Bft)</label>
-                  <UInput v-model.number="row.original.max_wind_force_bft" type="number" />
-                </div>
-                <div>
-                  <label class="block text-xs mb-1">Max neerslag</label>
-                  <UInput v-model="row.original.max_precipitation" />
-                </div>
-                <div>
-                  <label class="block text-xs mb-1">Ervaring</label>
-                  <USelectMenu
-                    :model-value="selectedExperienceOption(row.original.expertise_level)"
-                    :items="experienceLevelOptionsArr"
-                    placeholder="Kies niveau"
-                    @update:model-value="
-                      (opt) => (row.original.expertise_level = opt?.value ?? null)
-                    "
-                  />
-                </div>
-
-                <div class="col-span-1 md:col-span-2 grid grid-cols-2 md:grid-cols-5 gap-3">
-                  <UCheckbox v-model="row.original.wbc" label="WBC" />
-                  <UCheckbox v-model="row.original.fiets" label="Fiets" />
-                  <UCheckbox v-model="row.original.hub" label="HUB" />
-                  <UCheckbox v-model="row.original.dvp" label="DvP" />
-                  <UCheckbox v-model="row.original.sleutel" label="Sleutel" />
-                  <UCheckbox v-model="row.original.priority" label="Prioriteit" />
-                </div>
-
-                <div class="md:col-span-2">
-                  <label class="block text-xs mb-1">Opmerkingen planning</label>
-                  <UTextarea v-model="row.original.remarks_planning" class="w-xl" />
-                </div>
-                <div class="md:col-span-2">
-                  <label class="block text-xs mb-1">Opmerkingen veld</label>
-                  <UTextarea v-model="row.original.remarks_field" class="w-xl" />
-                </div>
-
-
-              </div>
-              <div class="my-4 flex gap-2">
+                <div class="my-4 flex gap-2">
                   <UButton
                     v-if="!['overdue', 'executed', 'approved'].includes(row.original.status)"
                     size="xs"
@@ -540,7 +541,7 @@
                     icon="i-lucide-calendar-clock"
                     @click="onOpenAdminPlanning(row.original)"
                   >
-                    {{ statusLabel(row.original.status)}} aanpassen
+                    {{ statusLabel(row.original.status) }} aanpassen
                   </UButton>
                   <UModal title="Bezoek verwijderen">
                     <UButton color="error" variant="soft" size="xs">Verwijder</UButton>
@@ -572,7 +573,8 @@
                     Opslaan
                   </UButton>
                 </div>
-              <VisitActivityLog :visit-id="row.original.id" />
+                <VisitActivityLog :visit-id="row.original.id" />
+              </div>
             </div>
           </template>
         </UTable>
@@ -710,6 +712,7 @@
   const page = ref(1)
   const pageSize = ref(25)
   const total = ref(0)
+  const expandedVisitId = ref<number | null>(null)
 
   const search = ref('')
 
@@ -801,6 +804,10 @@
     const start = formatter.format(range.start)
     const end = formatter.format(range.end)
     return `${row.planned_week} (${start} - ${end})`
+  }
+
+  function onToggleExpanded(id: number): void {
+    expandedVisitId.value = expandedVisitId.value === id ? null : id
   }
 
   async function loadVisits(): Promise<void> {
@@ -958,7 +965,7 @@
   const createResearcherIds = ref<number[]>([])
   const createFromDate = ref('')
   const createToDate = ref('')
-  const createPlannedWeek = ref<number | null>(null)
+  const createPlannedWeek = ref<number | null | ''>(null)
   const createVisitNr = ref<number | null>(null)
   const createStartTimeText = ref('')
   const createPartOfDay = ref<string | null>(null)
@@ -1040,11 +1047,13 @@
       const durationMinutes =
         createDurationHours.value == null ? null : Math.round(createDurationHours.value * 60)
 
+      const plannedWeek = createPlannedWeek.value === '' ? null : createPlannedWeek.value
+
       const payload = {
         cluster_id: selectedCluster.value.value,
         required_researchers: createRequiredResearchers.value,
         visit_nr: createVisitNr.value,
-        planned_week: createPlannedWeek.value,
+        planned_week: plannedWeek,
         from_date: createFromDate.value || null,
         to_date: createToDate.value || null,
         duration: durationMinutes,
@@ -1088,10 +1097,16 @@
   async function onSaveVisit(row: VisitListRow): Promise<void> {
     savingId.value = row.id
     try {
+      const rawPlannedWeek = row.planned_week as unknown
+      const plannedWeek =
+        rawPlannedWeek === '' || rawPlannedWeek == null
+          ? null
+          : (rawPlannedWeek as number)
+
       const payload = {
         required_researchers: row.required_researchers,
         visit_nr: row.visit_nr,
-        planned_week: row.planned_week,
+        planned_week: plannedWeek,
         from_date: row.from_date,
         to_date: row.to_date,
         duration: row.duration,
@@ -1115,8 +1130,8 @@
         researcher_ids: row.researcher_ids ?? row.researchers.map((r) => r.id)
       }
       await $api(`/visits/${row.id}`, { method: 'PUT', body: payload })
-      toast.add({ title: 'Bezoek opgeslagen', color: 'success' })
       await loadVisits()
+      toast.add({ title: 'Bezoek opgeslagen', color: 'success' })
     } catch {
       toast.add({ title: 'Opslaan mislukt', color: 'error' })
     } finally {
