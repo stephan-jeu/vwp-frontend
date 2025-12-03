@@ -39,7 +39,9 @@
                   </UButton>
                 </div>
                 <div v-else>
-                  <UBadge>{{ statusLabel(visit.status) }}</UBadge>
+                  <UBadge :color="statusBadgeColor(visit.status)" variant="solid">
+                    {{ statusLabel(visit.status) }}
+                  </UBadge>
                 </div>
                 <UButton
                   v-if="canAdminEditStatus"
@@ -289,6 +291,27 @@
     quote: boolean
   }
 
+  type BadgeColor =
+    | 'primary'
+    | 'warning'
+    | 'success'
+    | 'error'
+    | 'neutral'
+    | 'secondary'
+    | 'info'
+
+  const statusBadgeColorMap: Partial<Record<VisitStatusCode, BadgeColor>> = {
+    planned: 'primary',
+    overdue: 'warning',
+    executed: 'success',
+    executed_with_deviation: 'success',
+    not_executed: 'warning',
+    approved: 'success',
+    rejected: 'error',
+    cancelled: 'neutral',
+    missed: 'warning'
+  }
+
   type ResearcherOption = { label: string; value: number }
 
   type StatusAction = 'executed' | 'executed_with_deviation' | 'not_executed' | null
@@ -419,6 +442,10 @@
       default:
         return code
     }
+  }
+
+  function statusBadgeColor(code: VisitStatusCode): BadgeColor {
+    return statusBadgeColorMap[code] ?? 'neutral'
   }
 
   function formatDate(d: string | null): string {

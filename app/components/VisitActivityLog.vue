@@ -18,7 +18,7 @@
     <ul v-else class="space-y-1 text-xs">
       <li v-for="item in entries" :key="item.id" class="flex gap-2">
         <div class="text-[10px] text-gray-500 w-24 shrink-0">
-          {{ formatDateTime(item.created_at) }}
+          {{ formatDateTime(logTimestamp(item)) }}
         </div>
         <div class="flex-1">
           <div v-if="item.action !== 'visit_status_cleared'">
@@ -37,7 +37,7 @@
             {{ item.details.reason }}
           </div>
           <div
-            v-if="item.action === 'visit_rejected' && hasAudit(item.details)"
+            v-if="(item.action === 'visit_rejected' || item.action === 'visit_approved') && hasAudit(item.details)"
             class="mt-1 space-y-1 text-[11px] text-gray-600"
           >
             <div v-if="auditErrors(item.details).length">
@@ -184,6 +184,15 @@
       hour: '2-digit',
       minute: '2-digit'
     }).format(dt)
+  }
+
+  function logTimestamp(entry: ActivityLogEntry): string {
+    const details = entry.details as ActivityDetails
+    const raw =
+      (details && (details['execution_date'] as string | undefined | null)) ??
+      entry.created_at
+    if (typeof raw !== 'string' || !raw) return entry.created_at
+    return raw
   }
 
   function actionLabel(action: string): string {

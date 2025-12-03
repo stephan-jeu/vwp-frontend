@@ -1172,7 +1172,7 @@
     // Default: show all visits except approved/cancelled.
     // Users can clear this filter to see truly all visits.
     selectedStatuses.value = statusOptions.filter(
-      (s) => s.value !== 'approved' && s.value !== 'cancelled'
+      (s) => s.value !== 'approved' && s.value !== 'cancelled' && s.value !== 'overdue'
     )
 
     await loadVisits()

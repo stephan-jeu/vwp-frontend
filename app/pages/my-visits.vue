@@ -39,7 +39,12 @@
                     </div>
                   </div>
                   <div class="flex flex-col items-end gap-1">
-                    <UBadge v-if="visit.status === 'rejected'" color="warning"> Afgekeurd </UBadge>
+                    <UBadge
+                      :color="statusBadgeColor(visit.status)"
+                      variant="solid"
+                    >
+                      {{ statusLabel(visit.status) }}
+                    </UBadge>
                     <UBadge v-if="weekBadge(visit)" color="warning">
                       {{ weekBadge(visit) }}
                     </UBadge>
@@ -225,6 +230,49 @@
 
   const visits = computed<VisitListRow[]>(() => data.value?.items ?? [])
 
+  type BadgeColor =
+    | 'primary'
+    | 'warning'
+    | 'success'
+    | 'error'
+    | 'neutral'
+    | 'secondary'
+    | 'info'
+
+  const statusLabelMap: Record<VisitStatusCode, string> = {
+    created: 'Aangemaakt',
+    open: 'Open',
+    planned: 'Gepland',
+    overdue: 'Verlopen',
+    executed: 'Uitgevoerd',
+    executed_with_deviation: 'Uitgevoerd (afwijking)',
+    not_executed: 'Niet uitgevoerd',
+    approved: 'Goedgekeurd',
+    rejected: 'Afgekeurd',
+    cancelled: 'Geannuleerd',
+    missed: 'Gemist'
+  }
+
+  const statusBadgeColorMap: Partial<Record<VisitStatusCode, BadgeColor>> = {
+    planned: 'primary',
+    overdue: 'warning',
+    executed: 'success',
+    executed_with_deviation: 'success',
+    not_executed: 'warning',
+    approved: 'success',
+    rejected: 'error',
+    cancelled: 'neutral',
+    missed: 'warning'
+  }
+
+  function statusLabel(code: VisitStatusCode): string {
+    return statusLabelMap[code] ?? code
+  }
+
+  function statusBadgeColor(code: VisitStatusCode): BadgeColor {
+    return statusBadgeColorMap[code] ?? 'neutral'
+  }
+
   const filteredVisits = computed<VisitListRow[]>(() => {
     const currentId = identity.value?.id
     if (!currentId) return []
@@ -317,9 +365,28 @@
     return tab?.week ?? currentWeekNumber.value
   })
 
+  const statusSortOrder: Partial<Record<VisitStatusCode, number>> = {
+    planned: 1,
+    not_executed: 2,
+    executed_with_deviation: 3,
+    executed: 4
+  }
+
   const visitsForActiveWeek = computed<VisitListRow[]>(() => {
     const week = activeWeekNumber.value
-    return filteredVisits.value.filter((v) => visitWeekNumber(v) === week)
+    const list = filteredVisits.value.filter((v) => visitWeekNumber(v) === week)
+
+    return list.slice().sort((a, b) => {
+      const rankA = statusSortOrder[a.status] ?? 99
+      const rankB = statusSortOrder[b.status] ?? 99
+      if (rankA !== rankB) return rankA - rankB
+
+      const fromA = a.from_date ?? ''
+      const fromB = b.from_date ?? ''
+      if (fromA !== fromB) return fromA < fromB ? -1 : 1
+
+      return a.id - b.id
+    })
   })
 
   // ...
