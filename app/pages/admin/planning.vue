@@ -29,7 +29,7 @@
             :loading="clearing"
             @click="clearResearchers"
           >
-            Leeg onderzoekers
+            Verwijder planning
           </UButton>
           <div v-if="weekLabel" class="ml-auto text-xs text-gray-500">
             {{ weekLabel }}
