@@ -13,16 +13,27 @@
       <UNavigationMenu :items="menuItems" class="w-full justify-center" />
 
       <template #right>
-        <div v-if="testModeUiEnabled" class="flex items-center gap-2">
+        <div class="flex items-center gap-2">
+          <div v-if="testModeUiEnabled" class="flex items-center">
+            <UButton
+              size="xs"
+              variant="soft"
+              color="neutral"
+              icon="i-lucide-calendar-clock"
+              @click="onOpenTestMode"
+            >
+              {{ simulatedDateLabel }}
+            </UButton>
+          </div>
           <UButton
             size="xs"
-            variant="soft"
+            variant="ghost"
             color="neutral"
-            icon="i-lucide-calendar-clock"
-            @click="onOpenTestMode"
-          >
-            {{ simulatedDateLabel }}
-          </UButton>
+            icon="i-lucide-log-out"
+            class="rounded-full"
+            aria-label="Uitloggen"
+            @click="onLogout"
+          />
         </div>
       </template>
 
@@ -131,6 +142,14 @@
   function onResetTestMode(): void {
     testModeStore.reset()
     testModeModalOpen.value = false
+  }
+
+  function onLogout(): void {
+    if (import.meta.server) return
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
+    auth.$reset()
+    navigateTo('/login')
   }
 
   onMounted(() => {

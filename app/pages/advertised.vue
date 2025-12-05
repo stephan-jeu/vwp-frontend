@@ -103,11 +103,10 @@
             </div>
           </div>
 
-          <div class="mt-2 flex justify-end">
+          <div class="mt-4 flex">
             <UButton
               v-if="visit.can_accept"
               :loading="acceptingId === visit.id"
-              size="sm"
               @click="onAccept(visit)"
             >
               Accepteer
