@@ -29,24 +29,30 @@
 
           <template #actions-cell="{ row }">
             <div class="flex items-center gap-2">
-              <UButton
-                size="sm"
-                variant="ghost"
-                color="primary"
-                :loading="restoringId === row.original.id"
-                :icon="'i-lucide-archive-restore'"
-                aria-label="Terugzetten"
-                @click="onRestore(row.original)"
-              />
-              <UButton
-                size="sm"
-                variant="ghost"
-                color="warning"
-                :loading="deletingId === row.original.id"
-                :icon="'i-lucide-trash-2'"
-                aria-label="Definitief verwijderen"
-                @click="onHardDelete(row.original)"
-              />
+              <UPopover>
+                <UButton
+                  size="sm"
+                  variant="ghost"
+                  color="primary"
+                  :loading="restoringId === row.original.id"
+                  :icon="'i-lucide-archive-restore'"
+                  aria-label="Terugzetten"
+                  @click="onRestore(row.original)"
+                />
+                <template #content> Terugzetten </template>
+              </UPopover>
+              <UPopover>
+                <UButton
+                  size="sm"
+                  variant="ghost"
+                  color="warning"
+                  :loading="deletingId === row.original.id"
+                  :icon="'i-lucide-trash-2'"
+                  aria-label="Definitief verwijderen"
+                  @click="onHardDelete(row.original)"
+                />
+                <template #content> Definitief verwijderen </template>
+              </UPopover>
             </div>
             <p
               v-if="rowErrors[row.original.id]"
@@ -167,7 +173,8 @@
     } catch (error: unknown) {
       if (isApiError(error)) {
         const message =
-          error.data?.detail ?? error.response?._data?.detail ??
+          error.data?.detail ??
+          error.response?._data?.detail ??
           'Dit item bestaat al en kan niet worden teruggezet.'
         rowErrors.value = { ...rowErrors.value, [item.id]: message }
       } else {
