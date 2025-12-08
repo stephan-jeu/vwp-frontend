@@ -29,7 +29,7 @@
 
           <template #actions-cell="{ row }">
             <div class="flex items-center gap-2">
-              <UPopover>
+              <UPopover mode="hover">
                 <UButton
                   size="sm"
                   variant="ghost"
@@ -39,9 +39,9 @@
                   aria-label="Terugzetten"
                   @click="onRestore(row.original)"
                 />
-                <template #content> Terugzetten </template>
+                <template #content><span class="text-sm m-2"> Terugzetten </span></template>
               </UPopover>
-              <UPopover>
+              <UPopover mode="hover">
                 <UButton
                   size="sm"
                   variant="ghost"
@@ -51,7 +51,7 @@
                   aria-label="Definitief verwijderen"
                   @click="onHardDelete(row.original)"
                 />
-                <template #content> Definitief verwijderen </template>
+                <template #content><span class="text-sm m-2"> Definitief verwijderen </span></template>
               </UPopover>
             </div>
             <p
