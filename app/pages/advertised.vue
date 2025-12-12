@@ -280,11 +280,34 @@
   async function onAccept(visit: AdvertisedVisitRow): Promise<void> {
     acceptingId.value = visit.id
     try {
-      await $api(`/visits/${visit.id}/accept-advertised`, { method: 'POST' })
+      const query: Record<string, string> = {}
+      if (testModeEnabled.value && simulatedDate.value) {
+        query.simulated_today = simulatedDate.value
+      }
+
+      await $api(`/visits/${visit.id}/accept-advertised`, { method: 'POST', query })
       toast.add({ title: 'Dit onderzoek is nu aan je toegewezen.', color: 'success' })
       await refresh()
-    } catch {
-      toast.add({ title: 'Kon dit bezoek niet toewijzen', color: 'error' })
+    } catch (error: unknown) {
+      const err = error as { data?: { detail?: string }; response?: { status?: number } }
+      const detail = err?.data?.detail
+
+      let title = 'Kon dit bezoek niet toewijzen'
+      if (detail === 'Visit is not advertised for takeover') {
+        title = 'Dit bezoek is niet meer geadverteerd of al door iemand anders overgenomen.'
+      } else if (detail === 'Visit is not in a state that allows takeover') {
+        title = 'Dit bezoek is niet meer in een toestand waarin het kan worden overgenomen.'
+      } else if (err?.response?.status === 403) {
+        title = 'Je voldoet niet aan de vereisten om dit bezoek over te nemen.'
+      }
+
+      toast.add({ title, color: 'error' })
+
+      try {
+        await refresh()
+      } catch {
+        void 0
+      }
     } finally {
       acceptingId.value = null
     }
