@@ -4,7 +4,7 @@
 
     <UCard class="mt-6">
       <UForm :state="form" :schema="schema" data-testid="project-form" @submit="onSubmit">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 xl:grid-cols-4 gap-4">
           <UFormField label="Projectcode" name="code" required>
             <UInput v-model="form.code" placeholder="Bijv. P-001" data-testid="input-code" />
           </UFormField>
@@ -79,52 +79,49 @@
           <UButton variant="ghost" @click.stop="edit(row.original)"
             ><UIcon name="i-lucide-pencil" class="mr-1 size-4"
           /></UButton>
-          <UModal
-            v-model:open="showDelete"
-            title="Project verwijderen"
-            description="Verwijdert een project met alle onderliggende clusters en bezoeken"
-            data-testid="delete-modal"
+          <UButton
+            color="warning"
+            variant="ghost"
+            :data-testid="`btn-delete-${row.original?.id}`"
+            @click.stop="confirmDelete(row.original)"
           >
-            <UButton
-              color="warning"
-              variant="ghost"
-              size="xl"
-              :data-testid="`btn-delete-${row.original?.id}`"
-              @click.stop="toDelete = row.original"
-            >
-              <UIcon name="i-lucide-trash-2" />
-            </UButton>
-            <template #content>
-              <UCard>
-                <div class="flex items-center gap-2">
-                  <UIcon name="i-lucide-alert-triangle" class="text-amber-500" />
-                  <h3 class="text-lg font-medium">Project verwijderen</h3>
-                </div>
-                <p class="mt-2">
-                  Weet je zeker dat je project {{ row.original.code }} wilt verwijderen? Als je dit
-                  doet zullen ook alle onderliggende clusters en bezoeken worden verwijderd.
-                </p>
-                <div class="mt-6 flex justify-end gap-2">
-                  <UButton
-                    variant="ghost"
-                    data-testid="btn-modal-cancel"
-                    @click="showDelete = false"
-                    >Annuleren</UButton
-                  >
-                  <UButton
-                    color="warning"
-                    :loading="deleting"
-                    data-testid="btn-modal-delete"
-                    @click="doDelete"
-                    >Verwijderen</UButton
-                  >
-                </div>
-              </UCard>
-            </template>
-          </UModal>
+            <UIcon name="i-lucide-trash-2" class="size-4" />
+          </UButton>
         </template>
       </UTable>
     </UCard>
+
+    <UModal
+      v-model:open="showDelete"
+      title="Project verwijderen"
+      description="Verwijdert een project met alle onderliggende clusters en bezoeken"
+      data-testid="delete-modal"
+    >
+      <template #content>
+        <UCard>
+          <div class="flex items-center gap-2">
+            <UIcon name="i-lucide-alert-triangle" class="text-amber-500" />
+            <h3 class="text-lg font-medium">Project verwijderen</h3>
+          </div>
+          <p class="mt-2" v-if="toDelete">
+            Weet je zeker dat je project <strong>{{ toDelete.code }}</strong> wilt verwijderen? Als
+            je dit doet zullen ook alle onderliggende clusters en bezoeken worden verwijderd.
+          </p>
+          <div class="mt-6 flex justify-end gap-2">
+            <UButton variant="ghost" data-testid="btn-modal-cancel" @click="showDelete = false"
+              >Annuleren</UButton
+            >
+            <UButton
+              color="warning"
+              :loading="deleting"
+              data-testid="btn-modal-delete"
+              @click="doDelete"
+              >Verwijderen</UButton
+            >
+          </div>
+        </UCard>
+      </template>
+    </UModal>
   </div>
 </template>
 
@@ -227,6 +224,11 @@
   }
 
   // removed; handled inline in UModal trigger
+
+  function confirmDelete(project: Project) {
+    toDelete.value = project
+    showDelete.value = true
+  }
 
   async function doDelete() {
     if (!toDelete.value) return
