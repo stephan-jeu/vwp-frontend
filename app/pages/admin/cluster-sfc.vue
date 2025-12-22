@@ -62,7 +62,54 @@
           </div>
         </div>
       </div>
-      <div class="mt-8">
+
+      <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+        <div class="text-sm font-medium mb-3">Standaard waarden voor nieuwe bezoeken</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <UInput
+            v-model.number="defaultRequiredResearchers"
+            type="number"
+            placeholder="Aantal onderzoekers"
+          />
+          <USelectMenu
+            :model-value="
+              researcherOptions.find((o) => o.value === defaultPreferredResearcherId)
+            "
+            :items="researcherOptions"
+            searchable
+            placeholder="Voorkeursonderzoeker"
+            @update:model-value="
+              (opt) => (defaultPreferredResearcherId = opt?.value ?? null)
+            "
+          />
+          <USelectMenu
+            :model-value="selectedExperienceOption(defaultExpertiseLevel)"
+            :items="experienceLevelOptionsArr"
+            placeholder="Ervaring"
+            @update:model-value="
+              (opt: StringOption | undefined) =>
+                (defaultExpertiseLevel = opt?.value ?? null)
+            "
+          />
+         
+        </div>
+         <div class="flex gap-8 items-center flex-wrap my-4">
+            <UCheckbox v-model="defaultWbc" label="WBC" />
+            <UCheckbox v-model="defaultFiets" label="Fiets" />
+            <UCheckbox v-model="defaultHub" label="HUB" />
+            <UCheckbox v-model="defaultDvp" label="DvP" />
+            <UCheckbox v-model="defaultSleutel" label="Sleutel" />
+          </div>
+        <div class="mt-2">
+          <UTextarea
+            v-model="defaultRemarksField"
+            placeholder="Extra opmerkingen veld (wordt toegevoegd aan gegenereerde opmerkingen)"
+            :rows="2"
+            class="w-xl"
+          />
+        </div>
+      </div>
+      <div class="mt-4">
         <UButton :loading="creating" :disabled="!canCreate" @click="onCreate">Toevoegen</UButton>
       </div>
     </UCard>
@@ -371,6 +418,17 @@
   type ComboRow = { functions: Option[]; species: Option[] }
   const comboRows = ref<ComboRow[]>([])
 
+  // Defaults
+  const defaultRequiredResearchers = ref<number | null>(null)
+  const defaultPreferredResearcherId = ref<number | null>(null)
+  const defaultExpertiseLevel = ref<string | null>(null)
+  const defaultWbc = ref(false)
+  const defaultFiets = ref(false)
+  const defaultHub = ref(false)
+  const defaultDvp = ref(false)
+  const defaultSleutel = ref(false)
+  const defaultRemarksField = ref('')
+
   const creating = ref(false)
   const loading = ref(false)
   const showMergeConfirm = ref(false)
@@ -379,6 +437,15 @@
     address: string
     cluster_number: number
     combos: { function_ids: number[]; species_ids: number[] }[]
+    default_required_researchers?: number | null
+    default_preferred_researcher_id?: number | null
+    default_expertise_level?: string | null
+    default_wbc?: boolean
+    default_fiets?: boolean
+    default_hub?: boolean
+    default_dvp?: boolean
+    default_sleutel?: boolean
+    default_remarks_field?: string | null
   }>(null)
 
   const projectOptions = ref<Option[]>([])
@@ -558,7 +625,16 @@
         combos: comboRows.value.map((r) => ({
           function_ids: r.functions.map((o) => o.value as number),
           species_ids: r.species.map((o) => o.value as number)
-        }))
+        })),
+        default_required_researchers: defaultRequiredResearchers.value,
+        default_preferred_researcher_id: defaultPreferredResearcherId.value,
+        default_expertise_level: defaultExpertiseLevel.value,
+        default_wbc: defaultWbc.value,
+        default_fiets: defaultFiets.value,
+        default_hub: defaultHub.value,
+        default_dvp: defaultDvp.value,
+        default_sleutel: defaultSleutel.value,
+        default_remarks_field: defaultRemarksField.value || null
       }
       showMergeConfirm.value = true
       return
@@ -574,7 +650,16 @@
           combos: comboRows.value.map((r) => ({
             function_ids: r.functions.map((o) => o.value as number),
             species_ids: r.species.map((o) => o.value as number)
-          }))
+          })),
+          default_required_researchers: defaultRequiredResearchers.value,
+          default_preferred_researcher_id: defaultPreferredResearcherId.value,
+          default_expertise_level: defaultExpertiseLevel.value,
+          default_wbc: defaultWbc.value,
+          default_fiets: defaultFiets.value,
+          default_hub: defaultHub.value,
+          default_dvp: defaultDvp.value,
+          default_sleutel: defaultSleutel.value,
+          default_remarks_field: defaultRemarksField.value || null
         }
       })
       toast.add({ title: 'Cluster aangemaakt', color: 'success' })

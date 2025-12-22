@@ -43,6 +43,48 @@
             <UTabs v-model="selectedWeek" :items="weekTabs" />
           </div>
 
+          <!-- Capacity Section -->
+          <div
+            v-if="capacityData.researchers.length > 0"
+            class="mb-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden"
+          >
+            <button
+              class="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
+              @click="availabilityCollapsed = !availabilityCollapsed"
+            >
+              <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700 dark:text-gray-200">
+                <span class="font-semibold text-gray-900 dark:text-white">Nog beschikbaar:</span>
+                <span>Avond <span :class="{'text-red-600 font-bold': capacityData.totals.avond < 0}">{{ capacityData.totals.avond }}</span></span>
+                <span>Ochtend <span :class="{'text-red-600 font-bold': capacityData.totals.ochtend < 0}">{{ capacityData.totals.ochtend }}</span></span>
+                <span>Dag <span :class="{'text-red-600 font-bold': capacityData.totals.dag < 0}">{{ capacityData.totals.dag }}</span></span>
+                <span>Flex <span :class="{'text-red-600 font-bold': capacityData.totals.flex < 0}">{{ capacityData.totals.flex }}</span></span>
+              </div>
+              <UIcon
+                :name="availabilityCollapsed ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-up'"
+                class="w-5 h-5 text-gray-500"
+              />
+            </button>
+
+            <div
+              v-if="!availabilityCollapsed"
+              class="border-t border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800"
+            >
+              <div
+                v-for="r in capacityData.researchers"
+                :key="r.id"
+                class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800/50"
+              >
+                <div class="font-medium text-gray-900 dark:text-gray-100 min-w-[120px]">{{ r.name }}</div>
+                <div class="flex gap-4 text-xs text-gray-600 dark:text-gray-400">
+                   <div :class="{'text-red-600 font-bold': r.remaining.avond < 0}">Avond: {{ r.remaining.avond }}</div>
+                   <div :class="{'text-red-600 font-bold': r.remaining.ochtend < 0}">Ochtend: {{ r.remaining.ochtend }}</div>
+                   <div :class="{'text-red-600 font-bold': r.remaining.dag < 0}">Dag: {{ r.remaining.dag }}</div>
+                   <div :class="{'text-red-600 font-bold': r.remaining.flex < 0}">Flex: {{ r.remaining.flex }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div
             v-if="completedVisits.length === 0 && plannedVisits.length === 0"
             class="text-sm text-gray-500"
@@ -285,6 +327,36 @@
     { label: 'Geannuleerd', value: 'cancelled' }
   ]
 
+  // --- Availability / Capacity Types ---
+  interface ApiAvailabilityCompact {
+    week: number
+    morning_days: number
+    daytime_days: number
+    nighttime_days: number
+    flex_days: number
+    // We ignore backend 'assigned_*' counts here as we calculate them dynamically 
+    // based on the actual visits loaded in the planning view for accuracy.
+  }
+  interface ApiUserAvailability {
+    id: number
+    name: string
+    availability: ApiAvailabilityCompact[]
+  }
+  interface ApiAvailabilityListResponse {
+    users: ApiUserAvailability[]
+  }
+
+  interface ResearcherCapacity {
+    id: number
+    name: string
+    remaining: {
+      ochtend: number
+      dag: number
+      avond: number
+      flex: number
+    }
+  }
+
   const completedStatusValues: VisitStatusCode[] = [
     'executed',
     'executed_with_deviation',
@@ -299,6 +371,10 @@
   const currentWeekNumber = computed<number>(() => currentIsoWeek(effectiveToday.value))
   const week = ref<number>(currentWeekNumber.value)
   const visits = ref<VisitListRow[]>([])
+  
+  // Availability data
+  const rawAvailability = ref<ApiUserAvailability[]>([])
+  const availabilityCollapsed = ref(true)
 
   type WeekTab = { label: string; value: string; week: number }
   const selectedWeek = ref<string>('current')
@@ -447,6 +523,108 @@
     visits.value.filter((v) => plannedStatusValues.includes(v.status) && isInSelectedWeek(v))
   )
 
+
+
+  // --- Capacity Calculation ---
+
+  const capacityData = computed<{
+    researchers: ResearcherCapacity[]
+    totals: { ochtend: number; dag: number; avond: number; flex: number }
+  }>(() => {
+    // 1. Build initial map from raw availability
+    const map = new Map<number, ResearcherCapacity>()
+    const targetWeek = activeWeekNumber.value
+    
+    for (const user of rawAvailability.value) {
+      // Find the availability entry for the *active* week
+      const entry = user.availability.find((a) => a.week === targetWeek)
+      if (!entry) continue
+
+      // Initialize with total capacity
+      map.set(user.id, {
+        id: user.id,
+        name: user.name,
+        remaining: {
+          ochtend: entry.morning_days ?? 0,
+          dag: entry.daytime_days ?? 0,
+          avond: entry.nighttime_days ?? 0,
+          flex: entry.flex_days ?? 0,
+        },
+      })
+    }
+
+    // 2. Subtract assigned visits
+    // We use 'visits' and 'isInSelectedWeek' to ensure we only count what's visible/relevant
+    // for this week tab.
+    
+    for (const v of visits.value) {
+      if (['cancelled', 'rejected'].includes(v.status)) continue
+
+      // The tab logic already filters by week for display, but let's double check logic match.
+      // isInSelectedWeek uses date ranges. visitWeekNumber is more direct for planning logic.
+      if (visitWeekNumber(v) !== targetWeek) continue
+
+      const part = v.part_of_day 
+      
+      for (const r of v.researchers) {
+         const cap = map.get(r.id)
+         if (!cap) continue
+
+         if (part === 'Ochtend' || part === 'ochtend') {
+           cap.remaining.ochtend--
+           if (cap.remaining.ochtend < 0 && cap.remaining.flex > 0) {
+             cap.remaining.ochtend++
+             cap.remaining.flex--
+           }
+         } else if (part === 'Dag' || part === 'dag') {
+           cap.remaining.dag--
+           if (cap.remaining.dag < 0 && cap.remaining.flex > 0) {
+             cap.remaining.dag++
+             cap.remaining.flex--
+           }
+         } else if (part === 'Avond' || part === 'avond' || part === 'Nacht' || part === 'nacht') {
+           cap.remaining.avond--
+           if (cap.remaining.avond < 0 && cap.remaining.flex > 0) {
+             cap.remaining.avond++
+             cap.remaining.flex--
+           }
+         } else {
+           // No specific part -> consume Flex
+           cap.remaining.flex--
+         }
+      }
+    }
+
+    // 3. Aggregate totals and list
+    const researchers = Array.from(map.values())
+      .filter((r) => r.remaining.ochtend > 0 || r.remaining.dag > 0 || r.remaining.avond > 0 || r.remaining.flex > 0)
+      .sort((a, b) => a.name.localeCompare(b.name))
+    
+    const totals = { ochtend: 0, dag: 0, avond: 0, flex: 0 }
+    for (const r of researchers) {
+      if (r.remaining.ochtend > 0) totals.ochtend += r.remaining.ochtend
+      if (r.remaining.dag > 0) totals.dag += r.remaining.dag
+      if (r.remaining.avond > 0) totals.avond += r.remaining.avond
+      if (r.remaining.flex > 0) totals.flex += r.remaining.flex
+    }
+
+    return { researchers, totals }
+  })
+
+  async function loadAvailability(): Promise<void> {
+    try {
+      // Fetch for the active week tab
+      const w = activeWeekNumber.value
+      const response = await $api<ApiAvailabilityListResponse>('/admin/availability', {
+        method: 'GET',
+        query: { week_start: w, week_end: w }
+      })
+      rawAvailability.value = response.users
+    } catch (e) {
+      console.error('Failed to load availability', e)
+    }
+  }
+
   async function loadVisits(): Promise<void> {
     loading.value = true
     try {
@@ -461,10 +639,18 @@
       }
       const response = await $api<VisitListResponse>('/visits', { query })
       visits.value = response.items
+      
+      // Load availability for the initial active week
+      void loadAvailability()
     } finally {
       loading.value = false
     }
   }
+  
+  // Refetch availability when switching tabs (weeks)
+  watch(activeWeekNumber, () => {
+    void loadAvailability()
+  })
 
   async function runPlanning(): Promise<void> {
     loading.value = true
