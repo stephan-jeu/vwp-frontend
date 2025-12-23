@@ -68,7 +68,7 @@
             :items="functionOptions"
             multiple
             class="w-2xs"
-            @update:model-value="(sel) => (createFunctionIds = sel.map((o) => o.value))"
+            @update:model-value="(sel) => (createFunctionIds = sel.map((o) => o.value as number))"
           />
         </div>
         <div>
@@ -78,7 +78,7 @@
             :items="speciesOptions"
             multiple
             class="w-3xs"
-            @update:model-value="(sel) => (createSpeciesIds = sel.map((o) => o.value))"
+            @update:model-value="(sel) => (createSpeciesIds = sel.map((o) => o.value as number))"
           />
         </div>
 
@@ -89,7 +89,11 @@
         <div>
           <label class="block text-xs mb-1">Voorkeursonderzoeker</label>
           <USelectMenu
-            :model-value="preferredResearcherOption"
+            :model-value="
+              createPreferredResearcherId === null
+                ? undefined
+                : researcherOptions.find((o) => o.value === createPreferredResearcherId)
+            "
             :items="researcherOptions"
             searchable
             placeholder="Kies onderzoeker"
@@ -104,7 +108,7 @@
             :items="researcherOptions"
             multiple
             class="w-3xs"
-            @update:model-value="(sel) => (createResearcherIds = sel.map((o) => o.value))"
+            @update:model-value="(sel) => (createResearcherIds = sel.map((o) => o.value as number))"
           />
         </div>
 
@@ -378,7 +382,7 @@
                       multiple
                       class="w-2xs"
                       @update:model-value="
-                        (sel) => (row.original.function_ids = sel.map((o) => o.value))
+                        (sel) => (row.original.function_ids = sel.map((o) => o.value as number))
                       "
                     />
                   </div>
@@ -390,7 +394,7 @@
                       multiple
                       class="w-3xs"
                       @update:model-value="
-                        (sel) => (row.original.species_ids = sel.map((o) => o.value))
+                        (sel) => (row.original.species_ids = sel.map((o) => o.value as number))
                       "
                     />
                   </div>
@@ -403,9 +407,11 @@
                     <label class="block text-xs mb-1">Voorkeursonderzoeker</label>
                     <USelectMenu
                       :model-value="
-                        researcherOptions.find(
-                          (o) => o.value === row.original.preferred_researcher_id
-                        )
+                        row.original.preferred_researcher_id === null
+                          ? undefined
+                          : researcherOptions.find(
+                              (o) => o.value === row.original.preferred_researcher_id
+                            )
                       "
                       :items="researcherOptions"
                       searchable
@@ -427,7 +433,7 @@
                       class="w-3xs"
                       @update:model-value="
                         (sel) => {
-                          const ids = sel.map((o) => o.value)
+                          const ids = sel.map((o) => o.value).filter((v): v is number => v !== null)
                           row.original.researcher_ids = ids
                           row.original.researchers = ids.map((id) => {
                             const opt = researcherOptions.find((o) => o.value === id)
@@ -471,7 +477,9 @@
                     <label class="block text-xs mb-1">Dagdeel</label>
                     <USelectMenu
                       :model-value="
-                        partOfDayOptions.find((o) => o.value === row.original.part_of_day)
+                        row.original.part_of_day === null
+                          ? undefined
+                          : partOfDayOptions.find((o) => o.value === row.original.part_of_day)
                       "
                       :items="partOfDayOptions"
                       placeholder="Kies dagdeel"
@@ -607,7 +615,7 @@
       :initial-status="adminPlanningInitialStatus"
       :initial-planned-week="adminPlanningInitialPlannedWeek"
       :initial-researcher-ids="adminPlanningInitialResearcherIds"
-      :researcher-options="researcherOptions"
+      :researcher-options="(researcherOptions as Option[])"
       @saved="onAdminPlanningSaved"
     />
   </div>
@@ -677,8 +685,8 @@
     quote: boolean
   }
 
-  type Option = { label: string; value: number }
-  type StringOption = { label: string; value: string }
+  type Option = { label: string; value: number | null }
+  type StringOption = { label: string; value: string | null }
 
   type ProjectOption = Option
   type ClusterOption = Option & { address?: string }
@@ -889,6 +897,7 @@
   const researcherOptions = ref<Option[]>([])
 
   const experienceLevelOptionsArr: StringOption[] = [
+    { label: '\u00A0', value: null },
     { label: 'Nieuw', value: 'Nieuw' },
     { label: 'Junior', value: 'Junior' },
     { label: 'Senior', value: 'Senior' },
@@ -896,10 +905,12 @@
   ]
 
   function selectedExperienceOption(v: string | null | undefined): StringOption | undefined {
+    if (v === null) return undefined
     return experienceLevelOptionsArr.find((o) => o.value === v)
   }
 
   const partOfDayOptions: StringOption[] = [
+    { label: '\u00A0', value: null },
     { label: 'Ochtend', value: 'Ochtend' },
     { label: 'Dag', value: 'Dag' },
     { label: 'Avond', value: 'Avond' }
@@ -908,7 +919,7 @@
   function mapIdsToOptions(ids: number[] | undefined, options: Option[]): Option[] {
     if (!ids || ids.length === 0) return []
     const idSet = new Set(ids)
-    return options.filter((o) => idSet.has(o.value))
+    return options.filter((o) => o.value !== null && idSet.has(o.value))
   }
 
   async function loadStaticOptions(): Promise<void> {
@@ -922,9 +933,10 @@
     projectOptions.value = projects.map((p) => ({ label: p.code, value: p.id }))
     functionOptions.value = functions.map((f) => ({ label: f.name, value: f.id }))
     speciesOptions.value = species.map((s) => ({ label: s.abbreviation ?? s.name, value: s.id }))
-    researcherOptions.value = users
+    const mappedUsers = users
       .map((u) => ({ label: u.full_name ?? `Gebruiker #${u.id}`, value: u.id }))
       .sort((a, b) => a.label.localeCompare(b.label))
+    researcherOptions.value = [{ label: '\u00A0', value: null }, ...mappedUsers]
   }
 
   const selectedProject = ref<ProjectOption | undefined>(undefined)

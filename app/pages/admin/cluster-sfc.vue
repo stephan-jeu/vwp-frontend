@@ -5,11 +5,12 @@
     <UCard class="mb-6">
       <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
         <USelectMenu
-          v-model="selectedProject"
+          :model-value="selectedProject"
           :items="projectOptions"
           searchable
           searchable-placeholder="Zoek projectcode"
           placeholder="Project"
+          @update:model-value="(opt) => (selectedProject = opt?.value === null ? undefined : opt)"
         />
         <UInput v-model="address" placeholder="Adres" />
         <UInput v-model.number="clusterNumber" type="number" placeholder="Cluster nummer" />
@@ -24,7 +25,7 @@
           :key="idx"
           class="flex items-center gap-3 flex-wrap md:flex-nowrap"
         >
-          <div class="flex gap-3">
+          <div class="flex gap-3 my-2">
             <UInputMenu
               :model-value="row.functions"
               :items="functionOptions"
@@ -73,7 +74,9 @@
           />
           <USelectMenu
             :model-value="
-              researcherOptions.find((o) => o.value === defaultPreferredResearcherId)
+              defaultPreferredResearcherId === null
+                ? undefined
+                : researcherOptions.find((o) => o.value === defaultPreferredResearcherId)
             "
             :items="researcherOptions"
             searchable
@@ -280,7 +283,7 @@
                       :items="functionOptions"
                       multiple
                       class="w-2xs"
-                      @update:model-value="(sel) => (visit.function_ids = sel.map((o) => o.value))"
+                      @update:model-value="(sel) => (visit.function_ids = sel.map((o) => o.value as number))"
                     />
                   </div>
                   <div>
@@ -290,7 +293,7 @@
                       :items="speciesOptions"
                       multiple
                       class="w-3xs"
-                      @update:model-value="(sel) => (visit.species_ids = sel.map((o) => o.value))"
+                      @update:model-value="(sel) => (visit.species_ids = sel.map((o) => o.value as number))"
                     />
                   </div>
 
@@ -302,7 +305,9 @@
                     <label class="block text-xs mb-1">Voorkeursonderzoeker</label>
                     <USelectMenu
                       :model-value="
-                        researcherOptions.find((o) => o.value === visit.preferred_researcher_id)
+                        visit.preferred_researcher_id === null
+                          ? undefined
+                          : researcherOptions.find((o) => o.value === visit.preferred_researcher_id)
                       "
                       :items="researcherOptions"
                       searchable
@@ -335,7 +340,11 @@
                   <div>
                     <label class="block text-xs mb-1">Dagdeel</label>
                     <USelectMenu
-                      :model-value="partOfDayOptions.find((o) => o.value === visit.part_of_day)"
+                      :model-value="
+                        visit.part_of_day === null
+                          ? undefined
+                          : partOfDayOptions.find((o) => o.value === visit.part_of_day)
+                      "
                       :items="partOfDayOptions"
                       placeholder="Kies dagdeel"
                       @update:model-value="(opt) => (visit.part_of_day = opt?.value)"
@@ -407,8 +416,8 @@
 </template>
 
 <script setup lang="ts">
-  type Option = { label: string; value: number }
-  type StringOption = { label: string; value: string }
+  type Option = { label: string; value: number | null }
+  type StringOption = { label: string; value: string | null }
 
   const { $api } = useNuxtApp()
 
@@ -455,6 +464,7 @@
   const researcherOptions = ref<Option[]>([])
 
   const experienceLevelOptionsArr: StringOption[] = [
+    { label: '\u00A0', value: null },
     { label: 'Nieuw', value: 'Nieuw' },
     { label: 'Junior', value: 'Junior' },
     { label: 'Senior', value: 'Senior' },
@@ -462,6 +472,7 @@
   ]
 
   function selectedExperienceOption(v: string | null | undefined): StringOption | undefined {
+    if (v === null) return undefined
     return experienceLevelOptionsArr.find((o) => o.value === v)
   }
 
@@ -544,6 +555,7 @@
     return projectsList.value.find((p) => p.id === sel.value) || null
   })
   const partOfDayOptions = [
+    { label: '\u00A0', value: null },
     { label: 'Ochtend', value: 'Ochtend' },
     { label: 'Dag', value: 'Dag' },
     { label: 'Avond', value: 'Avond' }
@@ -564,7 +576,7 @@
   // no table columns needed
 
   const canCreate = computed(() => {
-    if (selectedProject.value === undefined || !address.value || clusterNumber.value === null)
+    if (selectedProject.value?.value == null || !address.value || clusterNumber.value === null)
       return false
     if (comboRows.value.length === 0) return false
     return comboRows.value.every((r) => r.functions.length > 0 && r.species.length > 0)
@@ -581,9 +593,10 @@
     projectOptions.value = projects.map((p) => ({ label: p.code, value: p.id }))
     functionOptions.value = functions.map((f) => ({ label: f.name, value: f.id }))
     speciesOptions.value = species.map((s) => ({ label: s.abbreviation ?? s.name, value: s.id }))
-    researcherOptions.value = users
+    const mappedUsers = users
       .map((u) => ({ label: u.full_name ?? `Gebruiker #${u.id}`, value: u.id }))
       .sort((a, b) => a.label.localeCompare(b.label))
+    researcherOptions.value = [{ label: '\u00A0', value: null }, ...mappedUsers]
   }
 
   watch(selectedProject, async (opt) => {
@@ -595,7 +608,7 @@
   async function loadClusters(): Promise<void> {
     loading.value = true
     try {
-      if (!selectedProject.value) {
+      if (!selectedProject.value || selectedProject.value.value === null) {
         clusters.value = []
         return
       }
@@ -611,6 +624,11 @@
       loading.value = false
     }
   }
+  function cleanInt(val: number | string | null | undefined): number | null {
+    if (val === '' || val === null || val === undefined) return null
+    return Number(val)
+  }
+
   async function onCreate(): Promise<void> {
     if (!canCreate.value) return
     const exists = !!clusters.value.find(
@@ -619,14 +637,14 @@
     )
     if (exists) {
       pendingCreatePayload.value = {
-        project_id: selectedProject.value!.value,
+        project_id: selectedProject.value!.value as number,
         address: address.value,
         cluster_number: clusterNumber.value!,
         combos: comboRows.value.map((r) => ({
           function_ids: r.functions.map((o) => o.value as number),
           species_ids: r.species.map((o) => o.value as number)
         })),
-        default_required_researchers: defaultRequiredResearchers.value,
+        default_required_researchers: cleanInt(defaultRequiredResearchers.value),
         default_preferred_researcher_id: defaultPreferredResearcherId.value,
         default_expertise_level: defaultExpertiseLevel.value,
         default_wbc: defaultWbc.value,
@@ -644,14 +662,14 @@
       const res = await $api<Cluster>('/clusters', {
         method: 'POST',
         body: {
-          project_id: selectedProject.value!.value,
+          project_id: selectedProject.value!.value as number,
           address: address.value,
           cluster_number: clusterNumber.value!,
           combos: comboRows.value.map((r) => ({
             function_ids: r.functions.map((o) => o.value as number),
             species_ids: r.species.map((o) => o.value as number)
           })),
-          default_required_researchers: defaultRequiredResearchers.value,
+          default_required_researchers: cleanInt(defaultRequiredResearchers.value),
           default_preferred_researcher_id: defaultPreferredResearcherId.value,
           default_expertise_level: defaultExpertiseLevel.value,
           default_wbc: defaultWbc.value,
@@ -692,7 +710,7 @@
   function mapIdsToOptions(ids: number[] | undefined, options: Option[]): Option[] {
     if (!ids || ids.length === 0) return []
     const idSet = new Set(ids)
-    return options.filter((o) => idSet.has(o.value))
+    return options.filter((o) => o.value !== null && idSet.has(o.value))
   }
 
   function toggleCluster(id: number): void {
@@ -727,13 +745,13 @@
 
   async function onSaveVisit(clusterId: number, visit: CompactVisit): Promise<void> {
     const payload = {
-      required_researchers: visit.required_researchers,
-      visit_nr: visit.visit_nr,
+      required_researchers: cleanInt(visit.required_researchers),
+      visit_nr: cleanInt(visit.visit_nr),
       from_date: visit.from_date,
       to_date: visit.to_date,
       duration: visit.duration,
-      min_temperature_celsius: visit.min_temperature_celsius,
-      max_wind_force_bft: visit.max_wind_force_bft,
+      min_temperature_celsius: cleanInt(visit.min_temperature_celsius),
+      max_wind_force_bft: cleanInt(visit.max_wind_force_bft),
       max_precipitation: visit.max_precipitation,
       expertise_level: visit.expertise_level ?? null,
       wbc: visit.wbc,
@@ -789,7 +807,7 @@
     try {
       await $api(`/clusters/${duplicateSource.value.id}/duplicate`, {
         method: 'POST',
-        body: { cluster_number: duplicateClusterNumber.value, address: duplicateAddress.value }
+        body: { cluster_number: duplicateClusterNumber.value!, address: duplicateAddress.value }
       })
       toast.add({ title: 'Cluster gedupliceerd', color: 'success' })
       await loadClusters()

@@ -87,7 +87,7 @@
   type ModeValue = 'open' | 'planned' | 'executed' | 'cancelled'
 
   type ModeOption = { label: string; value: ModeValue }
-  type ResearcherOption = { label: string; value: number }
+  type ResearcherOption = { label: string; value: number | null }
 
   const props = defineProps<{
     visitId: number
@@ -126,7 +126,9 @@
 
   const selectedResearcherOptions = computed<ResearcherOption[]>(() => {
     const idSet = new Set(selectedResearcherIds.value)
-    return props.researcherOptions.filter((o) => idSet.has(o.value))
+    return props.researcherOptions.filter(
+      (o) => o.value !== null && idSet.has(o.value)
+    )
   })
 
   watch(
@@ -157,7 +159,9 @@
   }
 
   function onResearchersChange(options: ResearcherOption[]): void {
-    selectedResearcherIds.value = options.map((o) => o.value)
+    selectedResearcherIds.value = options
+      .map((o) => o.value)
+      .filter((v): v is number => v !== null)
   }
 
   function onCancel(): void {
