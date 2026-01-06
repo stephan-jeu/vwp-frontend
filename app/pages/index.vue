@@ -375,6 +375,26 @@
       return `${actor} heeft een cluster toegevoegd voor project ${projectCode} voor de functies ${functionsLabel} en de soorten ${speciesLabel} op ${when}`
     }
 
+    if (action === 'cluster_duplicated') {
+      const projectCode = (details.project_code as string | undefined) ?? 'onbekend project'
+      const functionNames = (details.function_names as string[] | undefined) ?? []
+      const speciesAbbreviations = (details.species_abbreviations as string[] | undefined) ?? []
+      const functionsLabel =
+        functionNames.length > 0 ? functionNames.join(', ') : 'onbekende functies'
+      const speciesLabel =
+        speciesAbbreviations.length > 0
+          ? speciesAbbreviations.join(', ')
+          : 'onbekende soorten'
+      return `${actor} heeft een cluster gedupliceerd voor project ${projectCode} voor de functies ${functionsLabel} en de soorten ${speciesLabel} op ${when}`
+    }
+
+    if (action === 'cluster_updated') {
+      const clusterNumber = (details.cluster_number as number | undefined) ?? null
+      const projectCode = (details.project_code as string | undefined) ?? 'onbekend project'
+      const clusterLabel = clusterNumber != null ? `${clusterNumber}` : 'onbekend'
+      return `${actor} heeft cluster ${clusterLabel} bijgewerkt voor project ${projectCode} op ${when}`
+    }
+
     if (action === 'visit_status_cleared') {
       const previousStatusRaw = (details.previous_status as string | undefined) ?? null
       const modeRaw = (details.mode as string | undefined) ?? null
@@ -418,20 +438,20 @@
       case 'user_created': {
         const fullName = (details.full_name as string | undefined) ?? null
         const email = (details.email as string | undefined) ?? null
-        const label = fullName || email || `gebruiker #${entry.target_id ?? ''}`.trim()
-        return `${actor} heeft gebruiker ${label} aangemaakt op ${when}`
+        const label = fullName || email || `#${entry.target_id ?? ''}`.trim()
+        return `${actor} heeft ${label} aangemaakt op ${when}`
       }
       case 'user_updated': {
         const fullName = (details.full_name as string | undefined) ?? null
         const email = (details.email as string | undefined) ?? null
-        const label = fullName || email || `gebruiker #${entry.target_id ?? ''}`.trim()
-        return `${actor} heeft gebruiker ${label} bijgewerkt op ${when}`
+        const label = fullName || email || `#${entry.target_id ?? ''}`.trim()
+        return `${actor} heeft ${label} bijgewerkt op ${when}`
       }
       case 'user_deleted': {
         const fullName = (details.full_name as string | undefined) ?? null
         const email = (details.email as string | undefined) ?? null
-        const label = fullName || email || `gebruiker #${entry.target_id ?? ''}`.trim()
-        return `${actor} heeft gebruiker ${label} verwijderd op ${when}`
+        const label = fullName || email || `#${entry.target_id ?? ''}`.trim()
+        return `${actor} heeft ${label} verwijderd op ${when}`
       }
       default:
         return `${actor} heeft actie "${action}" uitgevoerd op ${when}`
