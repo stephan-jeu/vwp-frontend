@@ -376,7 +376,7 @@
     }
 
     if (action === 'cluster_duplicated') {
-      const projectCode = (details.project_code as string | undefined) ?? 'onbekend project'
+      const projectCode = (details.project_code as string | undefined) ?? 'onbekend'
       const functionNames = (details.function_names as string[] | undefined) ?? []
       const speciesAbbreviations = (details.species_abbreviations as string[] | undefined) ?? []
       const functionsLabel =
@@ -390,7 +390,7 @@
 
     if (action === 'cluster_updated') {
       const clusterNumber = (details.cluster_number as number | undefined) ?? null
-      const projectCode = (details.project_code as string | undefined) ?? 'onbekend project'
+      const projectCode = (details.project_code as string | undefined) ?? 'onbekend'
       const clusterLabel = clusterNumber != null ? `${clusterNumber}` : 'onbekend'
       return `${actor} heeft cluster ${clusterLabel} bijgewerkt voor project ${projectCode} op ${when}`
     }
