@@ -254,13 +254,13 @@
               variant="outline"
               color="neutral"
               size="xs"
-              :icon="expandedVisitId === row.original.id ? 'i-lucide-minus' : 'i-lucide-plus'"
-              @click.stop="() => { row.toggleExpanded(); onToggleExpanded(row.original.id) }"
+              :icon="row.getIsExpanded() ? 'i-lucide-minus' : 'i-lucide-plus'"
+              @click.stop="row.toggleExpanded()"
             />
           </template>
 
           <template #expanded="{ row }">
-            <div v-if="expandedVisitId === row.original.id">
+            <div>
               <div v-if="!isAdmin" class="px-3 pb-3 text-sm space-y-2">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
@@ -722,7 +722,6 @@
   const page = ref(1)
   const pageSize = ref(50)
   const total = ref(0)
-  const expandedVisitId = ref<number | null>(null)
 
   const search = ref('')
 
@@ -816,9 +815,6 @@
     return `${row.planned_week} (${start} - ${end})`
   }
 
-  function onToggleExpanded(id: number): void {
-    expandedVisitId.value = expandedVisitId.value === id ? null : id
-  }
 
   async function loadVisits(): Promise<void> {
     loading.value = true
