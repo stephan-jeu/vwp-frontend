@@ -7,12 +7,19 @@
 
         <div v-if="pending" class="text-sm text-gray-700 dark:text-gray-300">Bezoeken worden geladen…</div>
         <div v-else-if="error" class="text-sm text-red-500">Kon bezoeken niet laden.</div>
-        <div v-else-if="filteredVisits.length === 0" class="text-sm text-gray-700 dark:text-gray-300">
-          Er zijn nog geen bezoeken aan je toegewezen.
-        </div>
-
         <div v-else class="flex flex-col gap-3">
-          <UTabs v-model="selectedWeek" :items="weekTabs" />
+          <div class="w-64">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              Bekijk bezoeken voor week
+            </label>
+            <USelectMenu
+              v-model="selectedWeekTab"
+              :items="weekTabs"
+              option-attribute="label"
+              placeholder="Selecteer week"
+              class="w-sm"
+            />
+          </div>
 
           <div
             v-if="visitsForActiveWeek.length === 0"
@@ -212,12 +219,14 @@
     return new Date()
   })
 
-  const { data, pending, error } = useAsyncData('my-visits', async () => {
+  const { data, pending, error, refresh } = useAsyncData('my-visits', async () => {
     await auth.ensureLoaded()
 
+    const w = activeWeekNumber.value
     const query: Record<string, unknown> = {
       page: 1,
-      page_size: 200
+      page_size: 200,
+      week: w
     }
 
     if (testModeEnabled.value && simulatedDate.value) {
@@ -336,34 +345,72 @@
 
   type WeekTab = { label: string; value: string; week: number }
 
-  const weekTabs = computed<WeekTab[]>(() => {
-    const weeks = new Set<number>()
-    for (const v of filteredVisits.value) {
-      weeks.add(visitWeekNumber(v))
-    }
+  const availableWeeks = ref<number[]>([])
 
-    const sortedWeeks = Array.from(weeks).sort((a, b) => a - b)
+  const weekTabs = computed<WeekTab[]>(() => {
+    // Merge available weeks with current week to ensure at least current is shown
+    const allWeeks = new Set(availableWeeks.value)
+    allWeeks.add(currentWeekNumber.value)
+    
+    // Sort logically
+    const sorted = Array.from(allWeeks).sort((a, b) => a - b)
 
     const tabs: WeekTab[] = []
-    tabs.push({ label: 'Deze week', value: 'current', week: currentWeekNumber.value })
-
-    for (const week of sortedWeeks) {
-      if (week === currentWeekNumber.value) continue
-      const range = weekRangeLabel(week)
-      const base = `Week ${week}`
-      const label = range ? `${base} (${range})` : base
-      tabs.push({ label, value: `week-${week}`, week })
+    
+    for (const w of sorted) {
+      if (w === currentWeekNumber.value) {
+         tabs.push({ label: 'Deze week', value: 'current', week: w })
+      } else {
+         const range = weekRangeLabel(w)
+         const base = `Week ${w}`
+         const label = range ? `${base} (${range})` : base
+         tabs.push({ label, value: `week-${w}`, week: w })
+      }
     }
-
     return tabs
   })
 
-  const selectedWeek = ref<string>('current')
+  onMounted(async () => {
+     try {
+       // Filter weeks to only those where I have visits
+       availableWeeks.value = await $api<number[]>('/visits/weeks', {
+         query: { mine: true }
+       })
+     } catch (e) {
+       console.error('Failed to load weeks', e)
+     }
+  })
+
+  /* 
+   * We bind the SelectMenu to the full tab object.
+   * Default is the "current" week tab. We compute it similarly to how we build the list.
+   */
+  const defaultTab = { label: 'Deze week', value: 'current', week: currentWeekNumber.value }
+  const selectedWeekTab = ref<WeekTab>(defaultTab)
 
   const activeWeekNumber = computed<number>(() => {
-    const tab = weekTabs.value.find((t) => t.value === selectedWeek.value)
-    return tab?.week ?? currentWeekNumber.value
+    return selectedWeekTab.value.week
   })
+
+  // Ensure selectedTab stays valid or defaults to current if options change
+  watch(weekTabs, (tabs) => {
+    const currentVal = selectedWeekTab.value.value
+    const found = tabs.find(t => t.value === currentVal)
+    if (found) {
+      selectedWeekTab.value = found
+    } else {
+      // If previously selected week is gone, fallback to current
+      const current = tabs.find(t => t.value === 'current')
+      if (current) selectedWeekTab.value = current
+    }
+  })
+
+  // Reload data when active week changes
+  watch(activeWeekNumber, () => {
+    refresh()
+  })
+
+
 
   const statusSortOrder: Partial<Record<VisitStatusCode, number>> = {
     planned: 1,
@@ -373,10 +420,8 @@
   }
 
   const visitsForActiveWeek = computed<VisitListRow[]>(() => {
-    const week = activeWeekNumber.value
-    const list = filteredVisits.value.filter((v) => visitWeekNumber(v) === week)
-
-    return list.slice().sort((a, b) => {
+    // We trust backend filtering now, but still filter by researcher ownership
+    return filteredVisits.value.slice().sort((a, b) => {
       const rankA = statusSortOrder[a.status] ?? 99
       const rankB = statusSortOrder[b.status] ?? 99
       if (rankA !== rankB) return rankA - rankB

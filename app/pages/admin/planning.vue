@@ -40,7 +40,15 @@
 
         <div v-else>
           <div class="mb-3">
-            <UTabs v-model="selectedWeek" :items="weekTabs" />
+          <div class="mb-3 w-64">
+             <USelectMenu
+              v-model="selectedWeekTab"
+              :items="weekTabs"
+              option-attribute="label"
+              placeholder="Selecteer week"
+              class="w-sm"
+            />
+          </div>
           </div>
 
           <!-- Capacity Section -->
@@ -369,6 +377,8 @@
   const loading = ref(false)
   const clearing = ref(false)
   const currentWeekNumber = computed<number>(() => currentIsoWeek(effectiveToday.value))
+  const toast = useToast()
+
   const week = ref<number>(currentWeekNumber.value)
   const visits = ref<VisitListRow[]>([])
   
@@ -377,7 +387,7 @@
   const availabilityCollapsed = ref(true)
 
   type WeekTab = { label: string; value: string; week: number }
-  const selectedWeek = ref<string>('current')
+
 
   function currentIsoWeek(baseDate: Date): number {
     const d = new Date(baseDate)
@@ -467,38 +477,71 @@
     return found?.label ?? code
   }
 
+  const availableWeeks = ref<number[]>([])
+
   const weekTabs = computed<WeekTab[]>(() => {
-    const futureWeeks = new Set<number>()
-
-    for (const v of visits.value) {
-      const hasResearchers = v.researchers && v.researchers.length > 0
-      const isPlannedStatus = plannedStatusValues.includes(v.status)
-      if (!hasResearchers || !isPlannedStatus) continue
-
-      const weekNumber = visitWeekNumber(v)
-      if (weekNumber > currentWeekNumber.value) {
-        futureWeeks.add(weekNumber)
-      }
-    }
-
-    const sortedFutureWeeks = Array.from(futureWeeks).sort((a, b) => a - b)
+    const allWeeks = new Set(availableWeeks.value)
+    allWeeks.add(currentWeekNumber.value)
+    
+    // Sort logically
+    const sorted = Array.from(allWeeks).sort((a, b) => a - b)
 
     const tabs: WeekTab[] = []
-    tabs.push({ label: 'Deze week', value: 'current', week: currentWeekNumber.value })
-
-    for (const w of sortedFutureWeeks) {
-      const rangeLabel = weekRangeLabel(w)
-      const base = `Week ${w}`
-      const label = rangeLabel ? `${base} (${rangeLabel})` : base
-      tabs.push({ label, value: `week-${w}`, week: w })
+    
+    for (const w of sorted) {
+       if (w === currentWeekNumber.value) {
+         tabs.push({ label: 'Deze week', value: 'current', week: w })
+       } else {
+         const range = weekRangeLabel(w)
+         const base = `Week ${w}`
+         const label = range ? `${base} (${range})` : base
+         tabs.push({ label, value: `week-${w}`, week: w })
+       }
     }
 
     return tabs
   })
 
+  async function loadWeeks(): Promise<void> {
+    try {
+      availableWeeks.value = await $api<number[]>('/visits/weeks')
+    } catch (e) {
+      console.error('Failed to load weeks', e)
+    }
+  }
+
+  onMounted(async () => {
+     await loadWeeks()
+     // Initial visits load
+     void loadVisits()
+  })
+
+  /*
+   * We bind the SelectMenu to the full tab object.
+   * Default is the "current" week tab.
+   */
+  const defaultTab = { label: 'Deze week', value: 'current', week: currentWeekNumber.value }
+  const selectedWeekTab = ref<WeekTab>(defaultTab)
+
+  // Ensure selectedTab stays valid or defaults to current if options change
+  watch(weekTabs, (tabs) => {
+    const currentVal = selectedWeekTab.value.value
+    const found = tabs.find(t => t.value === currentVal)
+    if (found) {
+      selectedWeekTab.value = found
+    } else {
+      const current = tabs.find(t => t.value === 'current')
+      if (current) selectedWeekTab.value = current
+    }
+  })
+
   const activeWeekNumber = computed<number>(() => {
-    const tab = weekTabs.value.find((t) => t.value === selectedWeek.value)
-    return tab?.week ?? currentWeekNumber.value
+    return selectedWeekTab.value.week
+  })
+
+  // Reload data/availability when active week changes
+  watch(activeWeekNumber, () => {
+    void loadVisits()
   })
 
   const isCurrentWeekTab = computed<boolean>(() => activeWeekNumber.value === currentWeekNumber.value)
@@ -516,11 +559,11 @@
   }
 
   const completedVisits = computed(() =>
-    visits.value.filter((v) => completedStatusValues.includes(v.status) && isInSelectedWeek(v))
+    visits.value.filter((v) => completedStatusValues.includes(v.status))
   )
 
   const plannedVisits = computed(() =>
-    visits.value.filter((v) => plannedStatusValues.includes(v.status) && isInSelectedWeek(v))
+    visits.value.filter((v) => plannedStatusValues.includes(v.status))
   )
 
 
@@ -628,11 +671,13 @@
   async function loadVisits(): Promise<void> {
     loading.value = true
     try {
+      const w = activeWeekNumber.value
       const statuses: VisitStatusCode[] = [...completedStatusValues, ...plannedStatusValues]
       const query: Record<string, unknown> = {
         page: 1,
         page_size: 200,
-        statuses
+        statuses,
+        week: w
       }
       if (testModeEnabled.value && simulatedDate.value) {
         query.simulated_today = simulatedDate.value
@@ -656,7 +701,36 @@
     loading.value = true
     try {
       const w = week.value
-      await $api(`/planning/generate`, { method: 'POST', body: { week: w } })
+      // Retrieve response to get count
+      const result = await $api<{ selected_visit_ids: number[] }>(`/planning/generate`, {
+        method: 'POST',
+        body: { week: w }
+      })
+
+      // 1. Show feedback
+      const count = result.selected_visit_ids.length
+      toast.add({
+        title: 'Planning gegenereerd',
+        description: `Planning gegenereerd voor week ${w}, ${count} bezoeken ingepland.`,
+        color: 'success'
+      })
+
+      // 2. Refresh available weeks (in case this week wasn't there before)
+      await loadWeeks()
+
+      // 3. Auto-navigate to the planned week
+      const foundTab = weekTabs.value.find(t => t.week === w)
+      if (foundTab) {
+        selectedWeekTab.value = foundTab
+      } else {
+        // Fallback: try to select "current" if it matches
+        const currentTab = weekTabs.value.find(t => t.value === 'current')
+        if (currentTab && currentTab.week === w) {
+          selectedWeekTab.value = currentTab
+        }
+      }
+
+      // 4. Load visits for the newly selected week
       await loadVisits()
     } finally {
       loading.value = false
@@ -686,9 +760,8 @@
     }
   )
 
-  onMounted(() => {
-    void loadVisits()
-  })
+  // Removed onMounted here because we do it after loading weeks
+
 
   function goToDetail(id: number): void {
     navigateTo(`/visits/${id}`)
