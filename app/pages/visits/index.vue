@@ -242,9 +242,7 @@
           <template #researchers-cell="{ row }">
             <span class="text-xs text-gray-700 dark:text-gray-300">
               {{
-                row.original.researchers
-                  .map((r) => r.full_name || `Gebruiker #${r.id}`)
-                  .join(', ')
+                row.original.researchers.map((r) => r.full_name || `Gebruiker #${r.id}`).join(', ')
               }}
             </span>
           </template>
@@ -268,7 +266,9 @@
                     {{ durationHours(row.original.duration) ?? '-' }} uur
                   </div>
                   <div>
-                    <UBadge v-if="row.original.wbc" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
+                    <UBadge
+                      v-if="row.original.wbc"
+                      class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
                       >WBC</UBadge
                     >
                     <UBadge
@@ -276,10 +276,14 @@
                       class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
                       >Fiets</UBadge
                     >
-                    <UBadge v-if="row.original.hub" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
+                    <UBadge
+                      v-if="row.original.hub"
+                      class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
                       >HUB</UBadge
                     >
-                    <UBadge v-if="row.original.dvp" class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
+                    <UBadge
+                      v-if="row.original.dvp"
+                      class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
                       >DvP</UBadge
                     >
                     <UBadge
@@ -545,6 +549,14 @@
                 </div>
                 <div class="my-4 flex gap-2">
                   <UButton
+                    size="xs"
+                    variant="soft"
+                    icon="i-heroicons-eye"
+                    :to="{ path: `/visits/${row.original.id}`, query: { back: 'visits' } }"
+                  >
+                    Details
+                  </UButton>
+                  <UButton
                     v-if="!['overdue', 'executed', 'approved'].includes(row.original.status)"
                     size="xs"
                     variant="soft"
@@ -615,7 +627,7 @@
       :initial-status="adminPlanningInitialStatus"
       :initial-planned-week="adminPlanningInitialPlannedWeek"
       :initial-researcher-ids="adminPlanningInitialResearcherIds"
-      :researcher-options="(researcherOptions as Option[])"
+      :researcher-options="researcherOptions as Option[]"
       @saved="onAdminPlanningSaved"
     />
   </div>
@@ -814,7 +826,6 @@
     const end = formatter.format(range.end)
     return `${row.planned_week} (${start} - ${end})`
   }
-
 
   async function loadVisits(): Promise<void> {
     loading.value = true
@@ -1109,9 +1120,7 @@
     try {
       const rawPlannedWeek = row.planned_week as unknown
       const plannedWeek =
-        rawPlannedWeek === '' || rawPlannedWeek == null
-          ? null
-          : (rawPlannedWeek as number)
+        rawPlannedWeek === '' || rawPlannedWeek == null ? null : (rawPlannedWeek as number)
 
       const payload = {
         required_researchers: row.required_researchers,

@@ -47,7 +47,7 @@
                   size="xs"
                   variant="ghost"
                   icon="i-lucide-arrow-right"
-                  :to="`/visits/${visit.id}`"
+                  :to="{ path: `/visits/${visit.id}`, query: { back: 'index' } }"
                 />
               </div>
 
@@ -82,9 +82,7 @@
                   <span>
                     {{ visit.part_of_day }}
                   </span>
-                  <span v-if="visit.planned_week" >
-                    · Week {{ visit.planned_week }}
-                  </span>
+                  <span v-if="visit.planned_week"> · Week {{ visit.planned_week }} </span>
                 </div>
               </div>
             </li>
@@ -122,23 +120,23 @@
             <h2 class="text-sm font-semibold">Onderzoeken deze week</h2>
           </template>
 
-          <div v-if="visitsPending" class="text-sm text-gray-500">
-            Bezoeken worden geladen…
-          </div>
-          <div v-else-if="visitsError" class="text-sm text-red-500">
-            Kon bezoeken niet laden.
-          </div>
+          <div v-if="visitsPending" class="text-sm text-gray-500">Bezoeken worden geladen…</div>
+          <div v-else-if="visitsError" class="text-sm text-red-500">Kon bezoeken niet laden.</div>
           <div v-else>
             <p class="text-sm text-gray-700 dark:text-gray-200">
               Totaal: <span class="font-semibold">{{ totalThisWeek }}</span>
             </p>
             <ul class="mt-2 space-y-1 text-sm text-gray-700 dark:text-gray-200">
-              <li>Uitgevoerd: <span class="font-semibold">{{ executedThisWeek }}</span></li>
+              <li>
+                Uitgevoerd: <span class="font-semibold">{{ executedThisWeek }}</span>
+              </li>
               <li>
                 Nog uit te voeren:
                 <span class="font-semibold">{{ plannedThisWeek }}</span>
               </li>
-              <li>Afwijking: <span class="font-semibold">{{ deviationThisWeek }}</span></li>
+              <li>
+                Afwijking: <span class="font-semibold">{{ deviationThisWeek }}</span>
+              </li>
             </ul>
           </div>
         </UCard>
@@ -150,9 +148,7 @@
             </div>
           </template>
 
-          <div v-if="activityPending" class="text-sm text-gray-500">
-            Activiteit wordt geladen…
-          </div>
+          <div v-if="activityPending" class="text-sm text-gray-500">Activiteit wordt geladen…</div>
           <div v-else-if="activityError" class="text-sm text-red-500">
             Kon activiteit niet laden.
           </div>
@@ -180,9 +176,7 @@
             </ul>
 
             <div class="flex items-center justify-between pt-2 border-t text-xs text-gray-500">
-              <div>
-                Pagina {{ activityPage }} · {{ activityTotal }} items
-              </div>
+              <div>Pagina {{ activityPage }} · {{ activityTotal }} items</div>
               <div class="flex items-center gap-2">
                 <UButton
                   size="xs"
@@ -333,11 +327,8 @@
     const clusterNumber = (details.cluster_number as number | undefined) ?? null
     const visitNr = (details.visit_nr as number | undefined) ?? null
     const visitLabelBase =
-      projectCode && clusterNumber != null
-        ? `${projectCode}-${clusterNumber}`
-        : 'het bezoek'
-    const visitLabel =
-      visitNr != null ? `${visitLabelBase} nr ${visitNr}` : visitLabelBase
+      projectCode && clusterNumber != null ? `${projectCode}-${clusterNumber}` : 'het bezoek'
+    const visitLabel = visitNr != null ? `${visitLabelBase} nr ${visitNr}` : visitLabelBase
 
     if (action === 'planning_generated') {
       const week = (details.week as number | undefined) ?? null
@@ -369,9 +360,7 @@
       const functionsLabel =
         functionNames.length > 0 ? functionNames.join(', ') : 'onbekende functies'
       const speciesLabel =
-        speciesAbbreviations.length > 0
-          ? speciesAbbreviations.join(', ')
-          : 'onbekende soorten'
+        speciesAbbreviations.length > 0 ? speciesAbbreviations.join(', ') : 'onbekende soorten'
       return `${actor} heeft een cluster toegevoegd voor project ${projectCode} voor de functies ${functionsLabel} en de soorten ${speciesLabel} op ${when}`
     }
 
@@ -382,9 +371,7 @@
       const functionsLabel =
         functionNames.length > 0 ? functionNames.join(', ') : 'onbekende functies'
       const speciesLabel =
-        speciesAbbreviations.length > 0
-          ? speciesAbbreviations.join(', ')
-          : 'onbekende soorten'
+        speciesAbbreviations.length > 0 ? speciesAbbreviations.join(', ') : 'onbekende soorten'
       return `${actor} heeft een cluster gedupliceerd voor project ${projectCode} voor de functies ${functionsLabel} en de soorten ${speciesLabel} op ${when}`
     }
 
@@ -399,9 +386,7 @@
       const previousStatusRaw = (details.previous_status as string | undefined) ?? null
       const modeRaw = (details.mode as string | undefined) ?? null
       const previousLabel =
-        previousStatusRaw != null
-          ? statusLabel(previousStatusRaw as VisitStatusCode)
-          : null
+        previousStatusRaw != null ? statusLabel(previousStatusRaw as VisitStatusCode) : null
       const newLabel = modeRaw != null ? statusLabel(modeRaw as VisitStatusCode) : null
 
       if (previousLabel && newLabel) {
@@ -462,7 +447,11 @@
     if (entry.target_type === 'visit' && entry.target_id != null) {
       return `/visits/${entry.target_id}`
     }
-    if (entry.target_type === 'user' && entry.target_id != null && entry.action !== 'user_deleted') {
+    if (
+      entry.target_type === 'user' &&
+      entry.target_id != null &&
+      entry.action !== 'user_deleted'
+    ) {
       return '/admin/researchers'
     }
     return null
@@ -557,9 +546,7 @@
     }
   )
 
-  const pendingVisitsAll = computed<VisitListRow[]>(
-    () => pendingVisitsData.value?.items ?? []
-  )
+  const pendingVisitsAll = computed<VisitListRow[]>(() => pendingVisitsData.value?.items ?? [])
 
   function getIsoWeekNumber(date: Date): number {
     const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
@@ -593,14 +580,14 @@
   })
 
   const totalThisWeek = computed<number>(() => visitsThisWeek.value.length)
-  const executedThisWeek = computed<number>(() =>
-    visitsThisWeek.value.filter((v) => v.status === 'executed').length
+  const executedThisWeek = computed<number>(
+    () => visitsThisWeek.value.filter((v) => v.status === 'executed').length
   )
-  const deviationThisWeek = computed<number>(() =>
-    visitsThisWeek.value.filter((v) => v.status === 'executed_with_deviation').length
+  const deviationThisWeek = computed<number>(
+    () => visitsThisWeek.value.filter((v) => v.status === 'executed_with_deviation').length
   )
-  const plannedThisWeek = computed<number>(() =>
-    visitsThisWeek.value.filter((v) => v.status === 'planned').length
+  const plannedThisWeek = computed<number>(
+    () => visitsThisWeek.value.filter((v) => v.status === 'planned').length
   )
 
   const pendingVisits = computed<VisitListRow[]>(() => pendingVisitsAll.value)

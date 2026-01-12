@@ -3,10 +3,10 @@
     <UPageHeader :title="pageTitle" />
 
     <UCard class="mt-4">
-      <div v-if="pending" class="text-sm text-gray-700 dark:text-gray-300">Bezoek wordt geladen…</div>
-      <div v-else-if="error || !visit" class="text-sm text-red-500">
-        Kon dit bezoek niet laden.
+      <div v-if="pending" class="text-sm text-gray-700 dark:text-gray-300">
+        Bezoek wordt geladen…
       </div>
+      <div v-else-if="error || !visit" class="text-sm text-red-500">Kon dit bezoek niet laden.</div>
 
       <div v-else class="flex flex-col gap-4">
         <div class="flex flex-col gap-2">
@@ -15,6 +15,17 @@
               <UBadge v-if="weekBadge(visit)" color="warning" class="mb-4">
                 {{ weekBadge(visit) }}
               </UBadge>
+              <div class="mb-4">
+                <UButton
+                  variant="outline"
+                  color="neutral"
+                  icon="i-heroicons-arrow-left"
+                  class="-ml-2.5"
+                  @click="goBack"
+                >
+                  Terug
+                </UButton>
+              </div>
               <div class="text-xs text-gray-700 dark:text-gray-300">Project</div>
               <div class="text-sm font-semibold text-gray-800">
                 {{ visit.project_code }} · {{ visit.project_location }}
@@ -64,11 +75,7 @@
             />
             <span class="text-sm text-gray-700 dark:text-gray-300">Vraag iemand anders</span>
             <UPopover>
-              <UButton
-                variant="ghost"
-                color="neutral"
-                icon="i-lucide-circle-question-mark"
-              />
+              <UButton variant="ghost" color="neutral" icon="i-lucide-circle-question-mark" />
               <template #content>
                 <div class="p-3 text-xs text-gray-700 dark:text-gray-300 max-w-xs">
                   Zet dit aan als je graag wilt dat iemand anders dit bezoek overneemt. Dit verzoek
@@ -111,8 +118,7 @@
             <span class="font-medium">Onderzoekers:</span>
             <span class="ml-1">
               {{
-                visit.researchers.map((r) => r.full_name || `Gebruiker #${r.id}`).join(', ') ||
-                '-'
+                visit.researchers.map((r) => r.full_name || `Gebruiker #${r.id}`).join(', ') || '-'
               }}
             </span>
           </div>
@@ -126,10 +132,7 @@
             </span>
           </div>
 
-          <div
-            v-if="visit.project_google_drive_folder"
-            class="mt-1 text-sm text-primary-600"
-          >
+          <div v-if="visit.project_google_drive_folder" class="mt-1 text-sm text-primary-600">
             <a
               :href="visit.project_google_drive_folder"
               target="_blank"
@@ -167,11 +170,7 @@
       </div>
     </UCard>
 
-    <UModal
-      v-model:open="statusModalOpen"
-      title="Status bewerken"
-      :ui="{ footer: 'justify-end' }"
-    >
+    <UModal v-model:open="statusModalOpen" title="Status bewerken" :ui="{ footer: 'justify-end' }">
       <template #body>
         <div class="space-y-4 text-sm">
           <div>
@@ -199,18 +198,14 @@
 
           <div v-else-if="statusAction === 'not_executed'">
             <label class="block text-xs mb-1">Reden</label>
-            <UTextarea v-model="notExecutedReason" :rows="3" class="w-full"/>
+            <UTextarea v-model="notExecutedReason" :rows="3" class="w-full" />
           </div>
         </div>
       </template>
 
       <template #footer>
-        <UButton color="neutral" variant="ghost" @click="onCancelStatus">
-          Annuleren
-        </UButton>
-        <UButton :loading="statusSubmitting" @click="onSubmitStatus">
-          Opslaan
-        </UButton>
+        <UButton color="neutral" variant="ghost" @click="onCancelStatus"> Annuleren </UButton>
+        <UButton :loading="statusSubmitting" @click="onSubmitStatus"> Opslaan </UButton>
       </template>
     </UModal>
 
@@ -291,14 +286,7 @@
     quote: boolean
   }
 
-  type BadgeColor =
-    | 'primary'
-    | 'warning'
-    | 'success'
-    | 'error'
-    | 'neutral'
-    | 'secondary'
-    | 'info'
+  type BadgeColor = 'primary' | 'warning' | 'success' | 'error' | 'neutral' | 'secondary' | 'info'
 
   const statusBadgeColorMap: Partial<Record<VisitStatusCode, BadgeColor>> = {
     planned: 'primary',
@@ -347,12 +335,7 @@
 
   const visitId = computed(() => Number(route.params.id))
 
-  const {
-    data,
-    pending,
-    error,
-    refresh
-  } = useAsyncData(
+  const { data, pending, error, refresh } = useAsyncData(
     'visit-detail',
     () => {
       const query: Record<string, string> = {}
@@ -401,7 +384,11 @@
 
   const canAdminEditStatus = computed(() => {
     if (!visit.value) return false
-    return ['missed', 'rejected', 'executed_with_deviation', 'not_executed'].includes(visit.value.status) && isAdmin.value
+    return (
+      ['missed', 'rejected', 'executed_with_deviation', 'not_executed'].includes(
+        visit.value.status
+      ) && isAdmin.value
+    )
   })
 
   const statusActionOptions: StatusActionOption[] = [
@@ -470,6 +457,10 @@
     return dt >= monday && dt <= sunday
   }
 
+  function getDayName(date: Date): string {
+    return new Intl.DateTimeFormat('nl-NL', { weekday: 'long' }).format(date)
+  }
+
   function weekBadge(v: VisitDetailRow): string | null {
     const base = effectiveToday.value
     const today = new Date(base.getFullYear(), base.getMonth(), base.getDate())
@@ -478,12 +469,17 @@
       const from = new Date(v.from_date)
       const fromDateOnly = new Date(from.getFullYear(), from.getMonth(), from.getDate())
       if (fromDateOnly > today) {
-        return 'Na woensdag'
+        const prev = new Date(from)
+        prev.setDate(from.getDate() - 1)
+        return `Na ${getDayName(prev)}`
       }
     }
 
     if (v.to_date && isThisWeek(v.to_date)) {
-      return 'Voor donderdag'
+      const to = new Date(v.to_date)
+      const next = new Date(to)
+      next.setDate(to.getDate() + 1)
+      return `Voor ${getDayName(next)}`
     }
 
     return null
@@ -513,9 +509,7 @@
         data.value.advertized = val
       }
       toast.add({
-        title: val
-          ? 'Vraag iemand anders ingeschakeld'
-          : 'Vraag iemand anders uitgeschakeld',
+        title: val ? 'Vraag iemand anders ingeschakeld' : 'Vraag iemand anders uitgeschakeld',
         color: 'success'
       })
     } catch {
@@ -647,9 +641,7 @@
 
     adminPlanningLoading.value = true
     try {
-      const users = await $api<Array<{ id: number; full_name: string | null }>>(
-        '/admin/users'
-      )
+      const users = await $api<Array<{ id: number; full_name: string | null }>>('/admin/users')
       adminPlanningResearcherOptions.value = users.map((u) => ({
         value: u.id,
         label: u.full_name ?? `Gebruiker #${u.id}`
@@ -671,5 +663,35 @@
 
   async function onAdminPlanningSaved(): Promise<void> {
     await refresh()
+  }
+
+  function goBack(): void {
+    const back = route.query.back as string | undefined
+    if (back === 'planning') {
+      const q: Record<string, string | number> = {}
+      if (route.query.week) {
+        q.week = route.query.week as string
+      }
+      navigateTo({ path: '/admin/planning', query: q })
+    } else if (back === 'my-visits') {
+      navigateTo('/my-visits')
+    } else if (back === 'visits' || back === 'index') {
+      // Check if referrer was root index or visits index?
+      // For now, mapping 'index' to root dashboard if that was the intent,
+      // or 'visits' to /visits.
+      // Based on my changes:
+      // - admin/planning sends 'planning'
+      // - my-visits sends 'my-visits'
+      // - index (dashboard) sends 'index'
+      // - visits/index sends 'visits' (I need to ensure visits/index sends 'visits')
+
+      if (back === 'index') {
+        navigateTo('/')
+      } else {
+        navigateTo('/visits')
+      }
+    } else {
+      useRouter().back()
+    }
   }
 </script>

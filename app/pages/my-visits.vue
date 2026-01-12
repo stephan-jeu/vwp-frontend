@@ -4,8 +4,9 @@
 
     <UCard class="mt-4">
       <div class="flex flex-col gap-3">
-
-        <div v-if="pending" class="text-sm text-gray-700 dark:text-gray-300">Bezoeken worden geladen…</div>
+        <div v-if="pending" class="text-sm text-gray-700 dark:text-gray-300">
+          Bezoeken worden geladen…
+        </div>
         <div v-else-if="error" class="text-sm text-red-500">Kon bezoeken niet laden.</div>
         <div v-else class="flex flex-col gap-3">
           <div class="w-64">
@@ -46,10 +47,7 @@
                     </div>
                   </div>
                   <div class="flex flex-col items-end gap-1">
-                    <UBadge
-                      :color="statusBadgeColor(visit.status)"
-                      variant="solid"
-                    >
+                    <UBadge :color="statusBadgeColor(visit.status)" variant="solid">
                       {{ statusLabel(visit.status) }}
                     </UBadge>
                     <UBadge v-if="weekBadge(visit)" color="warning">
@@ -89,8 +87,9 @@
                   <span class="font-medium mr-1">Onderzoekers:</span>
                   <span>
                     {{
-                      visit.researchers.map((r) => r.full_name || `Gebruiker #${r.id}`).join(', ') ||
-                      '-'
+                      visit.researchers
+                        .map((r) => r.full_name || `Gebruiker #${r.id}`)
+                        .join(', ') || '-'
                     }}
                   </span>
                 </div>
@@ -239,14 +238,7 @@
 
   const visits = computed<VisitListRow[]>(() => data.value?.items ?? [])
 
-  type BadgeColor =
-    | 'primary'
-    | 'warning'
-    | 'success'
-    | 'error'
-    | 'neutral'
-    | 'secondary'
-    | 'info'
+  type BadgeColor = 'primary' | 'warning' | 'success' | 'error' | 'neutral' | 'secondary' | 'info'
 
   const statusLabelMap: Record<VisitStatusCode, string> = {
     created: 'Aangemaakt',
@@ -351,37 +343,37 @@
     // Merge available weeks with current week to ensure at least current is shown
     const allWeeks = new Set(availableWeeks.value)
     allWeeks.add(currentWeekNumber.value)
-    
+
     // Sort logically
     const sorted = Array.from(allWeeks).sort((a, b) => a - b)
 
     const tabs: WeekTab[] = []
-    
+
     for (const w of sorted) {
       if (w === currentWeekNumber.value) {
-         tabs.push({ label: 'Deze week', value: 'current', week: w })
+        tabs.push({ label: 'Deze week', value: 'current', week: w })
       } else {
-         const range = weekRangeLabel(w)
-         const base = `Week ${w}`
-         const label = range ? `${base} (${range})` : base
-         tabs.push({ label, value: `week-${w}`, week: w })
+        const range = weekRangeLabel(w)
+        const base = `Week ${w}`
+        const label = range ? `${base} (${range})` : base
+        tabs.push({ label, value: `week-${w}`, week: w })
       }
     }
     return tabs
   })
 
   onMounted(async () => {
-     try {
-       // Filter weeks to only those where I have visits
-       availableWeeks.value = await $api<number[]>('/visits/weeks', {
-         query: { mine: true }
-       })
-     } catch (e) {
-       console.error('Failed to load weeks', e)
-     }
+    try {
+      // Filter weeks to only those where I have visits
+      availableWeeks.value = await $api<number[]>('/visits/weeks', {
+        query: { mine: true }
+      })
+    } catch (e) {
+      console.error('Failed to load weeks', e)
+    }
   })
 
-  /* 
+  /*
    * We bind the SelectMenu to the full tab object.
    * Default is the "current" week tab. We compute it similarly to how we build the list.
    */
@@ -395,12 +387,12 @@
   // Ensure selectedTab stays valid or defaults to current if options change
   watch(weekTabs, (tabs) => {
     const currentVal = selectedWeekTab.value.value
-    const found = tabs.find(t => t.value === currentVal)
+    const found = tabs.find((t) => t.value === currentVal)
     if (found) {
       selectedWeekTab.value = found
     } else {
       // If previously selected week is gone, fallback to current
-      const current = tabs.find(t => t.value === 'current')
+      const current = tabs.find((t) => t.value === 'current')
       if (current) selectedWeekTab.value = current
     }
   })
@@ -409,8 +401,6 @@
   watch(activeWeekNumber, () => {
     refresh()
   })
-
-
 
   const statusSortOrder: Partial<Record<VisitStatusCode, number>> = {
     planned: 1,
@@ -457,6 +447,10 @@
     return dt >= monday && dt <= sunday
   }
 
+  function getDayName(date: Date): string {
+    return new Intl.DateTimeFormat('nl-NL', { weekday: 'long' }).format(date)
+  }
+
   function weekBadge(visit: VisitListRow): string | null {
     const base = effectiveToday.value
     const today = new Date(base.getFullYear(), base.getMonth(), base.getDate())
@@ -465,18 +459,26 @@
       const from = new Date(visit.from_date)
       const fromDateOnly = new Date(from.getFullYear(), from.getMonth(), from.getDate())
       if (fromDateOnly > today) {
-        return 'Na woensdag'
+        const prev = new Date(from)
+        prev.setDate(from.getDate() - 1)
+        return `Na ${getDayName(prev)}`
       }
     }
 
     if (visit.to_date && isThisWeek(visit.to_date)) {
-      return 'Voor donderdag'
+      const to = new Date(visit.to_date)
+      const next = new Date(to)
+      next.setDate(to.getDate() + 1)
+      return `Voor ${getDayName(next)}`
     }
 
     return null
   }
 
   function goToDetail(id: number): void {
-    navigateTo(`/visits/${id}`)
+    navigateTo({
+      path: `/visits/${id}`,
+      query: { back: 'my-visits' }
+    })
   }
 </script>

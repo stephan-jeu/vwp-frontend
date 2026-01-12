@@ -40,15 +40,16 @@
 
         <div v-else>
           <div class="mb-3">
-          <div class="mb-3 w-64">
-             <USelectMenu
-              v-model="selectedWeekTab"
-              :items="weekTabs"
-              option-attribute="label"
-              placeholder="Selecteer week"
-              class="w-sm"
-            />
-          </div>
+            <div class="mb-3 w-64">
+              <label class="block mb-1 text-md text-gray-500">Bekijk planning voor week</label>
+              <USelectMenu
+                v-model="selectedWeekTab"
+                :items="weekTabs"
+                option-attribute="label"
+                placeholder="Selecteer week"
+                class="w-sm"
+              />
+            </div>
           </div>
 
           <!-- Capacity Section -->
@@ -62,13 +63,35 @@
             >
               <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700 dark:text-gray-200">
                 <span class="font-semibold text-gray-900 dark:text-white">Nog beschikbaar:</span>
-                <span>Avond <span :class="{'text-red-600 font-bold': capacityData.totals.avond < 0}">{{ capacityData.totals.avond }}</span></span>
-                <span>Ochtend <span :class="{'text-red-600 font-bold': capacityData.totals.ochtend < 0}">{{ capacityData.totals.ochtend }}</span></span>
-                <span>Dag <span :class="{'text-red-600 font-bold': capacityData.totals.dag < 0}">{{ capacityData.totals.dag }}</span></span>
-                <span>Flex <span :class="{'text-red-600 font-bold': capacityData.totals.flex < 0}">{{ capacityData.totals.flex }}</span></span>
+                <span
+                  >Avond
+                  <span :class="{ 'text-red-600 font-bold': capacityData.totals.avond < 0 }">{{
+                    capacityData.totals.avond
+                  }}</span></span
+                >
+                <span
+                  >Ochtend
+                  <span :class="{ 'text-red-600 font-bold': capacityData.totals.ochtend < 0 }">{{
+                    capacityData.totals.ochtend
+                  }}</span></span
+                >
+                <span
+                  >Dag
+                  <span :class="{ 'text-red-600 font-bold': capacityData.totals.dag < 0 }">{{
+                    capacityData.totals.dag
+                  }}</span></span
+                >
+                <span
+                  >Flex
+                  <span :class="{ 'text-red-600 font-bold': capacityData.totals.flex < 0 }">{{
+                    capacityData.totals.flex
+                  }}</span></span
+                >
               </div>
               <UIcon
-                :name="availabilityCollapsed ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-up'"
+                :name="
+                  availabilityCollapsed ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-up'
+                "
                 class="w-5 h-5 text-gray-500"
               />
             </button>
@@ -82,12 +105,22 @@
                 :key="r.id"
                 class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800/50"
               >
-                <div class="font-medium text-gray-900 dark:text-gray-100 min-w-[120px]">{{ r.name }}</div>
+                <div class="font-medium text-gray-900 dark:text-gray-100 min-w-[120px]">
+                  {{ r.name }}
+                </div>
                 <div class="flex gap-4 text-xs text-gray-600 dark:text-gray-400">
-                   <div :class="{'text-red-600 font-bold': r.remaining.avond < 0}">Avond: {{ r.remaining.avond }}</div>
-                   <div :class="{'text-red-600 font-bold': r.remaining.ochtend < 0}">Ochtend: {{ r.remaining.ochtend }}</div>
-                   <div :class="{'text-red-600 font-bold': r.remaining.dag < 0}">Dag: {{ r.remaining.dag }}</div>
-                   <div :class="{'text-red-600 font-bold': r.remaining.flex < 0}">Flex: {{ r.remaining.flex }}</div>
+                  <div :class="{ 'text-red-600 font-bold': r.remaining.avond < 0 }">
+                    Avond: {{ r.remaining.avond }}
+                  </div>
+                  <div :class="{ 'text-red-600 font-bold': r.remaining.ochtend < 0 }">
+                    Ochtend: {{ r.remaining.ochtend }}
+                  </div>
+                  <div :class="{ 'text-red-600 font-bold': r.remaining.dag < 0 }">
+                    Dag: {{ r.remaining.dag }}
+                  </div>
+                  <div :class="{ 'text-red-600 font-bold': r.remaining.flex < 0 }">
+                    Flex: {{ r.remaining.flex }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -108,10 +141,7 @@
                 </h3>
               </div>
 
-              <div
-                v-if="completedVisits.length === 0"
-                class="text-xs text-gray-500"
-              >
+              <div v-if="completedVisits.length === 0" class="text-xs text-gray-500">
                 Geen uitgevoerde bezoeken voor deze week.
               </div>
 
@@ -225,7 +255,6 @@
       </div>
     </UCard>
   </div>
-
 </template>
 
 <script setup lang="ts">
@@ -342,7 +371,7 @@
     daytime_days: number
     nighttime_days: number
     flex_days: number
-    // We ignore backend 'assigned_*' counts here as we calculate them dynamically 
+    // We ignore backend 'assigned_*' counts here as we calculate them dynamically
     // based on the actual visits loaded in the planning view for accuracy.
   }
   interface ApiUserAvailability {
@@ -381,13 +410,12 @@
 
   const week = ref<number>(currentWeekNumber.value)
   const visits = ref<VisitListRow[]>([])
-  
+
   // Availability data
   const rawAvailability = ref<ApiUserAvailability[]>([])
   const availabilityCollapsed = ref(true)
 
   type WeekTab = { label: string; value: string; week: number }
-
 
   function currentIsoWeek(baseDate: Date): number {
     const d = new Date(baseDate)
@@ -397,7 +425,9 @@
     const weekNumber =
       1 +
       Math.round(
-        ((d.getTime() - firstThursday.getTime()) / 86400000 - 3 + ((firstThursday.getDay() + 6) % 7)) /
+        ((d.getTime() - firstThursday.getTime()) / 86400000 -
+          3 +
+          ((firstThursday.getDay() + 6) % 7)) /
           7
       )
     return Math.max(1, Math.min(53, weekNumber))
@@ -482,21 +512,21 @@
   const weekTabs = computed<WeekTab[]>(() => {
     const allWeeks = new Set(availableWeeks.value)
     allWeeks.add(currentWeekNumber.value)
-    
+
     // Sort logically
     const sorted = Array.from(allWeeks).sort((a, b) => a - b)
 
     const tabs: WeekTab[] = []
-    
+
     for (const w of sorted) {
-       if (w === currentWeekNumber.value) {
-         tabs.push({ label: 'Deze week', value: 'current', week: w })
-       } else {
-         const range = weekRangeLabel(w)
-         const base = `Week ${w}`
-         const label = range ? `${base} (${range})` : base
-         tabs.push({ label, value: `week-${w}`, week: w })
-       }
+      if (w === currentWeekNumber.value) {
+        tabs.push({ label: 'Deze week', value: 'current', week: w })
+      } else {
+        const range = weekRangeLabel(w)
+        const base = `Week ${w}`
+        const label = range ? `${base} (${range})` : base
+        tabs.push({ label, value: `week-${w}`, week: w })
+      }
     }
 
     return tabs
@@ -511,9 +541,20 @@
   }
 
   onMounted(async () => {
-     await loadWeeks()
-     // Initial visits load
-     void loadVisits()
+    await loadWeeks()
+
+    // Restore week from query if present
+    const route = useRoute()
+    const queryWeek = Number(route.query.week)
+    if (queryWeek && !Number.isNaN(queryWeek) && weekTabs.value.some((w) => w.week === queryWeek)) {
+      const found = weekTabs.value.find((w) => w.week === queryWeek)
+      if (found) {
+        selectedWeekTab.value = found
+      }
+    }
+
+    // Initial visits load
+    void loadVisits()
   })
 
   /*
@@ -526,11 +567,11 @@
   // Ensure selectedTab stays valid or defaults to current if options change
   watch(weekTabs, (tabs) => {
     const currentVal = selectedWeekTab.value.value
-    const found = tabs.find(t => t.value === currentVal)
+    const found = tabs.find((t) => t.value === currentVal)
     if (found) {
       selectedWeekTab.value = found
     } else {
-      const current = tabs.find(t => t.value === 'current')
+      const current = tabs.find((t) => t.value === 'current')
       if (current) selectedWeekTab.value = current
     }
   })
@@ -544,7 +585,9 @@
     void loadVisits()
   })
 
-  const isCurrentWeekTab = computed<boolean>(() => activeWeekNumber.value === currentWeekNumber.value)
+  const isCurrentWeekTab = computed<boolean>(
+    () => activeWeekNumber.value === currentWeekNumber.value
+  )
 
   function isInSelectedWeek(visit: VisitListRow): boolean {
     if (!weekRange.value) return false
@@ -566,8 +609,6 @@
     visits.value.filter((v) => plannedStatusValues.includes(v.status))
   )
 
-
-
   // --- Capacity Calculation ---
 
   const capacityData = computed<{
@@ -577,7 +618,7 @@
     // 1. Build initial map from raw availability
     const map = new Map<number, ResearcherCapacity>()
     const targetWeek = activeWeekNumber.value
-    
+
     for (const user of rawAvailability.value) {
       // Find the availability entry for the *active* week
       const entry = user.availability.find((a) => a.week === targetWeek)
@@ -591,15 +632,15 @@
           ochtend: entry.morning_days ?? 0,
           dag: entry.daytime_days ?? 0,
           avond: entry.nighttime_days ?? 0,
-          flex: entry.flex_days ?? 0,
-        },
+          flex: entry.flex_days ?? 0
+        }
       })
     }
 
     // 2. Subtract assigned visits
     // We use 'visits' and 'isInSelectedWeek' to ensure we only count what's visible/relevant
     // for this week tab.
-    
+
     for (const v of visits.value) {
       if (['cancelled', 'rejected'].includes(v.status)) continue
 
@@ -607,42 +648,48 @@
       // isInSelectedWeek uses date ranges. visitWeekNumber is more direct for planning logic.
       if (visitWeekNumber(v) !== targetWeek) continue
 
-      const part = v.part_of_day 
-      
-      for (const r of v.researchers) {
-         const cap = map.get(r.id)
-         if (!cap) continue
+      const part = v.part_of_day
 
-         if (part === 'Ochtend' || part === 'ochtend') {
-           cap.remaining.ochtend--
-           if (cap.remaining.ochtend < 0 && cap.remaining.flex > 0) {
-             cap.remaining.ochtend++
-             cap.remaining.flex--
-           }
-         } else if (part === 'Dag' || part === 'dag') {
-           cap.remaining.dag--
-           if (cap.remaining.dag < 0 && cap.remaining.flex > 0) {
-             cap.remaining.dag++
-             cap.remaining.flex--
-           }
-         } else if (part === 'Avond' || part === 'avond' || part === 'Nacht' || part === 'nacht') {
-           cap.remaining.avond--
-           if (cap.remaining.avond < 0 && cap.remaining.flex > 0) {
-             cap.remaining.avond++
-             cap.remaining.flex--
-           }
-         } else {
-           // No specific part -> consume Flex
-           cap.remaining.flex--
-         }
+      for (const r of v.researchers) {
+        const cap = map.get(r.id)
+        if (!cap) continue
+
+        if (part === 'Ochtend' || part === 'ochtend') {
+          cap.remaining.ochtend--
+          if (cap.remaining.ochtend < 0 && cap.remaining.flex > 0) {
+            cap.remaining.ochtend++
+            cap.remaining.flex--
+          }
+        } else if (part === 'Dag' || part === 'dag') {
+          cap.remaining.dag--
+          if (cap.remaining.dag < 0 && cap.remaining.flex > 0) {
+            cap.remaining.dag++
+            cap.remaining.flex--
+          }
+        } else if (part === 'Avond' || part === 'avond' || part === 'Nacht' || part === 'nacht') {
+          cap.remaining.avond--
+          if (cap.remaining.avond < 0 && cap.remaining.flex > 0) {
+            cap.remaining.avond++
+            cap.remaining.flex--
+          }
+        } else {
+          // No specific part -> consume Flex
+          cap.remaining.flex--
+        }
       }
     }
 
     // 3. Aggregate totals and list
     const researchers = Array.from(map.values())
-      .filter((r) => r.remaining.ochtend > 0 || r.remaining.dag > 0 || r.remaining.avond > 0 || r.remaining.flex > 0)
+      .filter(
+        (r) =>
+          r.remaining.ochtend > 0 ||
+          r.remaining.dag > 0 ||
+          r.remaining.avond > 0 ||
+          r.remaining.flex > 0
+      )
       .sort((a, b) => a.name.localeCompare(b.name))
-    
+
     const totals = { ochtend: 0, dag: 0, avond: 0, flex: 0 }
     for (const r of researchers) {
       if (r.remaining.ochtend > 0) totals.ochtend += r.remaining.ochtend
@@ -684,14 +731,14 @@
       }
       const response = await $api<VisitListResponse>('/visits', { query })
       visits.value = response.items
-      
+
       // Load availability for the initial active week
       void loadAvailability()
     } finally {
       loading.value = false
     }
   }
-  
+
   // Refetch availability when switching tabs (weeks)
   watch(activeWeekNumber, () => {
     void loadAvailability()
@@ -719,12 +766,12 @@
       await loadWeeks()
 
       // 3. Auto-navigate to the planned week
-      const foundTab = weekTabs.value.find(t => t.week === w)
+      const foundTab = weekTabs.value.find((t) => t.week === w)
       if (foundTab) {
         selectedWeekTab.value = foundTab
       } else {
         // Fallback: try to select "current" if it matches
-        const currentTab = weekTabs.value.find(t => t.value === 'current')
+        const currentTab = weekTabs.value.find((t) => t.value === 'current')
         if (currentTab && currentTab.week === w) {
           selectedWeekTab.value = currentTab
         }
@@ -762,9 +809,14 @@
 
   // Removed onMounted here because we do it after loading weeks
 
-
   function goToDetail(id: number): void {
-    navigateTo(`/visits/${id}`)
+    const q: Record<string, string | number> = { back: 'planning' }
+    if (activeWeekNumber.value) {
+      q.week = activeWeekNumber.value
+    }
+    navigateTo({
+      path: `/visits/${id}`,
+      query: q
+    })
   }
 </script>
-
