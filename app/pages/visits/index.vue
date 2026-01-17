@@ -176,7 +176,7 @@
           <UCheckbox v-model="createWbc" label="WBC" />
           <UCheckbox v-model="createFiets" label="Fiets" />
           <UCheckbox v-model="createHub" label="HUB" />
-          <UCheckbox v-model="createDvp" label="DvP" />
+          <UCheckbox v-model="createDvp" label="DVP" />
           <UCheckbox v-model="createSleutel" label="Sleutel" />
           <UCheckbox v-model="createPriority" label="Prioriteit" />
         </div>
@@ -284,7 +284,7 @@
                     <UBadge
                       v-if="row.original.dvp"
                       class="px-2 mx-1 py-0.5 rounded-full bg-gray-200"
-                      >DvP</UBadge
+                      >DVP</UBadge
                     >
                     <UBadge
                       v-if="row.original.sleutel"
@@ -532,7 +532,7 @@
                       <UCheckbox v-model="row.original.wbc" label="WBC" />
                       <UCheckbox v-model="row.original.fiets" label="Fiets" />
                       <UCheckbox v-model="row.original.hub" label="HUB" />
-                      <UCheckbox v-model="row.original.dvp" label="DvP" />
+                      <UCheckbox v-model="row.original.dvp" label="DVP" />
                       <UCheckbox v-model="row.original.sleutel" label="Sleutel" />
                       <UCheckbox v-model="row.original.priority" label="Prioriteit" />
                     </div>

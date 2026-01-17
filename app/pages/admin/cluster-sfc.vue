@@ -100,7 +100,7 @@
             <UCheckbox v-model="defaultWbc" label="WBC" />
             <UCheckbox v-model="defaultFiets" label="Fiets" />
             <UCheckbox v-model="defaultHub" label="HUB" />
-            <UCheckbox v-model="defaultDvp" label="DvP" />
+            <UCheckbox v-model="defaultDvp" label="DVP" />
             <UCheckbox v-model="defaultSleutel" label="Sleutel" />
           </div>
         <div class="mt-2">
@@ -392,7 +392,7 @@
                     <UCheckbox v-model="visit.wbc" label="WBC" />
                     <UCheckbox v-model="visit.fiets" label="Fiets" />
                     <UCheckbox v-model="visit.hub" label="HUB" />
-                    <UCheckbox v-model="visit.dvp" label="DvP" />
+                    <UCheckbox v-model="visit.dvp" label="DVP" />
                     <UCheckbox v-model="visit.sleutel" label="Sleutel" />
                     <UCheckbox v-model="visit.priority" label="Prioriteit" />
                   </div>

@@ -19,6 +19,9 @@
           <div v-if="row.original?.kind === 'parent'" class="font-bold">
             {{ row.original?.name }}
           </div>
+          <div v-else-if="row.original?.kind === 'total'" class="font-bold text-gray-700 dark:text-gray-200">
+            {{ row.original?.label }}
+          </div>
           <div v-else class="pl-4 text-sm text-gray-700 dark:text-gray-200">
             {{ row.original?.label }}
           </div>
@@ -44,6 +47,9 @@
             >
               {{ (row.original as FlatChildRow).assigned[col.id as WeekKey] }}
             </span>
+          </div>
+          <div v-else-if="row.original?.kind === 'total'" class="text-center font-bold text-gray-700 dark:text-gray-200">
+            {{ (row.original as FlatTotalRow).data[col.id as WeekKey] || 0 }}
           </div>
           <span v-else>&nbsp;</span>
         </template>
@@ -186,6 +192,7 @@ function scheduleSave(row: FlatChildRow, colId: WeekKey) {
 }
 
 type FlatChildRow = { kind: 'child'; data: CellMap; assigned: CellMap; userId: string; slot: SlotType };
+type FlatTotalRow = { kind: 'total'; label: string; data: CellMap };
 
 function onCellInput(row: FlatChildRow, colId: WeekKey) {
   // Keep value clamped as user types
@@ -214,10 +221,22 @@ const flatRows = computed(() => {
     flex: 'Flex'
   };
 
-  const rows = [];
+  const rows: any[] = [];
+  const totalMap: CellMap = {};
+
   for (const u of users.value) {
     rows.push({ id: `${u.id}-parent`, kind: 'parent', name: u.name });
     for (const child of u.children ?? []) {
+      // Accumulate totals
+      for (const [key, val] of Object.entries(child.data)) {
+        // Only sum valid numbers
+        const num = Number(val) || 0;
+        if (num > 0) {
+           const k = key as WeekKey;
+           totalMap[k] = (totalMap[k] || 0) + num;
+        }
+      }
+
       rows.push({
         id: child.id,
         kind: 'child',
@@ -229,6 +248,17 @@ const flatRows = computed(() => {
       });
     }
   }
+
+  // Prepend Total Row
+  if (users.value.length > 0) {
+    rows.unshift({
+      id: 'global-total',
+      kind: 'total',
+      label: 'Totaal',
+      data: totalMap
+    });
+  }
+
   return rows;
 });
 

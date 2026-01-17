@@ -4,52 +4,43 @@
 
     <UCard class="mt-4">
       <div class="flex flex-col gap-4">
-        <div class="flex items-end gap-3">
-          <UInput
-            v-model.number="week"
-            type="number"
-            :min="1"
-            :max="53"
-            label="Week (ISO)"
-            class="w-32"
-          />
-          <UButton
-            icon="i-heroicons-sparkles"
-            color="primary"
-            variant="solid"
-            :loading="loading"
-            @click="runPlanning"
-          >
-            Genereer planning
-          </UButton>
-          <UButton
-            icon="i-heroicons-trash"
-            color="error"
-            variant="soft"
-            :loading="clearing"
-            @click="clearResearchers"
-          >
-            Verwijder planning
-          </UButton>
-          <div v-if="weekLabel" class="ml-auto text-xs text-gray-500">
-            {{ weekLabel }}
-          </div>
-        </div>
-
         <div v-if="loading" class="text-sm text-gray-500">Bezoeken worden geladen…</div>
 
         <div v-else>
           <div class="mb-3">
-            <div class="mb-3 w-64">
-              <label class="block mb-1 text-md text-gray-500">Bekijk planning voor week</label>
-              <USelectMenu
-                v-model="selectedWeekTab"
-                :items="weekTabs"
-                option-attribute="label"
-                placeholder="Selecteer week"
-                class="w-sm"
-              />
-            </div>
+             <div class="flex items-end gap-3 flex-wrap">
+              <div class="min-w-[200px]">
+                <label class="block mb-1 text-md text-gray-500">Planning en beschikbaarheid voor week</label>
+                <USelectMenu
+                  v-model="selectedWeekTab"
+                  :items="weekTabs"
+                  option-attribute="label"
+                  placeholder="Selecteer week"
+                  class="w-full"
+                />
+              </div>
+              
+              <UButton
+                icon="i-heroicons-sparkles"
+                color="primary"
+                variant="solid"
+                :loading="loading"
+                @click="runPlanning"
+              >
+                {{ generateLabel }}
+              </UButton>
+              
+              <UButton
+                v-if="plannedVisits.length > 0"
+                icon="i-heroicons-trash"
+                color="error"
+                variant="soft"
+                :loading="clearing"
+                @click="clearResearchers"
+              >
+                {{ deleteLabel }}
+              </UButton>
+             </div>
           </div>
 
           <!-- Capacity Section -->
@@ -408,7 +399,7 @@
   const currentWeekNumber = computed<number>(() => currentIsoWeek(effectiveToday.value))
   const toast = useToast()
 
-  const week = ref<number>(currentWeekNumber.value)
+  // const week = ref<number>(currentWeekNumber.value) // REMOVED
   const visits = ref<VisitListRow[]>([])
 
   // Availability data
@@ -513,8 +504,12 @@
     const allWeeks = new Set(availableWeeks.value)
     allWeeks.add(currentWeekNumber.value)
 
+    // Filter out past weeks
+    const current = currentWeekNumber.value
+    const futureWeeks = Array.from(allWeeks).filter((w) => w >= current)
+    
     // Sort logically
-    const sorted = Array.from(allWeeks).sort((a, b) => a - b)
+    const sorted = futureWeeks.sort((a, b) => a - b)
 
     const tabs: WeekTab[] = []
 
@@ -546,7 +541,12 @@
     // Restore week from query if present
     const route = useRoute()
     const queryWeek = Number(route.query.week)
-    if (queryWeek && !Number.isNaN(queryWeek) && weekTabs.value.some((w) => w.week === queryWeek)) {
+    if (queryWeek && !Number.isNaN(queryWeek)) {
+      // Even if past week, if explicit query param, we might want to respect it?
+      // Or just filter. The user said "not display weeks past".
+      // Let's rely on weekTabs filter.
+      // But if user requested week 10 and we are in week 20, weekTabs won't have it.
+      // So we fallback to current.
       const found = weekTabs.value.find((w) => w.week === queryWeek)
       if (found) {
         selectedWeekTab.value = found
@@ -588,6 +588,20 @@
   const isCurrentWeekTab = computed<boolean>(
     () => activeWeekNumber.value === currentWeekNumber.value
   )
+
+  const generateLabel = computed(() => {
+    return isCurrentWeekTab.value 
+      ? 'Genereer planning deze week' 
+      : `Genereer planning week ${activeWeekNumber.value}`
+  })
+  
+  const deleteLabel = computed(() => {
+    return isCurrentWeekTab.value 
+      ? 'Verwijder planning deze week' 
+      : `Verwijder planning week ${activeWeekNumber.value}`
+  })
+  
+
 
   function isInSelectedWeek(visit: VisitListRow): boolean {
     if (!weekRange.value) return false
@@ -747,7 +761,7 @@
   async function runPlanning(): Promise<void> {
     loading.value = true
     try {
-      const w = week.value
+      const w = activeWeekNumber.value
       // Retrieve response to get count
       const result = await $api<{ selected_visit_ids: number[] }>(`/planning/generate`, {
         method: 'POST',
@@ -764,17 +778,13 @@
 
       // 2. Refresh available weeks (in case this week wasn't there before)
       await loadWeeks()
-
-      // 3. Auto-navigate to the planned week
+      
+      // No need to navigate, we are already on the tab? 
+      // Actually we might need to re-find the tab if it wasn't there before.
+      
       const foundTab = weekTabs.value.find((t) => t.week === w)
       if (foundTab) {
         selectedWeekTab.value = foundTab
-      } else {
-        // Fallback: try to select "current" if it matches
-        const currentTab = weekTabs.value.find((t) => t.value === 'current')
-        if (currentTab && currentTab.week === w) {
-          selectedWeekTab.value = currentTab
-        }
       }
 
       // 4. Load visits for the newly selected week
@@ -787,7 +797,7 @@
   async function clearResearchers(): Promise<void> {
     clearing.value = true
     try {
-      const w = week.value
+      const w = activeWeekNumber.value
       await $api(`/planning/clear`, { method: 'POST', body: { week: w } })
       await loadVisits()
     } finally {
@@ -795,9 +805,6 @@
     }
   }
 
-  watch(week, () => {
-    // Week change only affects client-side filtering; no extra load needed.
-  })
 
   watch(
     () => simulatedDate.value,

@@ -3,29 +3,45 @@
     <UPageHeader title="Capaciteitsplanning" />
 
     <UCard class="mt-4 space-y-4">
-      <div class="flex flex-wrap items-end gap-3">
-        <UInput
-          v-model="startDate"
-          type="date"
-          label="Startdatum"
-          class="w-48"
-        />
-        <UButton
-          icon="i-heroicons-sparkles"
-          color="primary"
-          variant="solid"
-          :loading="loading"
-          @click="runSimulation"
-        >
-          Genereer capaciteit
-        </UButton>
-        <span v-if="metaText" class="text-xs text-gray-500">
-          {{ metaText }}
-        </span>
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <!-- Left: Action & Info -->
+        <div class="flex items-center gap-3">
+             <UButton
+                icon="i-heroicons-calculator"
+                color="primary"
+                variant="outline"
+                :loading="loading"
+                @click="recalculateSimulation"
+            >
+                {{ hasData ? 'Herberekenen' : 'Bereken' }}
+            </UButton>
+            <span v-if="lastCalculatedLabel" class="text-xs text-gray-500">
+                {{ lastCalculatedLabel }}
+            </span>
+        </div>
+
+        <!-- Right: View Toggle -->
+        <div class="flex items-center gap-2">
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Weergave:</span>
+            <UButton 
+                :variant="viewMode === 'week' ? 'solid' : 'soft'"
+                :color="viewMode === 'week' ? 'primary' : 'neutral'" 
+                @click="viewMode = 'week'"
+                size="sm"
+            >Per week</UButton>
+             <UButton 
+                :variant="viewMode === 'deadline' ? 'solid' : 'soft'"
+                :color="viewMode === 'deadline' ? 'primary' : 'neutral'"
+                @click="viewMode = 'deadline'"
+                size="sm"
+            >Per bezoek einddatum</UButton>
+        </div>
       </div>
 
+
+
       <div v-if="loading" class="text-sm text-gray-500">
-        Capaciteitssimulatie wordt uitgevoerd...
+        Capaciteitssimulatie wordt geladen...
       </div>
 
       <div v-else-if="!hasData" class="text-sm text-gray-500">
@@ -33,33 +49,45 @@
       </div>
 
       <div v-else class="my-3">
-        <div class="text-xs">
-          <span class="font-medium">Legenda: niet-inplanbaar (inplanbaar).</span>
-          <span class="ml-1">Kolommen zijn bezoek eind datums.</span>
-          <span class="ml-1 text-red-600">Rood = tekort (niet inplanbaar)</span>
+        <!-- Legend dependent on view -->
+        <div class="text-xs mb-2">
+          <template v-if="viewMode === 'deadline'">
+              <span class="font-medium">Legenda: niet-inplanbaar (gepland).</span>
+              <span class="ml-1">Kolommen zijn bezoek eind datums.</span>
+              <span class="ml-1 text-red-600">Rood = tekort (niet inplanbaar)</span>
+          </template>
+          <template v-else>
+              <span class="font-medium">Legenda: vrije capaciteit (gepland).</span>
+          </template>
         </div>
 
-        <div class="border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900">
-          <UTable :columns="columns" :data="rows" class="max-h-[600px]">
+        <div class="border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 overflow-x-auto">
+          <UTable :key="tableKey" :columns="columns" :data="rows" class="max-h-[600px]">
+             <!-- Custom Cell Rendering -->
+             
             <template #family-cell="{ row }">
-              <span class="text-sm font-medium text-gray-800 dark:text-gray-100">
-                {{ row.original.family }}
+               <span 
+                class="text-sm font-medium text-gray-800 dark:text-gray-100"
+                :class="{ 'font-bold': isRowTotal(row) }"
+               >
+                {{ getFamily(row) }}
               </span>
             </template>
-
+             
             <template #part-cell="{ row }">
-              <span class="text-xs text-gray-700 dark:text-gray-200">
-                {{ row.original.part }}
+               <span class="text-xs text-gray-700 dark:text-gray-200">
+                {{ getPart(row) }}
               </span>
             </template>
 
+            <!-- Dynamic Week Columns -->
             <template
-              v-for="week in weekKeys"
+              v-for="week in activeWeekKeys"
               :key="week"
               #[`${week}-cell`]="{ row }"
             >
-              <div :class="cellClass(row.original.cells[week])" class="text-[11px] text-center">
-                {{ formatCell(row.original.cells[week]) }}
+              <div :class="getCellClass(row, week)" class="text-[11px] text-center px-1">
+                {{ formatCell(row, week) }}
               </div>
             </template>
           </UTable>
@@ -72,148 +100,296 @@
 <script setup lang="ts">
   definePageMeta({ middleware: 'admin' })
 
+  // --- Types ---
+  
   type FamilyDaypartCapacity = {
     required: number
     assigned: number
     shortfall: number
     spare: number
   }
+  
+  type WeekResultCell = {
+      spare: number
+      planned: number
+  }
+  
+  type WeekViewData = {
+      weeks: string[]
+      rows: Record<string, Record<string, WeekResultCell>>
+  }
 
   type CapacitySimulationResponse = {
     horizon_start: string
     horizon_end: string
+    created_at?: string | null
+    updated_at?: string | null
     grid: Record<string, Record<string, Record<string, FamilyDaypartCapacity>>>
+    week_view?: WeekViewData | null
   }
 
-  type GridCell = FamilyDaypartCapacity | null | undefined
+  // Force table re-render when structure changes significantly to avoid patch errors
+  const tableKey = computed(() => {
+     const modeStr = viewMode.value
+     const dataTime = response.value ? response.value.horizon_start : 'no-data'
+     // Just toggling viewMode or getting data should re-render
+     return `${modeStr}-${dataTime}`
+  })
 
+  // Row for UTable
+  type ViewMode = 'deadline' | 'week'
   type GridRow = {
     id: string
     family: string
     part: string
-    cells: Record<string, GridCell>
+    isTotal?: boolean
+    [key: string]: any 
   }
+
+  // Helper to safely access row data in template
+  function getRowData(row: any): GridRow {
+      return (row?.original ?? row) as GridRow
+  }
+  
+  function getFamily(row: any): string {
+      return getRowData(row).family
+  }
+  
+  function getPart(row: any): string {
+      return getRowData(row).part
+  }
+  
+  function isRowTotal(row: any): boolean {
+      return !!getRowData(row).isTotal
+  }
+
+  function formatCell(rowRaw: any, colKey: string): string {
+      const row = getRowData(rowRaw)
+      const cell = row[colKey]
+      if (!cell) return ''
+      
+      if (viewMode.value === 'week') {
+         const c = cell as WeekResultCell
+         if (c.spare === 0 && c.planned === 0) return '-'
+         return `${c.spare} (${c.planned})`
+      } else {
+         const c = cell as FamilyDaypartCapacity
+         if (c.required === 0) return ''
+         return `${c.shortfall} (${c.assigned})`
+      }
+  }
+
+  function getCellClass(rowRaw: any, colKey: string): string {
+      const row = getRowData(rowRaw)
+      const cell = row[colKey]
+      
+      if (viewMode.value === 'week') {
+          if (!cell) return 'text-gray-300'
+          const c = cell as WeekResultCell
+          if (c.spare === 0 && c.planned === 0) return 'text-gray-300'
+          return 'text-gray-700 dark:text-gray-300'
+      } else {
+          if (!cell) return 'text-gray-400'
+          const c = cell as FamilyDaypartCapacity
+          if (c.required === 0) return 'text-gray-400'
+          
+          if (c.shortfall > 0) {
+             return 'text-red-600 dark:text-red-400 font-bold'
+          }
+          return 'text-green-800 dark:text-green-400'
+      }
+  }
+
+  const rows = computed<GridRow[]>(() => {
+    if (!response.value) return []
+    const result: GridRow[] = []
+    
+    if (viewMode.value === 'week') {
+         const wv = response.value.week_view
+         if (!wv) return []
+         
+         const sortedLabels = Object.keys(wv.rows).sort((a,b) => {
+             if (a === 'Totalen') return -1
+             if (b === 'Totalen') return 1
+             return a.localeCompare(b)
+         })
+         
+         for (const label of sortedLabels) {
+             const rowData = wv.rows[label] ?? {}
+             const isTotal = label === 'Totalen'
+
+             // Calculate total planned visits for this row across all relevant weeks
+             // activeWeekKeys are already filtered to existing weeks
+             const weeks = activeWeekKeys.value
+             let totalPlanned = 0
+             for (const wk of weeks) {
+                 const cell = rowData[wk]
+                 if (cell) totalPlanned += cell.planned
+             }
+
+             // Hide row if 0 planned visits, unless it's the Totalen row
+             if (!isTotal && totalPlanned === 0) {
+                 continue
+             }
+
+             // Parse label "Family - Part"
+             let family = label
+             let part = ''
+             const parts2 = label.split(' - ')
+             if (parts2.length > 1) {
+                 part = parts2.pop() ?? ''
+                 family = parts2.join(' - ')
+             }
+             
+             const row: GridRow = {
+                 id: label,
+                 family,
+                 part,
+                 isTotal,
+                 ...rowData // Spread week data directly into row
+             }
+             result.push(row)
+         }
+         
+    } else {
+        // Deadline View
+        const grid = response.value.grid ?? {}
+
+        for (const [family, parts] of Object.entries(grid)) {
+          for (const [part, deadlines] of Object.entries(parts)) {
+            const row: GridRow = {
+              id: `${family}|${part}`,
+              family,
+              part,
+              // Spread deadlines
+              ...deadlines
+            }
+            if (Object.keys(deadlines).length > 0) {
+              result.push(row)
+            }
+          }
+        }
+        
+        result.sort((a, b) => {
+          if (a.family === b.family) return a.part.localeCompare(b.part)
+          return a.family.localeCompare(b.family)
+        })
+    }
+
+    return result
+  })
 
   const { $api } = useNuxtApp()
   const toast = useToast()
 
   const loading = ref(false)
   const response = ref<CapacitySimulationResponse | null>(null)
+  
+  const viewMode = ref<ViewMode>('week')
 
-  function todayIsoDate(): string {
-    const d = new Date()
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${y}-${m}-${day}`
-  }
 
-  const startDate = ref<string>(todayIsoDate())
 
   const hasData = computed(() => {
-    const grid = response.value?.grid
-    return !!grid && Object.keys(grid).length > 0
+     if (!response.value) return false
+     if (viewMode.value === 'week') {
+         return !!response.value.week_view
+     }
+     const grid = response.value.grid
+     return !!grid && Object.keys(grid).length > 0
+  })
+  
+  const lastCalculatedLabel = computed(() => {
+    // Prefer updated_at, fallback to created_at
+    const ts = response.value?.updated_at || response.value?.created_at
+    if (!ts) return ''
+    
+    const d = new Date(ts)
+    if (isNaN(d.getTime())) return ''
+    
+    const day = d.getDate()
+    const month = d.getMonth() + 1
+    const h = String(d.getHours()).padStart(2, '0')
+    const m = String(d.getMinutes()).padStart(2, '0')
+    
+    return `(Laatste keer berekend op ${day}-${month} om ${h}:${m})`
   })
 
-  const weekKeys = computed<string[]>(() => {
-    const grid = response.value?.grid ?? {}
-    const weeks = new Set<string>()
+  // --- Logic for Views ---
 
-    // Grid is Family -> Part -> DeadlineWeek -> Cell
-    for (const parts of Object.values(grid)) {
-      for (const deadlines of Object.values(parts)) {
-        for (const week of Object.keys(deadlines)) {
-          weeks.add(week)
+  const activeWeekKeys = computed<string[]>(() => {
+    if (!response.value) return []
+    
+    if (viewMode.value === 'week') {
+        const wv = response.value.week_view
+        if (!wv) return []
+        
+        // Filter weeks to only those that have data in at least one row
+        const weeks = wv.weeks ?? []
+        const relevantWeeks = weeks.filter(week => {
+             // Check all rows for this week
+             for (const row of Object.values(wv.rows)) {
+                 const cell = row[week]
+                 if (cell && (cell.spare !== 0 || cell.planned !== 0)) {
+                     return true
+                 }
+             }
+             return false
+        })
+        
+        return relevantWeeks
+    } else {
+        // Deadline View logic
+        const grid = response.value.grid ?? {}
+        const weeks = new Set<string>()
+
+        // Grid is Family -> Part -> DeadlineWeek -> Cell
+        for (const parts of Object.values(grid)) {
+          for (const deadlines of Object.values(parts)) {
+            for (const week of Object.keys(deadlines)) {
+              weeks.add(week)
+            }
+          }
         }
-      }
+        return Array.from(weeks).sort()
     }
-    return Array.from(weeks).sort()
   })
 
   const columns = computed(() => {
     const base = [
-      { id: 'family', header: 'Soortfamilie' },
-      { id: 'part', header: 'Dagdeel' }
+      { accessorKey: 'family', header: '', sortable: true },
+      { accessorKey: 'part', header: '' }
     ]
-    const weekCols = weekKeys.value.map((wk) => {
-      // wk is ISO date "YYYY-MM-DD" or "No Deadline"
-      if (wk === "No Deadline") return { id: wk, header: "Geen deadline" }
-
-      const [y, m, d] = wk.split('-')
-      if (y && m && d) {
-        return { id: wk, header: `${d}/${m}` }
+    const weekCols = activeWeekKeys.value.map((wk) => {
+      let label = wk
+      
+      if (viewMode.value === 'deadline') {
+           if (wk === "No Deadline") label = "Geen deadline"
+           else {
+               const [y, m, d] = wk.split('-')
+               if (y && m && d && d.length === 2 && m.length === 2) {
+                   label = `${d}-${m}`
+               }
+           }
+      } else {
+           // Week View: YYYY-WXX -> WXX
+           const parts = wk.split('-W')
+           if (parts.length === 2) {
+               label = `W${parts[1]}`
+           }
       }
 
-      return { id: wk, header: wk }
+      // Use accessorKey for data binding
+      return { accessorKey: wk, header: label }
     })
-    return [...base, ...weekCols]
+    return [...base, ...weekCols] as any[]
   })
 
-  const rows = computed<GridRow[]>(() => {
-    const grid = response.value?.grid ?? {}
-    const result: GridRow[] = []
-
-    // Grid is Family -> Part -> DeadlineWeek -> Cell
-    for (const [family, parts] of Object.entries(grid)) {
-      for (const [part, deadlines] of Object.entries(parts)) {
-        const row: GridRow = {
-          id: `${family}|${part}`,
-          family,
-          part,
-          cells: {}
-        }
-
-        for (const [week, cell] of Object.entries(deadlines)) {
-          row.cells[week] = cell
-        }
-
-        // Only add if there is some data
-        if (Object.keys(row.cells).length > 0) {
-          result.push(row)
-        }
-      }
-    }
-
-    return result.sort((a, b) => {
-      if (a.family === b.family) return a.part.localeCompare(b.part)
-      return a.family.localeCompare(b.family)
-    })
-  })
-
-  const metaText = computed(() => {
-    if (!response.value) return ''
-    const { horizon_start, horizon_end } = response.value
-    return `Horizon: ${horizon_start} - ${horizon_end}`
-  })
-
-  function formatCell(cell: GridCell): string {
-    if (!cell || cell.required === 0) return ''
-    // User requested: "nr of unplannable visits/nr of planned visits"
-    // mapped to: shortfall / assigned
-    return `${cell.shortfall} (${cell.assigned})`
-  }
-
-  function cellClass(cell: GridCell): string {
-    if (!cell || cell.required === 0) {
-      return 'text-gray-400'
-    }
-    if (cell.shortfall > 0) {
-      return 'text-red-600 dark:text-red-400 font-bold'
-    }
-    // Green if all unplannable is 0 (meaning all planned)
-    return 'text-green-800 dark:text-green-400'
-  }
-
-  async function runSimulation(): Promise<void> {
+  async function loadCapacity(): Promise<void> {
     loading.value = true
     try {
-      const query: Record<string, string> = {}
-      if (startDate.value) {
-        query.start = startDate.value
-      }
       const result = await $api<CapacitySimulationResponse>(
         '/admin/capacity/visits/families',
-        { method: 'GET', query }
+        { method: 'GET' }
       )
       response.value = result
     } catch {
@@ -222,4 +398,27 @@
       loading.value = false
     }
   }
+  
+  async function recalculateSimulation(): Promise<void> {
+      toast.add({ title: 'De capaciteit wordt opnieuw berekend, dit kan even duren.', color: 'info' })
+      
+      loading.value = true
+      try {
+          // Trigger POST
+          const result = await $api<CapacitySimulationResponse>(
+            '/admin/capacity/visits/families',
+            { method: 'POST' }
+          )
+          response.value = result
+          toast.add({ title: 'Simulatie opnieuw berekend', color: 'success' })
+      } catch (e) {
+          toast.add({ title: 'Fout bij herberekenen', color: 'error' })
+      } finally {
+          loading.value = false
+      }
+  }
+  
+  onMounted(() => {
+     void loadCapacity()
+  })
 </script>

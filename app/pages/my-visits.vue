@@ -111,7 +111,7 @@
                   <UBadge v-if="visit.wbc" class="bg-amber-600 mr-1">WBC</UBadge>
                   <UBadge v-if="visit.fiets" class="bg-amber-600 mr-1">Fiets</UBadge>
                   <UBadge v-if="visit.hub" class="bg-amber-600 mr-1">HUB</UBadge>
-                  <UBadge v-if="visit.dvp" class="bg-amber-600 mr-1">DvP</UBadge>
+                  <UBadge v-if="visit.dvp" class="bg-amber-600 mr-1">DVP</UBadge>
                   <UBadge v-if="visit.sleutel" class="bg-amber-600 mr-1">Sleutel</UBadge>
                   <UBadge v-if="visit.priority" class="bg-amber-600 mr-1"> Prioriteit </UBadge>
                 </div>
