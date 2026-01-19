@@ -620,15 +620,13 @@
       </div>
     </UCard>
 
-    <AdminVisitPlanningStatusModal
-      v-if="adminPlanningVisitId != null && isAdmin"
-      v-model:open="adminPlanningModalOpen"
-      :visit-id="adminPlanningVisitId"
-      :initial-status="adminPlanningInitialStatus"
-      :initial-planned-week="adminPlanningInitialPlannedWeek"
-      :initial-researcher-ids="adminPlanningInitialResearcherIds"
-      :researcher-options="researcherOptions as Option[]"
-      @saved="onAdminPlanningSaved"
+    <VisitStatusModal
+      v-if="selectedVisitForStatus && isAdmin"
+      v-model:open="statusModalOpen"
+      :visit="selectedVisitForStatus"
+      :is-admin="isAdmin"
+      :researcher-options="researcherOptions"
+      @saved="loadVisits"
     />
   </div>
 </template>
@@ -737,11 +735,8 @@
 
   const search = ref('')
 
-  const adminPlanningModalOpen = ref(false)
-  const adminPlanningVisitId = ref<number | null>(null)
-  const adminPlanningInitialStatus = ref<VisitStatusCode>('created')
-  const adminPlanningInitialPlannedWeek = ref<number | null>(null)
-  const adminPlanningInitialResearcherIds = ref<number[]>([])
+  const statusModalOpen = ref(false)
+  const selectedVisitForStatus = ref<VisitListRow | null>(null)
 
   type VisitStatusOption = { label: string; value: VisitStatusCode }
 
@@ -763,6 +758,7 @@
 
   const columns: TableColumn<VisitListRow>[] = [
     { id: 'expand', header: '', enableSorting: false, cell: 'expand' },
+    // { accessorKey: 'id', header: 'ID' },
     { accessorKey: 'project_code', header: 'Projectcode' },
     { accessorKey: 'project_location', header: 'Locatie' },
     { accessorKey: 'cluster_number', header: 'Cluster' },
@@ -1172,15 +1168,8 @@
   }
 
   function onOpenAdminPlanning(row: VisitListRow): void {
-    adminPlanningVisitId.value = row.id
-    adminPlanningInitialStatus.value = row.status
-    adminPlanningInitialPlannedWeek.value = row.planned_week
-    adminPlanningInitialResearcherIds.value = (row.researcher_ids ?? []).slice()
-    adminPlanningModalOpen.value = true
-  }
-
-  async function onAdminPlanningSaved(): Promise<void> {
-    await loadVisits()
+    selectedVisitForStatus.value = row
+    statusModalOpen.value = true
   }
 
   onMounted(async () => {

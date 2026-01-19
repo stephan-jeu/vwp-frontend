@@ -1,5 +1,6 @@
 <template>
-  <svg
+  <!-- <div class="text-xl font-bold">Veldwerkplanning</div> -->
+   <svg
     id="Layer_1"
     role="graphics-document"
     title="logo-habitus"

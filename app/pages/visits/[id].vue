@@ -170,54 +170,13 @@
       </div>
     </UCard>
 
-    <UModal v-model:open="statusModalOpen" title="Status bewerken" :ui="{ footer: 'justify-end' }">
-      <template #body>
-        <div class="space-y-4 text-sm">
-          <div>
-            <label class="block text-xs mb-1">Nieuwe status</label>
-            <USelectMenu
-              :model-value="selectedStatusActionOption"
-              :items="statusActionOptions"
-              placeholder="Kies status"
-              class="w-xs"
-              @update:model-value="onStatusActionSelect"
-            />
-          </div>
-
-          <div v-if="statusAction === 'executed'">
-            <label class="block text-xs mb-1">Datum uitvoering</label>
-            <UInput v-model="statusDate" type="date" />
-          </div>
-
-          <div v-else-if="statusAction === 'executed_with_deviation'">
-            <label class="block text-xs mb-1">Datum uitvoering</label>
-            <UInput v-model="statusDate" type="date" class="mb-3" />
-            <label class="block text-xs mb-1">Beschrijf de afwijking</label>
-            <UTextarea v-model="deviationReason" :rows="3" class="w-full" />
-          </div>
-
-          <div v-else-if="statusAction === 'not_executed'">
-            <label class="block text-xs mb-1">Reden</label>
-            <UTextarea v-model="notExecutedReason" :rows="3" class="w-full" />
-          </div>
-        </div>
-      </template>
-
-      <template #footer>
-        <UButton color="neutral" variant="ghost" @click="onCancelStatus"> Annuleren </UButton>
-        <UButton :loading="statusSubmitting" @click="onSubmitStatus"> Opslaan </UButton>
-      </template>
-    </UModal>
-
-    <AdminVisitPlanningStatusModal
-      v-if="visit && isAdmin"
-      v-model:open="adminPlanningModalOpen"
-      :visit-id="visit.id"
-      :initial-status="visit.status"
-      :initial-planned-week="visit.planned_week"
-      :initial-researcher-ids="visit.researchers.map((r) => r.id)"
+    <VisitStatusModal
+      v-if="visit"
+      v-model:open="statusModalOpen"
+      :visit="visit"
+      :is-admin="isAdmin"
       :researcher-options="adminPlanningResearcherOptions"
-      @saved="onAdminPlanningSaved"
+      @saved="refresh"
     />
   </div>
 </template>
@@ -301,9 +260,6 @@
   }
 
   type ResearcherOption = { label: string; value: number }
-
-  type StatusAction = 'executed' | 'executed_with_deviation' | 'not_executed' | null
-  type StatusActionOption = { label: string; value: Exclude<StatusAction, null> }
 
   const route = useRoute()
   const { $api } = useNuxtApp()
@@ -389,17 +345,6 @@
         visit.value.status
       ) && isAdmin.value
     )
-  })
-
-  const statusActionOptions: StatusActionOption[] = [
-    { label: 'Uitgevoerd', value: 'executed' },
-    { label: 'Afwijking protocol', value: 'executed_with_deviation' },
-    { label: 'Niet uitgevoerd', value: 'not_executed' }
-  ]
-
-  const selectedStatusActionOption = computed<StatusActionOption | undefined>(() => {
-    if (!statusAction.value) return undefined
-    return statusActionOptions.find((o) => o.value === statusAction.value)
   })
 
   function statusLabel(code: VisitStatusCode): string {
@@ -521,118 +466,17 @@
   }
 
   const statusModalOpen = ref(false)
-  const statusAction = ref<StatusAction>(null)
-  const statusDate = ref('')
-  const deviationReason = ref('')
-  const notExecutedReason = ref('')
-  const statusSubmitting = ref(false)
-
-  const adminPlanningModalOpen = ref(false)
   const adminPlanningResearcherOptions = ref<ResearcherOption[]>([])
   const adminPlanningOptionsLoaded = ref(false)
   const adminPlanningLoading = ref(false)
 
-  function todayIso(): string {
-    const base = effectiveToday.value
-    const m = `${base.getMonth() + 1}`.padStart(2, '0')
-    const d = `${base.getDate()}`.padStart(2, '0')
-    return `${base.getFullYear()}-${m}-${d}`
-  }
-
-  function openStatusModal(): void {
-    if (!visit.value || !canResearcherEditStatus.value) return
-    // Default selection based on current status if possible, otherwise "executed"
-    if (visit.value.status === 'executed') {
-      statusAction.value = 'executed'
-    } else if (visit.value.status === 'executed_with_deviation') {
-      statusAction.value = 'executed_with_deviation'
-    } else if (visit.value.status === 'not_executed') {
-      statusAction.value = 'not_executed'
-    } else {
-      statusAction.value = 'executed'
+  // Combined opener for both researchers and admins
+  async function openStatusModal(): Promise<void> {
+    // If admin is doing planning-related status changes, fetch researchers
+    if (isAdmin.value) {
+        await ensureAdminPlanningOptionsLoaded()
     }
-    statusDate.value = todayIso()
-    deviationReason.value = ''
-    notExecutedReason.value = ''
     statusModalOpen.value = true
-  }
-
-  function onStatusActionSelect(option: StatusActionOption | null | undefined): void {
-    statusAction.value = option?.value ?? null
-    statusDate.value = todayIso()
-    deviationReason.value = ''
-    notExecutedReason.value = ''
-  }
-
-  function onCancelStatus(): void {
-    statusModalOpen.value = false
-    statusAction.value = null
-  }
-
-  async function onSubmitStatus(): Promise<void> {
-    if (!visit.value || !statusAction.value || !canResearcherEditStatus.value) return
-
-    statusSubmitting.value = true
-    try {
-      if (statusAction.value === 'executed') {
-        if (!statusDate.value) {
-          toast.add({ title: 'Kies een datum van uitvoering', color: 'error' })
-          statusSubmitting.value = false
-          return
-        }
-        await $api(`/visits/${visit.value.id}/execute`, {
-          method: 'POST',
-          body: {
-            execution_date: statusDate.value,
-            comment: null
-          }
-        })
-        toast.add({ title: 'Bezoek gemarkeerd als uitgevoerd', color: 'success' })
-      } else if (statusAction.value === 'executed_with_deviation') {
-        if (!statusDate.value || !deviationReason.value.trim()) {
-          toast.add({
-            title: 'Datum en omschrijving van de afwijking zijn verplicht',
-            color: 'error'
-          })
-          statusSubmitting.value = false
-          return
-        }
-        await $api(`/visits/${visit.value.id}/execute-deviation`, {
-          method: 'POST',
-          body: {
-            execution_date: statusDate.value,
-            reason: deviationReason.value,
-            comment: null
-          }
-        })
-        toast.add({
-          title: 'Bezoek gemarkeerd als uitgevoerd (met afwijking)',
-          color: 'success'
-        })
-      } else if (statusAction.value === 'not_executed') {
-        if (!notExecutedReason.value.trim()) {
-          toast.add({ title: 'Reden is verplicht', color: 'error' })
-          statusSubmitting.value = false
-          return
-        }
-        await $api(`/visits/${visit.value.id}/not-executed`, {
-          method: 'POST',
-          body: {
-            date: todayIso(),
-            reason: notExecutedReason.value
-          }
-        })
-        toast.add({ title: 'Bezoek gemarkeerd als niet uitgevoerd', color: 'success' })
-      }
-
-      statusModalOpen.value = false
-      statusAction.value = null
-      await refresh()
-    } catch {
-      toast.add({ title: 'Kon status niet bijwerken', color: 'error' })
-    } finally {
-      statusSubmitting.value = false
-    }
   }
 
   async function ensureAdminPlanningOptionsLoaded(): Promise<void> {
@@ -654,15 +498,12 @@
     }
   }
 
+  // Alias for old admin open handler if needed, or simply replace usage
   async function onOpenAdminPlanning(): Promise<void> {
     if (!visit.value || !isAdmin.value) return
     await ensureAdminPlanningOptionsLoaded()
     if (!adminPlanningOptionsLoaded.value) return
-    adminPlanningModalOpen.value = true
-  }
-
-  async function onAdminPlanningSaved(): Promise<void> {
-    await refresh()
+    statusModalOpen.value = true
   }
 
   function goBack(): void {
@@ -676,15 +517,6 @@
     } else if (back === 'my-visits') {
       navigateTo('/my-visits')
     } else if (back === 'visits' || back === 'index') {
-      // Check if referrer was root index or visits index?
-      // For now, mapping 'index' to root dashboard if that was the intent,
-      // or 'visits' to /visits.
-      // Based on my changes:
-      // - admin/planning sends 'planning'
-      // - my-visits sends 'my-visits'
-      // - index (dashboard) sends 'index'
-      // - visits/index sends 'visits' (I need to ensure visits/index sends 'visits')
-
       if (back === 'index') {
         navigateTo('/')
       } else {

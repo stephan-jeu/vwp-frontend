@@ -3,116 +3,202 @@
     <UPageHeader title="Admin startpagina" />
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <UCard class="lg:col-span-2">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <h2 class="text-sm font-semibold">Te behandelen</h2>
-            <UBadge color="warning" variant="subtle">
-              {{ pendingVisits.length }}
-            </UBadge>
-          </div>
-        </template>
+      <div class="lg:col-span-2 flex flex-col gap-4">
+        <UTabs :items="dashboardTabs" class="w-full">
+          <template #default="{ item }">
+            <div class="flex items-center gap-2 relative truncate">
+              <span class="truncate">{{ item.label }}</span>
+              <UBadge
+                v-if="item.key === 'pending' && pendingVisits.length > 0"
+                color="warning"
+                variant="subtle"
+                size="xs"
+                class="rounded-full"
+              >
+                {{ pendingVisits.length }}
+              </UBadge>
+              <UBadge
+                v-if="item.key === 'tight' && tightVisits.length > 0"
+                color="error"
+                variant="subtle"
+                size="xs"
+                class="rounded-full"
+              >
+                {{ tightVisits.length }}
+              </UBadge>
+            </div>
+          </template>
 
-        <div v-if="pendingVisitsPending" class="text-sm text-gray-500">
-          Bezoeken worden geladen…
-        </div>
-        <div v-else-if="pendingVisitsError" class="text-sm text-red-500">
-          Kon bezoeken niet laden.
-        </div>
-        <div v-else-if="pendingVisitsPreview.length === 0" class="text-sm text-gray-500">
-          Geen bezoeken om te behandelen.
-        </div>
-        <div v-else class="space-y-3">
-          <ul class="space-y-3 text-sm text-gray-700 dark:text-gray-200">
-            <li
-              v-for="visit in pendingVisitsPreview"
-              :key="visit.id"
-              class="flex flex-col gap-1 border-b pb-2 last:border-b-0 last:pb-0"
-            >
-              <div class="flex items-start justify-between gap-2">
-                <div>
-                  <div class="flex items-center gap-2">
-                    <div class="font-medium">
-                      {{ visit.project_code }} · Cluster {{ visit.cluster_number }}
+          <template #pending>
+               <div v-if="pendingVisitsPending" class="text-sm text-gray-500">
+                Bezoeken worden geladen…
+              </div>
+              <div v-else-if="pendingVisitsError" class="text-sm text-red-500">
+                Kon bezoeken niet laden.
+              </div>
+              <div v-else-if="pendingVisitsPreview.length === 0" class="text-sm text-gray-500">
+                Geen bezoeken om te behandelen.
+              </div>
+              <div v-else class="space-y-4">
+                 <UCard
+                    v-for="visit in pendingVisitsPreview"
+                    :key="visit.id"
+                    class="cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all dark:hover:ring-primary-400"
+                    @click="navigateTo(`/visits/${visit.id}`)"
+                 >
+                    <div class="flex items-start justify-between mb-2">
+                       <div>
+                          <div class="font-bold text-gray-900 dark:text-white">
+                             <span v-if="visit.project_location" class="mr-1">{{ visit.project_location }} -</span>
+                             {{ visit.project_code }}
+                             <span class="text-gray-500 font-normal ml-1">
+                                Cluster {{ visit.cluster_number }}
+                                <span v-if="visit.cluster_address">({{ visit.cluster_address }})</span>
+                             </span>
+                          </div>
+                       </div>
                     </div>
-                    <UBadge size="sm" variant="subtle" color="neutral">
-                      {{ statusLabel(visit.status) }}
+
+                    <div class="mt-2 pl-3 border-l-2 border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                       <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+                          <div>
+                             <span class="font-semibold text-gray-700 dark:text-gray-300">Functies: </span>
+                             {{ visit.functions.map((f) => f.name).join(', ') || '-' }}
+                          </div>
+                          <div>
+                             <span class="font-semibold text-gray-700 dark:text-gray-300">Soorten: </span>
+                             {{ visit.species.map((s) => s.abbreviation || s.name).join(', ') || '-' }}
+                          </div>
+                       </div>
+                       <div>
+                          <span class="font-semibold text-gray-700 dark:text-gray-300">Onderzoekers: </span>
+                          {{
+                             visit.researchers.length
+                                ? visit.researchers
+                                    .map((r) => r.full_name || `Gebruiker #${r.id}`)
+                                    .join(', ')
+                                : '-'
+                          }}
+                       </div>
+                       
+                       <div class="pt-1 flex items-center gap-2 text-primary-600 dark:text-primary-400 font-medium">
+                          <span>{{ visit.part_of_day }}</span>
+                          <span v-if="visit.planned_week"> · Week {{ visit.planned_week }} </span>
+                       </div>
+
+                       <!-- Dates & Status -->
+                       <div class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                           <div class="mb-1" v-if="visit.from_date || visit.to_date">
+                              {{ formatDate(visit.from_date) }} - {{ formatDate(visit.to_date) }}
+                           </div>
+                           <UBadge size="md" variant="subtle" color="neutral">
+                              {{ statusLabel(visit.status) }}
+                           </UBadge>
+                       </div>
+                    </div>
+                 </UCard>
+
+                 <!-- Pagination -->
+                 <div class="flex justify-between items-center pt-2">
+                   <div class="text-xs text-gray-500">
+                     Pagina {{ pendingPage }} · {{ pendingVisits.length }} bezoeken
+                   </div>
+                   <div class="flex items-center gap-2">
+                     <UButton
+                       size="xs"
+                       variant="ghost"
+                       :disabled="pendingPage <= 1 || pendingVisitsPending"
+                       @click="onPendingPrev()"
+                     >
+                       Vorige
+                     </UButton>
+                     <UButton
+                       size="xs"
+                       variant="ghost"
+                       :disabled="pendingPage >= pendingMaxPage || pendingVisitsPending"
+                       @click="onPendingNext()"
+                     >
+                       Volgende
+                     </UButton>
+                   </div>
+                 </div>
+              </div>
+          </template>
+
+          <template #tight>
+            <UCard class="mt-2">
+              <template #header>
+                <div class="flex items-center justify-between">
+                  <h2 class="text-sm font-semibold">Krappe planning (bezoek moet binnen 14 dagen)</h2>
+                </div>
+              </template>
+
+              <div v-if="tightVisitsPending" class="text-sm text-gray-500">Laden…</div>
+              <div v-else-if="tightVisitsData === null" class="text-sm text-red-500">Fout bij laden.</div>
+              <div v-else-if="tightVisits.length === 0" class="text-sm text-gray-500">
+                Geen bezoeken met krappe planning gevonden.
+              </div>
+              <div v-else class="space-y-4">
+                <UCard
+                  v-for="(tv, idx) in tightVisits"
+                  :key="idx"
+                  class="cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all dark:hover:ring-primary-400"
+                  @click="navigateTo(`/visits/${tv.visit.id}`)"
+                >
+                  <div class="flex items-start justify-between mb-2">
+                    <div>
+                      <div class="font-bold text-gray-900 dark:text-white">
+                        <span v-if="tv.visit.project_location" class="mr-1">{{ tv.visit.project_location }} -</span>
+                        {{ tv.visit.project_code }}
+                        <span class="text-gray-500 font-normal ml-1">
+                           Cluster {{ tv.visit.cluster_number }}
+                           <span v-if="tv.visit.cluster_address">({{ tv.visit.cluster_address }})</span>
+                        </span>
+                      </div>
+                      <div class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                        {{ tv.protocol_names.join(', ') }}
+                      </div>
+                    </div>
+                    
+                    <UBadge color="error" variant="subtle" class="rounded-full">
+                      Binnen {{ tv.slack }} dagen
                     </UBadge>
                   </div>
-                  <div class="text-xs text-gray-500">
-                    {{ visit.cluster_address }}
+                  
+                  <!-- Visit Details -->
+                  <div class="mt-2 pl-3 border-l-2 border-primary-500">
+                      <div class="flex items-center justify-between text-sm">
+                        <span class="font-semibold text-gray-800 dark:text-gray-200">
+                           Bezoek {{ tv.visit.visit_nr }} 
+                           <span v-if="tv.visit.part_of_day"> ({{ tv.visit.part_of_day }})</span>
+                        </span>
+                      </div>
+                      
+                      <!-- Dates & Status -->
+                      <div class="text-sm mt-1 text-gray-700 dark:text-gray-300">
+                        <div>{{ formatDate(tv.visit.from_date) }} - {{ formatDate(tv.visit.to_date) }}</div>
+                        <UBadge size="md" variant="subtle" color="neutral" class="mt-1">
+                           {{ statusLabel(tv.visit.status) }}
+                        </UBadge>
+                      </div>
+
+                      <!-- Planned details if applicable -->
+                      <div v-if="tv.visit.status === 'planned'" class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-xs">
+                          <div class="flex items-center gap-2">
+                             <span class="font-semibold">Week:</span> {{ tv.visit.planned_week }}
+                          </div>
+                          <div class="flex items-center gap-2 mt-1">
+                             <span class="font-semibold">Onderzoeker(s):</span>
+                             <span>{{ tv.visit.researchers.map((u: any) => u.full_name).join(', ') || 'Nog niet toegewezen' }}</span>
+                          </div>
+                      </div>
                   </div>
-                </div>
-                <UButton
-                  size="xs"
-                  variant="ghost"
-                  icon="i-lucide-arrow-right"
-                  :to="{ path: `/visits/${visit.id}`, query: { back: 'index' } }"
-                />
+                </UCard>
               </div>
-
-              <div
-                class="mt-1 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600"
-              >
-                <div>
-                  <span class="font-medium">Functies: </span>
-                  <span>
-                    {{ visit.functions.map((f) => f.name).join(', ') || '-' }}
-                  </span>
-                </div>
-                <div>
-                  <span class="font-medium">Soorten: </span>
-                  <span>
-                    {{ visit.species.map((s) => s.abbreviation || s.name).join(', ') || '-' }}
-                  </span>
-                </div>
-                <div>
-                  <span class="font-medium">Onderzoekers: </span>
-                  <span>
-                    {{
-                      visit.researchers.length
-                        ? visit.researchers
-                            .map((r) => r.full_name || `Gebruiker #${r.id}`)
-                            .join(', ')
-                        : '-'
-                    }}
-                  </span>
-                </div>
-                <div>
-                  <span>
-                    {{ visit.part_of_day }}
-                  </span>
-                  <span v-if="visit.planned_week"> · Week {{ visit.planned_week }} </span>
-                </div>
-              </div>
-            </li>
-          </ul>
-
-          <div class="pt-2 border-t flex justify-between items-center">
-            <div class="text-xs text-gray-500">
-              Pagina {{ pendingPage }} · {{ pendingVisits.length }} bezoeken
-            </div>
-            <div class="flex items-center gap-2">
-              <UButton
-                size="xs"
-                variant="ghost"
-                :disabled="pendingPage <= 1 || pendingVisitsPending"
-                @click="onPendingPrev()"
-              >
-                Vorige
-              </UButton>
-              <UButton
-                size="xs"
-                variant="ghost"
-                :disabled="pendingPage >= pendingMaxPage || pendingVisitsPending"
-                @click="onPendingNext()"
-              >
-                Volgende
-              </UButton>
-            </div>
-          </div>
-        </div>
-      </UCard>
+            </UCard>
+          </template>
+        </UTabs>
+      </div>
 
       <div class="space-y-4">
         <UCard>
@@ -485,10 +571,12 @@
   type VisitListRow = {
     id: number
     project_code: string
+    project_location: string
     cluster_number: number
     cluster_address: string
     status: VisitStatusCode
     planned_week: number | null
+    visit_nr: number | null
     from_date: string | null
     to_date: string | null
     functions: CompactFunction[]
@@ -631,5 +719,54 @@
       missed: 'Gemist'
     }
     return map[code]
+  }
+
+  // --- Tight Visits ---
+
+  interface TightVisit {
+    visit: VisitListRow
+    min_start: string
+    max_end: string
+    slack: number
+    protocol_names: string[]
+  }
+
+  const { data: tightVisitsData, pending: tightVisitsPending } = useAsyncData(
+    'admin-tight-visits',
+    () => {
+        // Only fetch if admin
+        if (!isAdmin.value) return Promise.resolve([])
+        const query: Record<string, string> = {}
+        if (testModeEnabled.value && simulatedDate.value) {
+           query.simulated_today = simulatedDate.value
+        }
+        return $api<TightVisit[]>('/admin/tight-visits', { query })
+    },
+    {
+       watch: [() => simulatedDate.value, () => testModeEnabled.value],
+       immediate: isAdmin.value
+    }
+  )
+
+  const tightVisits = computed<TightVisit[]>(() => tightVisitsData.value ?? [])
+
+  const dashboardTabs = computed(() => [
+    {
+      label: 'Te behandelen',
+      key: 'pending',
+      slot: 'pending'
+    },
+    {
+      label: 'Krappe planning',
+      key: 'tight',
+      slot: 'tight'
+    }
+  ])
+  
+  function formatDate(d: string | null): string {
+    if (!d) return ''
+    const dt = new Date(d)
+    if (Number.isNaN(dt.getTime())) return ''
+    return new Intl.DateTimeFormat('nl-NL', { day: '2-digit', month: 'short' }).format(dt)
   }
 </script>
