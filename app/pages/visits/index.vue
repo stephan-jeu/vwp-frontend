@@ -69,7 +69,7 @@
           <UInput
              v-if="createCustomVisit"
              v-model="createCustomFunctionName"
-             placeholder="Typ functie (maatwerk)"
+             placeholder="Voer functie in"
           />
           <UInputMenu
             v-else
@@ -86,7 +86,7 @@
           <UInput
              v-if="createCustomVisit"
              v-model="createCustomSpeciesName"
-             placeholder="Typ soort (maatwerk)"
+             placeholder="Voer soort in"
           />
           <UInputMenu
             v-else
