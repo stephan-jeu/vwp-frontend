@@ -15,7 +15,7 @@ RUN pnpm install
 # Kopieer de rest van de code
 COPY . .
 
-# Build de statische site
+# Build de statische site.
 # Voor Nuxt 4 SSG gebruiken we 'nuxi generate'
 ARG NUXT_PUBLIC_API_BASE
 ENV NUXT_PUBLIC_API_BASE=$NUXT_PUBLIC_API_BASE

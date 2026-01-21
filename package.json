@@ -27,7 +27,9 @@
     "msw": "^2.6.6",
     "prettier": "^3.6.2",
     "typescript": "^5.9.3",
-    "vue-tsc": "^3.1.0"
+    "vue-tsc": "^3.1.0",
+    "tailwindcss": "^4.0.0",
+    "@tailwindcss/vite": "^4.0.0"
   },
   "resolutions": {
     "unimport": "4.1.1"
