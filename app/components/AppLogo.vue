@@ -1,6 +1,11 @@
+<script setup lang="ts">
+  const config = useRuntimeConfig()
+</script>
+
 <template>
-  <!-- <div class="text-xl font-bold">Veldwerkplanning</div> -->
-   <svg
+  <div v-if="config.public.demoMode" class="text-xl font-bold">VWP</div>
+  <svg
+    v-else
     id="Layer_1"
     role="graphics-document"
     title="logo-habitus"
