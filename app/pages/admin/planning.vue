@@ -152,11 +152,19 @@
                       </div>
                       <div class="text-gray-700">
                         <span class="font-medium">Functies:</span>
-                        {{ visit.functions.map((f) => f.name).join(', ') || '-' }}
+                        {{ 
+                            visit.functions.length 
+                            ? visit.functions.map((f) => f.name).join(', ') 
+                            : visit.custom_function_name || '-' 
+                        }}
                       </div>
                       <div class="text-gray-700">
                         <span class="font-medium">Soorten:</span>
-                        {{ visit.species.map((s) => s.abbreviation || s.name).join(', ') || '-' }}
+                        {{ 
+                            visit.species.length 
+                            ? visit.species.map((s) => s.abbreviation || s.name).join(', ') 
+                            : visit.custom_species_name || '-' 
+                        }}
                       </div>
                       <div class="text-gray-700">
                         <span class="font-medium">Dagdeel:</span>
@@ -211,11 +219,19 @@
                       </div>
                       <div class="text-gray-700">
                         <span class="font-medium">Functies:</span>
-                        {{ visit.functions.map((f) => f.name).join(', ') || '-' }}
+                        {{ 
+                            visit.functions.length 
+                            ? visit.functions.map((f) => f.name).join(', ') 
+                            : visit.custom_function_name || '-' 
+                        }}
                       </div>
                       <div class="text-gray-700">
                         <span class="font-medium">Soorten:</span>
-                        {{ visit.species.map((s) => s.abbreviation || s.name).join(', ') || '-' }}
+                        {{ 
+                            visit.species.length 
+                            ? visit.species.map((s) => s.abbreviation || s.name).join(', ') 
+                            : visit.custom_species_name || '-' 
+                        }}
                       </div>
                       <div class="text-gray-700">
                         <span class="font-medium">Dagdeel:</span>
@@ -330,6 +346,8 @@
     researchers: UserName[]
     advertized: boolean
     quote: boolean
+    custom_function_name: string | null
+    custom_species_name: string | null
   }
 
   type VisitListResponse = {

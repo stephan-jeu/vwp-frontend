@@ -63,11 +63,19 @@
                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
                           <div>
                              <span class="font-semibold text-gray-700 dark:text-gray-300">Functies: </span>
-                             {{ visit.functions.map((f) => f.name).join(', ') || '-' }}
+                             {{ 
+                                visit.functions.length 
+                                ? visit.functions.map((f) => f.name).join(', ') 
+                                : visit.custom_function_name || '-' 
+                             }}
                           </div>
                           <div>
                              <span class="font-semibold text-gray-700 dark:text-gray-300">Soorten: </span>
-                             {{ visit.species.map((s) => s.abbreviation || s.name).join(', ') || '-' }}
+                             {{ 
+                                visit.species.length 
+                                ? visit.species.map((s) => s.abbreviation || s.name).join(', ') 
+                                : visit.custom_species_name || '-' 
+                             }}
                           </div>
                        </div>
                        <div>
@@ -583,6 +591,8 @@
     species: CompactSpecies[]
     researchers: UserName[]
     part_of_day: string | null
+    custom_function_name: string | null
+    custom_species_name: string | null
   }
 
   type VisitListResponse = {

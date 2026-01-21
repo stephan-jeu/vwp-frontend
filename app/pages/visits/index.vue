@@ -34,14 +34,17 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
           <label class="block text-xs mb-1">Project</label>
-          <USelectMenu
-            v-model="selectedProject"
-            :items="projectOptions"
-            searchable
-            searchable-placeholder="Zoek projectcode"
-            placeholder="Project"
-            @update:model-value="onProjectChange"
-          />
+             <USelectMenu
+                v-model="selectedProject"
+                :items="projectOptions"
+                searchable
+                searchable-placeholder="Zoek projectcode"
+                placeholder="Project"
+                class="flex-1 w-2xs"
+                @update:model-value="onProjectChange"
+                
+             />
+
           <p v-if="selectedProjectDetails" class="mt-1 text-xs text-gray-500">
             {{ selectedProjectDetails.location }}
           </p>
@@ -63,7 +66,13 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <label class="block text-xs mb-1">Functies</label>
+          <UInput
+             v-if="createCustomVisit"
+             v-model="createCustomFunctionName"
+             placeholder="Typ functie (maatwerk)"
+          />
           <UInputMenu
+            v-else
             :model-value="createFunctions"
             :items="functionOptions"
             multiple
@@ -72,14 +81,25 @@
           />
         </div>
         <div>
+        <div>
           <label class="block text-xs mb-1">Soorten</label>
+          <UInput
+             v-if="createCustomVisit"
+             v-model="createCustomSpeciesName"
+             placeholder="Typ soort (maatwerk)"
+          />
           <UInputMenu
+            v-else
             :model-value="createSpecies"
             :items="speciesOptions"
             multiple
             class="w-3xs"
             @update:model-value="(sel) => (createSpeciesIds = sel.map((o) => o.value as number))"
           />
+           <div class="mt-1">
+             <UCheckbox v-model="createCustomVisit" label="Andere soort" class="text-xs" />
+          </div>
+        </div>
         </div>
 
         <div>
@@ -143,6 +163,7 @@
             :items="partOfDayOptions"
             placeholder="Kies dagdeel"
             @update:model-value="(opt) => (createPartOfDay = opt?.value ?? null)"
+            class="w-3xs"
           />
         </div>
         <div>
@@ -204,6 +225,7 @@
 
       <div v-else class="flex flex-col gap-4">
         <UTable
+          :key="tableKey"
           :data="rows"
           :columns="columns"
           :loading="loading"
@@ -223,13 +245,21 @@
             <span
               class="text-xs text-gray-700 dark:text-gray-300 max-w-xs whitespace-normal break-words block"
             >
-              {{ row.original.functions.map((f) => f.name).join(', ') }}
+              {{ 
+                 row.original.functions.length 
+                 ? row.original.functions.map((f) => f.name).join(', ') 
+                 : (row.original.custom_function_name || '-') 
+              }}
             </span>
           </template>
 
           <template #species-cell="{ row }">
             <span class="text-xs text-gray-700 dark:text-gray-300">
-              {{ row.original.species.map((s) => s.abbreviation || s.name).join(', ') }}
+              {{ 
+                 row.original.species.length 
+                 ? row.original.species.map((s) => s.abbreviation || s.name).join(', ') 
+                 : (row.original.custom_species_name || '-') 
+              }}
             </span>
           </template>
 
@@ -379,8 +409,16 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-xs mb-1">Functies</label>
+                    <div class="flex justify-between items-center mb-1">
+                      <label class="block text-xs">Functies</label>
+                    </div>
+                    <UInput
+                      v-if="row.original.custom_function_name !== null"
+                      v-model="row.original.custom_function_name"
+                      placeholder="Maatwerk functie"
+                    />
                     <UInputMenu
+                      v-else
                       :model-value="mapIdsToOptions(row.original.function_ids, functionOptions)"
                       :items="functionOptions"
                       multiple
@@ -392,7 +430,13 @@
                   </div>
                   <div>
                     <label class="block text-xs mb-1">Soorten</label>
+                    <UInput
+                      v-if="row.original.custom_species_name !== null"
+                      v-model="row.original.custom_species_name"
+                      placeholder="Maatwerk soort"
+                    />
                     <UInputMenu
+                      v-else
                       :model-value="mapIdsToOptions(row.original.species_ids, speciesOptions)"
                       :items="speciesOptions"
                       multiple
@@ -401,6 +445,24 @@
                         (sel) => (row.original.species_ids = sel.map((o) => o.value as number))
                       "
                     />
+                     <div class="mt-1">
+                         <UCheckbox 
+                            :model-value="!!(row.original.custom_function_name || row.original.custom_species_name)"
+                            label="Andere soort"
+                            class="text-xs"
+                            @change="(val) => {
+                                if (val) {
+                                   row.original.custom_function_name = ''
+                                   row.original.custom_species_name = ''
+                                   row.original.function_ids = []
+                                   row.original.species_ids = []
+                                } else {
+                                   row.original.custom_function_name = null
+                                   row.original.custom_species_name = null
+                                }
+                            }"
+                         />
+                    </div>
                   </div>
 
                   <div>
@@ -488,6 +550,8 @@
                       :items="partOfDayOptions"
                       placeholder="Kies dagdeel"
                       @update:model-value="(opt) => (row.original.part_of_day = opt?.value ?? null)"
+                      class="w-3xs"
+
                     />
                   </div>
                   <div>
@@ -565,26 +629,15 @@
                   >
                     {{ statusLabel(row.original.status) }} aanpassen
                   </UButton>
-                  <UModal title="Bezoek verwijderen">
-                    <UButton color="error" variant="soft" size="xs">Verwijder</UButton>
-                    <template #content>
-                      <UCard>
-                        <div>Weet je zeker dat je dit bezoek wilt verwijderen?</div>
-                        <template #footer>
-                          <div class="flex justify-end gap-2">
-                            <UButton color="neutral" variant="ghost">Annuleer</UButton>
-                            <UButton
-                              color="error"
-                              :loading="deletingId === row.original.id"
-                              @click="onDeleteVisit(row.original.id)"
-                            >
-                              Verwijder
-                            </UButton>
-                          </div>
-                        </template>
-                      </UCard>
-                    </template>
-                  </UModal>
+                  <UButton
+                    color="error"
+                    variant="soft"
+                    size="xs"
+                    icon="i-heroicons-trash"
+                    @click="openDeleteModal(row.original)"
+                  >
+                    Verwijder
+                  </UButton>
 
                   <UButton
                     size="xs"
@@ -628,6 +681,28 @@
       :researcher-options="researcherOptions"
       @saved="loadVisits"
     />
+
+    <UModal v-model:open="deleteModalOpen" title="Bezoek verwijderen">
+      <template #content>
+        <UCard>
+          <div>Weet je zeker dat je dit bezoek wilt verwijderen?</div>
+          <template #footer>
+            <div class="flex justify-end gap-2">
+              <UButton color="neutral" variant="ghost" @click="deleteModalOpen = false">
+                Annuleer
+              </UButton>
+              <UButton
+                color="error"
+                :loading="isDeleting"
+                @click="confirmDeleteVisit"
+              >
+                Verwijder
+              </UButton>
+            </div>
+          </template>
+        </UCard>
+      </template>
+    </UModal>
   </div>
 </template>
 
@@ -693,6 +768,8 @@
     researcher_ids?: number[]
     advertized: boolean
     quote: boolean
+    custom_function_name: string | null
+    custom_species_name: string | null
   }
 
   type Option = { label: string; value: number | null }
@@ -732,6 +809,7 @@
   const page = ref(1)
   const pageSize = ref(50)
   const total = ref(0)
+  const tableKey = ref(0)
 
   const search = ref('')
 
@@ -999,6 +1077,9 @@
   const createPriority = ref(false)
   const createRemarksPlanning = ref<string | null>(null)
   const createRemarksField = ref<string | null>(null)
+  const createCustomVisit = ref(false)
+  const createCustomFunctionName = ref('')
+  const createCustomSpeciesName = ref('')
 
   const createFunctions = computed(() =>
     mapIdsToOptions(createFunctionIds.value, functionOptions.value)
@@ -1043,6 +1124,9 @@
     createPriority.value = false
     createRemarksPlanning.value = null
     createRemarksField.value = null
+    createCustomVisit.value = false
+    createCustomFunctionName.value = ''
+    createCustomSpeciesName.value = ''
   }
 
   function onStartCreate(): void {
@@ -1089,8 +1173,10 @@
         part_of_day: createPartOfDay.value,
         start_time_text: createStartTimeText.value || null,
         preferred_researcher_id: createPreferredResearcherId.value,
-        function_ids: [...createFunctionIds.value],
-        species_ids: [...createSpeciesIds.value],
+        function_ids: createCustomVisit.value ? [] : [...createFunctionIds.value],
+        species_ids: createCustomVisit.value ? [] : [...createSpeciesIds.value],
+        custom_function_name: createCustomVisit.value ? createCustomFunctionName.value : null,
+        custom_species_name: createCustomVisit.value ? createCustomSpeciesName.value : null,
         researcher_ids: createResearcherIds.value.length > 0 ? [...createResearcherIds.value] : null
       }
 
@@ -1109,7 +1195,6 @@
   // --- Admin inline save/delete ---
 
   const savingId = ref<number | null>(null)
-  const deletingId = ref<number | null>(null)
 
   async function onSaveVisit(row: VisitListRow): Promise<void> {
     savingId.value = row.id
@@ -1142,6 +1227,8 @@
         preferred_researcher_id: row.preferred_researcher_id,
         function_ids: row.function_ids,
         species_ids: row.species_ids,
+        custom_function_name: row.custom_function_name,
+        custom_species_name: row.custom_species_name,
         researcher_ids: row.researcher_ids ?? row.researchers.map((r) => r.id)
       }
       await $api(`/visits/${row.id}`, { method: 'PUT', body: payload })
@@ -1154,18 +1241,36 @@
     }
   }
 
-  async function onDeleteVisit(id: number): Promise<void> {
-    deletingId.value = id
+  /* Delete Modal */
+  const deleteModalOpen = ref(false)
+  const visitToDelete = ref<VisitListRow | null>(null)
+  const isDeleting = ref(false)
+
+  function openDeleteModal(row: VisitListRow): void {
+    visitToDelete.value = row
+    deleteModalOpen.value = true
+  }
+
+  async function confirmDeleteVisit(): Promise<void> {
+    if (!visitToDelete.value) return
+    isDeleting.value = true
     try {
-      await $api(`/visits/${id}`, { method: 'DELETE' })
+      await $api(`/visits/${visitToDelete.value.id}`, { method: 'DELETE' })
       toast.add({ title: 'Bezoek verwijderd', color: 'success' })
+      deleteModalOpen.value = false
       await loadVisits()
     } catch {
       toast.add({ title: 'Verwijderen mislukt', color: 'error' })
     } finally {
-      deletingId.value = null
+      isDeleting.value = false
+      visitToDelete.value = null
+      tableKey.value++ 
     }
   }
+
+  /* ... */
+
+  // const deletingId = ref<number | null>(null) // Removed as we use shared state now
 
   function onOpenAdminPlanning(row: VisitListRow): void {
     selectedVisitForStatus.value = row

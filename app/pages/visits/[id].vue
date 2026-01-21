@@ -105,13 +105,21 @@
           <div>
             <span class="font-medium">Functies:</span>
             <span class="ml-1">
-              {{ visit.functions.map((f) => f.name).join(', ') || '-' }}
+              {{
+                visit.functions.length
+                  ? visit.functions.map((f) => f.name).join(', ')
+                  : visit.custom_function_name || '-'
+              }}
             </span>
           </div>
           <div>
             <span class="font-medium">Soorten:</span>
             <span class="ml-1">
-              {{ visit.species.map((s) => s.abbreviation || s.name).join(', ') || '-' }}
+              {{
+                visit.species.length
+                  ? visit.species.map((s) => s.abbreviation || s.name).join(', ')
+                  : visit.custom_species_name || '-'
+              }}
             </span>
           </div>
           <div>
@@ -216,6 +224,8 @@
     status: VisitStatusCode
     function_ids: number[]
     species_ids: number[]
+    custom_function_name: string | null
+    custom_species_name: string | null
     functions: CompactFunction[]
     species: CompactSpecies[]
     required_researchers: number | null

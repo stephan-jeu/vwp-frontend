@@ -74,12 +74,20 @@
 
                 <div class="mt-1 text-[12px] text-gray-700 dark:text-gray-300">
                   <span class="font-medium mr-1">Functies:</span>
-                  <span>{{ visit.functions.map((f) => f.name).join(', ') || '-' }}</span>
+                  <span>{{ 
+                      visit.functions.length 
+                      ? visit.functions.map((f) => f.name).join(', ') 
+                      : visit.custom_function_name || '-' 
+                  }}</span>
                 </div>
                 <div class="mt-1 text-[12px] text-gray-700 dark:text-gray-300">
                   <span class="font-medium mr-1">Soorten:</span>
                   <span>
-                    {{ visit.species.map((s) => s.abbreviation || s.name).join(', ') || '-' }}
+                    {{ 
+                        visit.species.length 
+                        ? visit.species.map((s) => s.abbreviation || s.name).join(', ') 
+                        : visit.custom_species_name || '-' 
+                    }}
                   </span>
                 </div>
 
@@ -183,6 +191,8 @@
     preferred_researcher_id: number | null
     preferred_researcher: UserName | null
     researchers: UserName[]
+    custom_function_name: string | null
+    custom_species_name: string | null
   }
 
   type VisitListResponse = {
