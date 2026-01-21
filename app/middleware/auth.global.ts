@@ -1,7 +1,9 @@
 export default defineNuxtRouteMiddleware(async (to) => {
   // Allow unauthenticated access to login and OAuth callback pages
   const publicPaths = ['/login', '/auth/callback']
-  if (publicPaths.includes(to.path)) {
+  // Normalize path by removing trailing slash for the check
+  const path = to.path.endsWith('/') && to.path.length > 1 ? to.path.slice(0, -1) : to.path
+  if (publicPaths.includes(path)) {
     return
   }
 
