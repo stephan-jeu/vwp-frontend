@@ -1,34 +1,33 @@
-# Stage 1: Build
-FROM node:20-slim AS build
+# STAP 1: Build fase
+FROM node:20-bookworm-slim AS builder
 
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
+# Kopieer package bestanden
+COPY package*.json ./
 
-# Copy requirements
-COPY package.json pnpm-lock.yaml ./
+# Installeer dependencies
+RUN npm install
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
-
-# Copy source code
+# Kopieer de rest van de code
 COPY . .
 
-# Build the application
-# For SPA mode (ssr: false), 'nuxt build' or 'nuxt generate' creates proper output.
-# 'nuxt typecheck' is run optionally, but let's skip it for speed in Docker.
-RUN pnpm generate
+# Haal de build variabelen op (nodig tijdens 'generate')
+ARG NUXT_PUBLIC_API_BASE
+ENV NUXT_PUBLIC_API_BASE=$NUXT_PUBLIC_API_BASE
 
-# Stage 2: Serve
+# Genereer de statische bestanden (dist map)
+RUN npm run generate
+
+# STAP 2: Runtime fase (Nginx)
 FROM nginx:alpine
 
-# Copy built assets from builder stage
-# Nuxt 3/4 outputs to .output/public for static generation
-COPY --from=build /app/.output/public /usr/share/nginx/html
+# Kopieer de statische bestanden van de builder naar de Nginx html map
+# Let op: bij Nuxt 3 is de output map vaak '.output/public' ipv 'dist'
+COPY --from=builder /app/.output/public /usr/share/nginx/html
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Voeg je eigen nginx.conf toe als je die hebt, anders gebruikt hij de default
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
