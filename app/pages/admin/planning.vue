@@ -19,7 +19,7 @@
                   class="w-full"
                 />
               </div>
-              
+
               <UButton
                 icon="i-heroicons-sparkles"
                 color="primary"
@@ -29,7 +29,7 @@
               >
                 {{ generateLabel }}
               </UButton>
-              
+
               <UButton
                 v-if="plannedVisits.length > 0"
                 icon="i-heroicons-trash"
@@ -152,18 +152,18 @@
                       </div>
                       <div class="text-gray-700">
                         <span class="font-medium">Functies:</span>
-                        {{ 
-                            visit.functions.length 
-                            ? visit.functions.map((f) => f.name).join(', ') 
-                            : visit.custom_function_name || '-' 
+                        {{
+                            visit.functions.length
+                            ? visit.functions.map((f) => f.name).join(', ')
+                            : visit.custom_function_name || '-'
                         }}
                       </div>
                       <div class="text-gray-700">
                         <span class="font-medium">Soorten:</span>
-                        {{ 
-                            visit.species.length 
-                            ? visit.species.map((s) => s.abbreviation || s.name).join(', ') 
-                            : visit.custom_species_name || '-' 
+                        {{
+                            visit.species.length
+                            ? visit.species.map((s) => s.abbreviation || s.name).join(', ')
+                            : visit.custom_species_name || '-'
                         }}
                       </div>
                       <div class="text-gray-700">
@@ -219,18 +219,18 @@
                       </div>
                       <div class="text-gray-700">
                         <span class="font-medium">Functies:</span>
-                        {{ 
-                            visit.functions.length 
-                            ? visit.functions.map((f) => f.name).join(', ') 
-                            : visit.custom_function_name || '-' 
+                        {{
+                            visit.functions.length
+                            ? visit.functions.map((f) => f.name).join(', ')
+                            : visit.custom_function_name || '-'
                         }}
                       </div>
                       <div class="text-gray-700">
                         <span class="font-medium">Soorten:</span>
-                        {{ 
-                            visit.species.length 
-                            ? visit.species.map((s) => s.abbreviation || s.name).join(', ') 
-                            : visit.custom_species_name || '-' 
+                        {{
+                            visit.species.length
+                            ? visit.species.map((s) => s.abbreviation || s.name).join(', ')
+                            : visit.custom_species_name || '-'
                         }}
                       </div>
                       <div class="text-gray-700">
@@ -460,7 +460,7 @@
 
   const weekRange = computed(() => isoWeekRange(activeWeekNumber.value))
 
-  const weekLabel = computed(() => {
+  const _weekLabel = computed(() => {
     if (!weekRange.value) return ''
 
     const formatter = new Intl.DateTimeFormat('nl-NL', {
@@ -525,7 +525,7 @@
     // Filter out past weeks
     const current = currentWeekNumber.value
     const futureWeeks = Array.from(allWeeks).filter((w) => w >= current)
-    
+
     // Sort logically
     const sorted = futureWeeks.sort((a, b) => a - b)
 
@@ -548,8 +548,8 @@
   async function loadWeeks(): Promise<void> {
     try {
       availableWeeks.value = await $api<number[]>('/visits/weeks')
-    } catch (e) {
-      console.error('Failed to load weeks', e)
+    } catch (_e) {
+      console.error('Failed to load weeks', _e)
     }
   }
 
@@ -608,20 +608,20 @@
   )
 
   const generateLabel = computed(() => {
-    return isCurrentWeekTab.value 
-      ? 'Genereer planning deze week' 
+    return isCurrentWeekTab.value
+      ? 'Genereer planning deze week'
       : `Genereer planning week ${activeWeekNumber.value}`
   })
-  
+
   const deleteLabel = computed(() => {
-    return isCurrentWeekTab.value 
-      ? 'Verwijder planning deze week' 
+    return isCurrentWeekTab.value
+      ? 'Verwijder planning deze week'
       : `Verwijder planning week ${activeWeekNumber.value}`
   })
-  
 
 
-  function isInSelectedWeek(visit: VisitListRow): boolean {
+
+  function _isInSelectedWeek(visit: VisitListRow): boolean {
     if (!weekRange.value) return false
     if (!visit.from_date || !visit.to_date) return false
 
@@ -796,10 +796,10 @@
 
       // 2. Refresh available weeks (in case this week wasn't there before)
       await loadWeeks()
-      
-      // No need to navigate, we are already on the tab? 
+
+      // No need to navigate, we are already on the tab?
       // Actually we might need to re-find the tab if it wasn't there before.
-      
+
       const foundTab = weekTabs.value.find((t) => t.week === w)
       if (foundTab) {
         selectedWeekTab.value = foundTab

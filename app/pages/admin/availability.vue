@@ -191,8 +191,18 @@ function scheduleSave(row: FlatChildRow, colId: WeekKey) {
   savingTimers.set(key, handle);
 }
 
-type FlatChildRow = { kind: 'child'; data: CellMap; assigned: CellMap; userId: string; slot: SlotType };
-type FlatTotalRow = { kind: 'total'; label: string; data: CellMap };
+type FlatChildRow = {
+  id: string;
+  kind: 'child';
+  label: string;
+  data: CellMap;
+  assigned: CellMap;
+  userId: string;
+  slot: SlotType;
+};
+type FlatTotalRow = { id: string; kind: 'total'; label: string; data: CellMap };
+type FlatParentRow = { id: string; kind: 'parent'; name: string };
+type FlatRow = FlatParentRow | FlatChildRow | FlatTotalRow;
 
 function onCellInput(row: FlatChildRow, colId: WeekKey) {
   // Keep value clamped as user types
@@ -221,7 +231,7 @@ const flatRows = computed(() => {
     flex: 'Flex'
   };
 
-  const rows: any[] = [];
+  const rows: FlatRow[] = [];
   const totalMap: CellMap = {};
 
   for (const u of users.value) {

@@ -74,19 +74,19 @@
 
                 <div class="mt-1 text-[12px] text-gray-700 dark:text-gray-300">
                   <span class="font-medium mr-1">Functies:</span>
-                  <span>{{ 
-                      visit.functions.length 
-                      ? visit.functions.map((f) => f.name).join(', ') 
-                      : visit.custom_function_name || '-' 
+                  <span>{{
+                      visit.functions.length
+                      ? visit.functions.map((f) => f.name).join(', ')
+                      : visit.custom_function_name || '-'
                   }}</span>
                 </div>
                 <div class="mt-1 text-[12px] text-gray-700 dark:text-gray-300">
                   <span class="font-medium mr-1">Soorten:</span>
                   <span>
-                    {{ 
-                        visit.species.length 
-                        ? visit.species.map((s) => s.abbreviation || s.name).join(', ') 
-                        : visit.custom_species_name || '-' 
+                    {{
+                        visit.species.length
+                        ? visit.species.map((s) => s.abbreviation || s.name).join(', ')
+                        : visit.custom_species_name || '-'
                     }}
                   </span>
                 </div>
@@ -330,7 +330,7 @@
 
   const currentWeekNumber = computed<number>(() => getIsoWeekNumber(effectiveToday.value))
 
-  function visitWeekNumber(visit: VisitListRow): number {
+  function _visitWeekNumber(visit: VisitListRow): number {
     if (visit.planned_week && Number.isInteger(visit.planned_week)) {
       return visit.planned_week
     }
@@ -378,8 +378,8 @@
       availableWeeks.value = await $api<number[]>('/visits/weeks', {
         query: { mine: true }
       })
-    } catch (e) {
-      console.error('Failed to load weeks', e)
+    } catch (_e) {
+      console.error('Failed to load weeks', _e)
     }
   })
 

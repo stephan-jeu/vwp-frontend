@@ -63,18 +63,18 @@
                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
                           <div>
                              <span class="font-semibold text-gray-700 dark:text-gray-300">Functies: </span>
-                             {{ 
-                                visit.functions.length 
-                                ? visit.functions.map((f) => f.name).join(', ') 
-                                : visit.custom_function_name || '-' 
+                             {{
+                                visit.functions.length
+                                ? visit.functions.map((f) => f.name).join(', ')
+                                : visit.custom_function_name || '-'
                              }}
                           </div>
                           <div>
                              <span class="font-semibold text-gray-700 dark:text-gray-300">Soorten: </span>
-                             {{ 
-                                visit.species.length 
-                                ? visit.species.map((s) => s.abbreviation || s.name).join(', ') 
-                                : visit.custom_species_name || '-' 
+                             {{
+                                visit.species.length
+                                ? visit.species.map((s) => s.abbreviation || s.name).join(', ')
+                                : visit.custom_species_name || '-'
                              }}
                           </div>
                        </div>
@@ -88,7 +88,7 @@
                                 : '-'
                           }}
                        </div>
-                       
+
                        <div class="pt-1 flex items-center gap-2 text-primary-600 dark:text-primary-400 font-medium">
                           <span>{{ visit.part_of_day }}</span>
                           <span v-if="visit.planned_week"> · Week {{ visit.planned_week }} </span>
@@ -96,7 +96,7 @@
 
                        <!-- Dates & Status -->
                        <div class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-                           <div class="mb-1" v-if="visit.from_date || visit.to_date">
+                           <div v-if="visit.from_date || visit.to_date" class="mb-1">
                               {{ formatDate(visit.from_date) }} - {{ formatDate(visit.to_date) }}
                            </div>
                            <UBadge size="md" variant="subtle" color="neutral">
@@ -167,21 +167,21 @@
                         {{ tv.protocol_names.join(', ') }}
                       </div>
                     </div>
-                    
+
                     <UBadge color="error" variant="subtle" class="rounded-full">
                       Binnen {{ tv.slack }} dagen
                     </UBadge>
                   </div>
-                  
+
                   <!-- Visit Details -->
                   <div class="mt-2 pl-3 border-l-2 border-primary-500">
                       <div class="flex items-center justify-between text-sm">
                         <span class="font-semibold text-gray-800 dark:text-gray-200">
-                           Bezoek {{ tv.visit.visit_nr }} 
+                           Bezoek {{ tv.visit.visit_nr }}
                            <span v-if="tv.visit.part_of_day"> ({{ tv.visit.part_of_day }})</span>
                         </span>
                       </div>
-                      
+
                       <!-- Dates & Status -->
                       <div class="text-sm mt-1 text-gray-700 dark:text-gray-300">
                         <div>{{ formatDate(tv.visit.from_date) }} - {{ formatDate(tv.visit.to_date) }}</div>
@@ -772,7 +772,7 @@
       slot: 'tight'
     }
   ])
-  
+
   function formatDate(d: string | null): string {
     if (!d) return ''
     const dt = new Date(d)

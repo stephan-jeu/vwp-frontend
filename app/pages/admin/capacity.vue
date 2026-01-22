@@ -23,17 +23,17 @@
         <!-- Right: View Toggle -->
         <div class="flex items-center gap-2">
             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Weergave:</span>
-            <UButton 
+            <UButton
                 :variant="viewMode === 'week' ? 'solid' : 'soft'"
-                :color="viewMode === 'week' ? 'primary' : 'neutral'" 
-                @click="viewMode = 'week'"
+                :color="viewMode === 'week' ? 'primary' : 'neutral'"
                 size="sm"
+                @click="viewMode = 'week'"
             >Per week</UButton>
-             <UButton 
+             <UButton
                 :variant="viewMode === 'deadline' ? 'solid' : 'soft'"
                 :color="viewMode === 'deadline' ? 'primary' : 'neutral'"
-                @click="viewMode = 'deadline'"
                 size="sm"
+                @click="viewMode = 'deadline'"
             >Per bezoek einddatum</UButton>
         </div>
       </div>
@@ -64,16 +64,16 @@
         <div class="border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 overflow-x-auto">
           <UTable :key="tableKey" :columns="columns" :data="rows" class="max-h-[600px]">
              <!-- Custom Cell Rendering -->
-             
+
             <template #family-cell="{ row }">
-               <span 
+               <span
                 class="text-sm font-medium text-gray-800 dark:text-gray-100"
                 :class="{ 'font-bold': isRowTotal(row) }"
                >
                 {{ getFamily(row) }}
               </span>
             </template>
-             
+
             <template #part-cell="{ row }">
                <span class="text-xs text-gray-700 dark:text-gray-200">
                 {{ getPart(row) }}
@@ -101,19 +101,19 @@
   definePageMeta({ middleware: 'admin' })
 
   // --- Types ---
-  
+
   type FamilyDaypartCapacity = {
     required: number
     assigned: number
     shortfall: number
     spare: number
   }
-  
+
   type WeekResultCell = {
       spare: number
       planned: number
   }
-  
+
   type WeekViewData = {
       weeks: string[]
       rows: Record<string, Record<string, WeekResultCell>>
@@ -138,36 +138,52 @@
 
   // Row for UTable
   type ViewMode = 'deadline' | 'week'
+  type CellValue = FamilyDaypartCapacity | WeekResultCell
+  type TableColumn = { accessorKey: string; header: string; sortable?: boolean }
   type GridRow = {
     id: string
     family: string
     part: string
     isTotal?: boolean
-    [key: string]: any 
+    [key: string]: unknown
   }
 
   // Helper to safely access row data in template
-  function getRowData(row: any): GridRow {
-      return (row?.original ?? row) as GridRow
+  function getRowData(row: unknown): GridRow {
+      if (row && typeof row === 'object' && 'original' in row) {
+          const original = (row as { original?: unknown }).original
+          if (original && typeof original === 'object') {
+              return original as GridRow
+          }
+      }
+      return row as GridRow
   }
-  
-  function getFamily(row: any): string {
+
+  function getFamily(row: unknown): string {
       return getRowData(row).family
   }
-  
-  function getPart(row: any): string {
+
+  function getPart(row: unknown): string {
       return getRowData(row).part
   }
-  
-  function isRowTotal(row: any): boolean {
+
+  function isRowTotal(row: unknown): boolean {
       return !!getRowData(row).isTotal
   }
 
-  function formatCell(rowRaw: any, colKey: string): string {
+  function isCellValue(v: unknown): v is CellValue {
+      if (!v || typeof v !== 'object') return false
+      return (
+          ('required' in v && 'assigned' in v && 'shortfall' in v && 'spare' in v) ||
+          ('spare' in v && 'planned' in v)
+      )
+  }
+
+  function formatCell(rowRaw: unknown, colKey: string): string {
       const row = getRowData(rowRaw)
       const cell = row[colKey]
-      if (!cell) return ''
-      
+      if (!isCellValue(cell)) return ''
+
       if (viewMode.value === 'week') {
          const c = cell as WeekResultCell
          if (c.spare === 0 && c.planned === 0) return '-'
@@ -179,20 +195,20 @@
       }
   }
 
-  function getCellClass(rowRaw: any, colKey: string): string {
+  function getCellClass(rowRaw: unknown, colKey: string): string {
       const row = getRowData(rowRaw)
       const cell = row[colKey]
-      
+
       if (viewMode.value === 'week') {
-          if (!cell) return 'text-gray-300'
+          if (!isCellValue(cell)) return 'text-gray-300'
           const c = cell as WeekResultCell
           if (c.spare === 0 && c.planned === 0) return 'text-gray-300'
           return 'text-gray-700 dark:text-gray-300'
       } else {
-          if (!cell) return 'text-gray-400'
+          if (!isCellValue(cell)) return 'text-gray-400'
           const c = cell as FamilyDaypartCapacity
           if (c.required === 0) return 'text-gray-400'
-          
+
           if (c.shortfall > 0) {
              return 'text-red-600 dark:text-red-400 font-bold'
           }
@@ -203,17 +219,17 @@
   const rows = computed<GridRow[]>(() => {
     if (!response.value) return []
     const result: GridRow[] = []
-    
+
     if (viewMode.value === 'week') {
          const wv = response.value.week_view
          if (!wv) return []
-         
+
          const sortedLabels = Object.keys(wv.rows).sort((a,b) => {
              if (a === 'Totalen') return -1
              if (b === 'Totalen') return 1
              return a.localeCompare(b)
          })
-         
+
          for (const label of sortedLabels) {
              const rowData = wv.rows[label] ?? {}
              const isTotal = label === 'Totalen'
@@ -240,7 +256,7 @@
                  part = parts2.pop() ?? ''
                  family = parts2.join(' - ')
              }
-             
+
              const row: GridRow = {
                  id: label,
                  family,
@@ -250,7 +266,7 @@
              }
              result.push(row)
          }
-         
+
     } else {
         // Deadline View
         const grid = response.value.grid ?? {}
@@ -269,7 +285,7 @@
             }
           }
         }
-        
+
         result.sort((a, b) => {
           if (a.family === b.family) return a.part.localeCompare(b.part)
           return a.family.localeCompare(b.family)
@@ -284,7 +300,7 @@
 
   const loading = ref(false)
   const response = ref<CapacitySimulationResponse | null>(null)
-  
+
   const viewMode = ref<ViewMode>('week')
 
 
@@ -297,20 +313,20 @@
      const grid = response.value.grid
      return !!grid && Object.keys(grid).length > 0
   })
-  
+
   const lastCalculatedLabel = computed(() => {
     // Prefer updated_at, fallback to created_at
     const ts = response.value?.updated_at || response.value?.created_at
     if (!ts) return ''
-    
+
     const d = new Date(ts)
     if (isNaN(d.getTime())) return ''
-    
+
     const day = d.getDate()
     const month = d.getMonth() + 1
     const h = String(d.getHours()).padStart(2, '0')
     const m = String(d.getMinutes()).padStart(2, '0')
-    
+
     return `(Laatste keer berekend op ${day}-${month} om ${h}:${m})`
   })
 
@@ -318,11 +334,11 @@
 
   const activeWeekKeys = computed<string[]>(() => {
     if (!response.value) return []
-    
+
     if (viewMode.value === 'week') {
         const wv = response.value.week_view
         if (!wv) return []
-        
+
         // Filter weeks to only those that have data in at least one row
         const weeks = wv.weeks ?? []
         const relevantWeeks = weeks.filter(week => {
@@ -335,7 +351,7 @@
              }
              return false
         })
-        
+
         return relevantWeeks
     } else {
         // Deadline View logic
@@ -354,14 +370,14 @@
     }
   })
 
-  const columns = computed(() => {
-    const base = [
+  const columns = computed<TableColumn[]>(() => {
+    const base: TableColumn[] = [
       { accessorKey: 'family', header: '', sortable: true },
       { accessorKey: 'part', header: '' }
     ]
     const weekCols = activeWeekKeys.value.map((wk) => {
       let label = wk
-      
+
       if (viewMode.value === 'deadline') {
            if (wk === "No Deadline") label = "Geen deadline"
            else {
@@ -379,9 +395,9 @@
       }
 
       // Use accessorKey for data binding
-      return { accessorKey: wk, header: label }
+      return { accessorKey: wk, header: label } satisfies TableColumn
     })
-    return [...base, ...weekCols] as any[]
+    return [...base, ...weekCols]
   })
 
   async function loadCapacity(): Promise<void> {
@@ -398,10 +414,10 @@
       loading.value = false
     }
   }
-  
+
   async function recalculateSimulation(): Promise<void> {
       toast.add({ title: 'De capaciteit wordt opnieuw berekend, dit kan even duren.', color: 'info' })
-      
+
       loading.value = true
       try {
           // Trigger POST
@@ -411,13 +427,13 @@
           )
           response.value = result
           toast.add({ title: 'Simulatie opnieuw berekend', color: 'success' })
-      } catch (e) {
+      } catch {
           toast.add({ title: 'Fout bij herberekenen', color: 'error' })
       } finally {
           loading.value = false
       }
   }
-  
+
   onMounted(() => {
      void loadCapacity()
   })

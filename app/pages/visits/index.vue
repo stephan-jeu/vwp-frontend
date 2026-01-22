@@ -42,7 +42,7 @@
                 placeholder="Project"
                 class="flex-1 w-2xs"
                 @update:model-value="onProjectChange"
-                
+
              />
 
           <p v-if="selectedProjectDetails" class="mt-1 text-xs text-gray-500">
@@ -162,8 +162,8 @@
             :model-value="partOfDayOptions.find((o) => o.value === createPartOfDay)"
             :items="partOfDayOptions"
             placeholder="Kies dagdeel"
-            @update:model-value="(opt) => (createPartOfDay = opt?.value ?? null)"
             class="w-3xs"
+            @update:model-value="(opt) => (createPartOfDay = opt?.value ?? null)"
           />
         </div>
         <div>
@@ -245,20 +245,20 @@
             <span
               class="text-xs text-gray-700 dark:text-gray-300 max-w-xs whitespace-normal break-words block"
             >
-              {{ 
-                 row.original.functions.length 
-                 ? row.original.functions.map((f) => f.name).join(', ') 
-                 : (row.original.custom_function_name || '-') 
+              {{
+                 row.original.functions.length
+                 ? row.original.functions.map((f) => f.name).join(', ')
+                 : (row.original.custom_function_name || '-')
               }}
             </span>
           </template>
 
           <template #species-cell="{ row }">
             <span class="text-xs text-gray-700 dark:text-gray-300">
-              {{ 
-                 row.original.species.length 
-                 ? row.original.species.map((s) => s.abbreviation || s.name).join(', ') 
-                 : (row.original.custom_species_name || '-') 
+              {{
+                 row.original.species.length
+                 ? row.original.species.map((s) => s.abbreviation || s.name).join(', ')
+                 : (row.original.custom_species_name || '-')
               }}
             </span>
           </template>
@@ -446,7 +446,7 @@
                       "
                     />
                      <div class="mt-1">
-                         <UCheckbox 
+                         <UCheckbox
                             :model-value="!!(row.original.custom_function_name || row.original.custom_species_name)"
                             label="Andere soort"
                             class="text-xs"
@@ -549,8 +549,8 @@
                       "
                       :items="partOfDayOptions"
                       placeholder="Kies dagdeel"
-                      @update:model-value="(opt) => (row.original.part_of_day = opt?.value ?? null)"
                       class="w-3xs"
+                      @update:model-value="(opt) => (row.original.part_of_day = opt?.value ?? null)"
 
                     />
                   </div>
@@ -1090,11 +1090,6 @@
   const createResearchers = computed(() =>
     mapIdsToOptions(createResearcherIds.value, researcherOptions.value)
   )
-  const preferredResearcherOption = computed(() =>
-    createPreferredResearcherId.value == null
-      ? undefined
-      : researcherOptions.value.find((o) => o.value === createPreferredResearcherId.value)
-  )
 
   function resetCreateForm(): void {
     selectedProject.value = undefined
@@ -1264,7 +1259,7 @@
     } finally {
       isDeleting.value = false
       visitToDelete.value = null
-      tableKey.value++ 
+      tableKey.value++
     }
   }
 

@@ -103,7 +103,7 @@
             <UIcon name="i-lucide-alert-triangle" class="text-amber-500" />
             <h3 class="text-lg font-medium">Project verwijderen</h3>
           </div>
-          <p class="mt-2" v-if="toDelete">
+          <p v-if="toDelete" class="mt-2">
             Weet je zeker dat je project <strong>{{ toDelete.code }}</strong> wilt verwijderen? Als
             je dit doet zullen ook alle onderliggende clusters en bezoeken worden verwijderd.
           </p>
