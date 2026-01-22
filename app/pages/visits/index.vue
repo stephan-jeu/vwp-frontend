@@ -6,8 +6,8 @@
       <div class="flex items-center gap-2 flex-1">
         <UInput
           v-model="search"
-          placeholder="Zoek op project, locatie, cluster, functies, soorten, onderzoekers"
-          class="w-full"
+          placeholder="Zoek op project, locatie, functies, soorten, onderzoekers"
+          class="w-64"
         />
         <USelectMenu
           v-model="selectedStatuses"
@@ -15,6 +15,34 @@
           multiple
           placeholder="Status"
           class="w-56"
+        />
+
+        <UInput
+          v-model.number="filterClusterNumber"
+          type="number"
+          min="1"
+          placeholder="Cluster"
+          class="w-20"
+        />
+
+        <UInputMenu
+          :model-value="selectedFunctionFilters"
+          :items="functionOptions"
+          multiple
+          searchable
+          placeholder="Functies"
+          class="w-64"
+          @update:model-value="(sel) => (filterFunctionIds = sel.map((o) => o.value as number))"
+        />
+
+        <UInputMenu
+          :model-value="selectedSpeciesFilters"
+          :items="speciesOptions"
+          multiple
+          searchable
+          placeholder="Soorten"
+          class="w-64"
+          @update:model-value="(sel) => (filterSpeciesIds = sel.map((o) => o.value as number))"
         />
       </div>
 
@@ -239,6 +267,12 @@
               color="neutral"
               class="text-gray-600 dark:text-gray-200"
             />
+          </template>
+
+          <template #week-cell="{ row }">
+            <span class="text-xs text-gray-700 dark:text-gray-300">
+              {{ row.original.planned_week ?? '-' }}
+            </span>
           </template>
 
           <template #functions-cell="{ row }">
@@ -630,6 +664,15 @@
                     {{ statusLabel(row.original.status) }} aanpassen
                   </UButton>
                   <UButton
+                    size="xs"
+                    variant="soft"
+                    icon="i-lucide-copy"
+                    :loading="duplicatingId === row.original.id"
+                    @click="onDuplicateVisit(row.original)"
+                  >
+                    Dupliceer
+                  </UButton>
+                  <UButton
                     color="error"
                     variant="soft"
                     size="xs"
@@ -813,12 +856,23 @@
 
   const search = ref('')
 
+  const filterClusterNumber = ref<number | null | ''>(null)
+  const filterFunctionIds = ref<number[]>([])
+  const filterSpeciesIds = ref<number[]>([])
+
   const statusModalOpen = ref(false)
   const selectedVisitForStatus = ref<VisitListRow | null>(null)
 
   type VisitStatusOption = { label: string; value: VisitStatusCode }
 
   const selectedStatuses = ref<VisitStatusOption[]>([])
+
+  const selectedFunctionFilters = computed(() =>
+    mapIdsToOptions(filterFunctionIds.value, functionOptions.value)
+  )
+  const selectedSpeciesFilters = computed(() =>
+    mapIdsToOptions(filterSpeciesIds.value, speciesOptions.value)
+  )
 
   const statusOptions: VisitStatusOption[] = [
     { label: 'Aangemaakt', value: 'created' },
@@ -842,6 +896,7 @@
     { accessorKey: 'cluster_number', header: 'Cluster' },
     { accessorKey: 'visit_nr', header: 'Bezoek nr' },
     { id: 'status', header: 'Status' },
+    { id: 'week', header: 'Week' },
     { id: 'functions', header: 'Functies' },
     { id: 'species', header: 'Soorten' },
     { id: 'period', header: 'Periode' },
@@ -913,6 +968,16 @@
       if (selectedStatuses.value.length > 0)
         query.statuses = selectedStatuses.value.map((s) => s.value)
 
+      if (filterClusterNumber.value !== null && filterClusterNumber.value !== '') {
+        query.cluster_number = filterClusterNumber.value
+      }
+      if (filterFunctionIds.value.length > 0) {
+        query.function_ids = filterFunctionIds.value
+      }
+      if (filterSpeciesIds.value.length > 0) {
+        query.species_ids = filterSpeciesIds.value
+      }
+
       if (testModeEnabled.value && simulatedDate.value) {
         query.simulated_today = simulatedDate.value
       }
@@ -968,6 +1033,34 @@
     }
   )
 
+  watch(
+    () => filterClusterNumber.value,
+    () => {
+      if (filterClusterNumber.value === '') {
+        filterClusterNumber.value = null
+        return
+      }
+      page.value = 1
+      void loadVisits()
+    }
+  )
+
+  watch(
+    () => filterFunctionIds.value.join(','),
+    () => {
+      page.value = 1
+      void loadVisits()
+    }
+  )
+
+  watch(
+    () => filterSpeciesIds.value.join(','),
+    () => {
+      page.value = 1
+      void loadVisits()
+    }
+  )
+
   // --- Options for admin form ---
 
   const projectOptions = ref<ProjectOption[]>([])
@@ -1006,8 +1099,8 @@
   async function loadStaticOptions(): Promise<void> {
     const [projects, functions, species, users] = await Promise.all([
       $api<Array<{ id: number; code: string; location: string }>>('/projects'),
-      $api<Array<{ id: number; name: string }>>('/admin/functions'),
-      $api<Array<{ id: number; name: string; abbreviation?: string | null }>>('/admin/species'),
+      $api<Array<{ id: number; name: string }>>('/visits/options/functions'),
+      $api<Array<{ id: number; name: string; abbreviation?: string | null }>>('/visits/options/species'),
       $api<Array<{ id: number; full_name: string | null }>>('/admin/users')
     ])
     projectDetails.value = projects
@@ -1190,6 +1283,7 @@
   // --- Admin inline save/delete ---
 
   const savingId = ref<number | null>(null)
+  const duplicatingId = ref<number | null>(null)
 
   async function onSaveVisit(row: VisitListRow): Promise<void> {
     savingId.value = row.id
@@ -1233,6 +1327,54 @@
       toast.add({ title: 'Opslaan mislukt', color: 'error' })
     } finally {
       savingId.value = null
+    }
+  }
+
+  async function onDuplicateVisit(row: VisitListRow): Promise<void> {
+    duplicatingId.value = row.id
+    try {
+      const rawPlannedWeek = row.planned_week as unknown
+      const plannedWeek =
+        rawPlannedWeek === '' || rawPlannedWeek == null ? null : (rawPlannedWeek as number)
+
+      const payload = {
+        cluster_id: row.cluster_id,
+        required_researchers: row.required_researchers,
+        visit_nr: row.visit_nr,
+        planned_week: plannedWeek,
+        from_date: row.from_date,
+        to_date: row.to_date,
+        duration: row.duration,
+        min_temperature_celsius: row.min_temperature_celsius,
+        max_wind_force_bft: row.max_wind_force_bft,
+        max_precipitation: row.max_precipitation,
+        expertise_level: row.expertise_level,
+        wbc: row.wbc,
+        fiets: row.fiets,
+        hub: row.hub,
+        dvp: row.dvp,
+        sleutel: row.sleutel,
+        remarks_planning: row.remarks_planning,
+        remarks_field: row.remarks_field,
+        priority: row.priority,
+        part_of_day: row.part_of_day,
+        start_time_text: row.start_time_text,
+        preferred_researcher_id: row.preferred_researcher_id,
+        function_ids: row.function_ids,
+        species_ids: row.species_ids,
+        custom_function_name: row.custom_function_name,
+        custom_species_name: row.custom_species_name,
+        researcher_ids: row.researcher_ids ?? row.researchers.map((r) => r.id)
+      }
+
+      await $api('/visits', { method: 'POST', body: payload })
+      toast.add({ title: 'Bezoek gedupliceerd', color: 'success' })
+      page.value = 1
+      await loadVisits()
+    } catch {
+      toast.add({ title: 'Dupliceren mislukt', color: 'error' })
+    } finally {
+      duplicatingId.value = null
     }
   }
 
@@ -1281,9 +1423,19 @@
       (s) => s.value !== 'approved' && s.value !== 'cancelled' && s.value !== 'overdue'
     )
 
-    await loadVisits()
     if (isAdmin.value) {
       await loadStaticOptions()
+    } else {
+      const [functions, species] = await Promise.all([
+        $api<Array<{ id: number; name: string }>>('/visits/options/functions'),
+        $api<Array<{ id: number; name: string; abbreviation?: string | null }>>(
+          '/visits/options/species'
+        )
+      ])
+      functionOptions.value = functions.map((f) => ({ label: f.name, value: f.id }))
+      speciesOptions.value = species.map((s) => ({ label: s.abbreviation ?? s.name, value: s.id }))
     }
+
+    await loadVisits()
   })
 </script>
