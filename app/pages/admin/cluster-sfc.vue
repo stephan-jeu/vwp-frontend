@@ -94,7 +94,7 @@
                 (defaultExpertiseLevel = opt?.value ?? null)
             "
           />
-         
+
         </div>
          <div class="flex gap-8 items-center flex-wrap my-4">
             <UCheckbox v-model="defaultWbc" label="WBC" />
@@ -118,18 +118,26 @@
     </UCard>
 
     <UCard>
-      <UCard v-if="showMergeConfirm" class="my-4">
-        <div class="text-base font-medium">Dit cluster bestaat al</div>
-        <div class="mt-2 text-sm text-gray-600 dark:text-gray-300">
-          Weet je zeker dat je bezoeken wilt toevoegen?
-        </div>
-        <div class="mt-4 flex justify-end gap-2">
-          <UButton color="neutral" variant="soft" @click="showMergeConfirm = false"
-            >Annuleren</UButton
-          >
-          <UButton color="primary" :loading="creating" @click="onConfirmMerge">Bevestigen</UButton>
-        </div>
-      </UCard>
+      <UModal v-model:open="showMergeConfirm" title="Dit cluster bestaat al">
+        <template #content>
+          <UCard>
+            <div class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              Cluster {{ clusterNumber }} bestaat al. Weet je zeker dat je er nieuwe bezoeken aan
+              wilt toevoegen?
+            </div>
+            <template #footer>
+              <div class="flex justify-end gap-2">
+                <UButton color="neutral" variant="soft" @click="onCancelMergeConfirm"
+                  >Annuleren</UButton
+                >
+                <UButton color="primary" :loading="creating" @click="onConfirmMerge"
+                  >Bevestigen</UButton
+                >
+              </div>
+            </template>
+          </UCard>
+        </template>
+      </UModal>
       <template #header>
         <div v-if="selectedProject && currentProject">
           <div class="text-base font-semibold">
@@ -457,6 +465,12 @@
     default_remarks_field?: string | null
   }>(null)
 
+  watch(showMergeConfirm, (isOpen) => {
+    if (isOpen) return
+    if (!pendingCreatePayload.value) return
+    onCancelMergeConfirm()
+  })
+
   const projectOptions = ref<Option[]>([])
   const projectsList = ref<Array<{ id: number; code: string; location?: string | null }>>([])
   const functionOptions = ref<Option[]>([])
@@ -535,6 +549,11 @@
     } finally {
       creating.value = false
     }
+  }
+
+  function onCancelMergeConfirm(): void {
+    showMergeConfirm.value = false
+    pendingCreatePayload.value = null
   }
 
   type Cluster = {
