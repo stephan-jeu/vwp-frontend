@@ -479,7 +479,6 @@
 
   const experienceLevelOptionsArr: StringOption[] = [
     { label: '\u00A0', value: null },
-    { label: 'Nieuw', value: 'Nieuw' },
     { label: 'Junior', value: 'Junior' },
     { label: 'Senior', value: 'Senior' },
     { label: 'GZ', value: 'GZ' }

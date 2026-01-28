@@ -21,7 +21,7 @@
         <USelect
           v-model="createForm.experience_bat"
           :items="experienceOptions"
-          placeholder="Kies ervaring..."
+          placeholder="Kies vleermuis ervaring..."
         />
         <UInput v-model="createForm.city" placeholder="Plaats" />
         <UInput v-model="createForm.address" placeholder="Straatnaam" />
@@ -173,7 +173,7 @@
     city: string | null
     address: string | null
     contract: 'Intern' | 'Flex' | 'ZZP' | undefined
-    experience_bat: 'Nieuw' | 'Junior' | 'Medior' | 'Senior' | undefined
+    experience_bat: 'Junior' | 'Medior' | 'Senior' | undefined
     smp_huismus: boolean
     smp_vleermuis: boolean
     smp_gierzwaluw: boolean
@@ -215,7 +215,6 @@
     { label: 'ZZP', value: 'ZZP' }
   ]
   const experienceOptions = [
-    { label: 'Nieuw', value: 'Nieuw' },
     { label: 'Junior', value: 'Junior' },
     { label: 'Medior', value: 'Medior' },
     { label: 'Senior', value: 'Senior' }

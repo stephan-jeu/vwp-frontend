@@ -180,6 +180,20 @@
         </div>
 
         <div>
+          <label class="block text-xs mb-1">Voorlopige week</label>
+          <UInput v-model.number="createProvisionalWeek" type="number" min="1" max="53" />
+          <div class="mt-1">
+            <UTooltip text="Seizoensplanning behoudt deze week (tenzij leeg).">
+            <UCheckbox
+              v-model="createProvisionalLocked"
+              label="Voorlopige week vastzetten"
+              class="text-xs"
+            /> <UIcon name="i-lucide-info" class="size-4" />
+            </UTooltip>
+          </div>
+        </div>
+
+        <div>
           <label class="block text-xs mb-1">Starttijd</label>
           <UInput v-model="createStartTimeText" />
         </div>
@@ -211,8 +225,8 @@
           <label class="block text-xs mb-1">Max neerslag</label>
           <UInput v-model="createMaxPrecipitation" />
         </div>
-        <div>
-          <label class="block text-xs mb-1">Ervaring</label>
+        <div v-if="showCreateExpertise">
+          <label class="block text-xs mb-1">Vleermuis ervaring</label>
           <USelectMenu
             :model-value="selectedExperienceOption(createExpertiseLevel)"
             :items="experienceLevelOptionsArr"
@@ -271,7 +285,7 @@
 
           <template #week-cell="{ row }">
             <span class="text-xs text-gray-700 dark:text-gray-300">
-              {{ row.original.planned_week ?? '-' }}
+              {{ row.original.planned_week ?? row.original.provisional_week ?? '-' }}
             </span>
           </template>
 
@@ -375,8 +389,8 @@
                     <span class="font-medium">Adres:</span>
                     {{ row.original.cluster_address }}
                   </div>
-                  <div v-if="row.original.planned_week != null">
-                    <span class="font-medium">Gepland voor week:</span>
+                  <div v-if="plannedWeekLabel(row.original)">
+                    <span class="font-medium">Week:</span>
                     {{ plannedWeekLabel(row.original) }}
                   </div>
                   <div>
@@ -569,6 +583,25 @@
                   </div>
 
                   <div>
+                    <label class="block text-xs mb-1">Voorlopige week</label>
+                    <UInput
+                      v-model.number="row.original.provisional_week"
+                      type="number"
+                      min="1"
+                      max="53"
+                    />
+                    <div class="mt-1">
+                      <UTooltip text="Seizoensplanning behoudt deze week (tenzij leeg)">
+                      <UCheckbox
+                        v-model="row.original.provisional_locked"
+                        label="Voorlopige week vastzetten"
+                        class="text-xs"
+                      />
+                      </UTooltip>
+                    </div>
+                  </div>
+
+                  <div>
                     <label class="block text-xs mb-1">Starttijd</label>
                     <UInput v-model="row.original.start_time_text" />
                   </div>
@@ -613,8 +646,8 @@
                     <label class="block text-xs mb-1">Max neerslag</label>
                     <UInput v-model="row.original.max_precipitation" />
                   </div>
-                  <div>
-                    <label class="block text-xs mb-1">Ervaring</label>
+                  <div v-if="showRowExpertise(row.original)">
+                    <label class="block text-xs mb-1">Vleermuis ervaring</label>
                     <USelectMenu
                       :model-value="selectedExperienceOption(row.original.expertise_level)"
                       :items="experienceLevelOptionsArr"
@@ -769,7 +802,12 @@
     | 'missed'
 
   type CompactFunction = { id: number; name: string }
-  type CompactSpecies = { id: number; name: string; abbreviation?: string | null }
+  type CompactSpecies = {
+    id: number
+    name: string
+    abbreviation?: string | null
+    family_name?: string | null
+  }
   type UserName = { id: number; full_name: string | null }
 
   type VisitListRow = {
@@ -788,6 +826,8 @@
     required_researchers: number | null
     visit_nr: number | null
     planned_week: number | null
+    provisional_week: number | null
+    provisional_locked: boolean
     from_date: string | null
     to_date: string | null
     duration: number | null
@@ -941,10 +981,14 @@
     return { start: monday, end: friday }
   }
 
-  function plannedWeekLabel(row: { planned_week: number | null }): string | null {
-    if (row.planned_week == null) return null
-    const range = isoWeekRange(row.planned_week)
-    if (!range) return String(row.planned_week)
+  function plannedWeekLabel(row: {
+    planned_week: number | null
+    provisional_week: number | null
+  }): string | null {
+    const week = row.planned_week ?? row.provisional_week
+    if (week == null) return null
+    const range = isoWeekRange(week)
+    if (!range) return String(week)
 
     const formatter = new Intl.DateTimeFormat('nl-NL', {
       day: '2-digit',
@@ -953,7 +997,8 @@
 
     const start = formatter.format(range.start)
     const end = formatter.format(range.end)
-    return `${row.planned_week} (${start} - ${end})`
+    const suffix = row.planned_week != null ? ' (gepland)' : ' (voorlopig)'
+    return `${week} (${start} - ${end})${suffix}`
   }
 
   async function loadVisits(): Promise<void> {
@@ -1068,19 +1113,56 @@
   const clusterOptions = ref<ClusterOption[]>([])
   const functionOptions = ref<Option[]>([])
   const speciesOptions = ref<Option[]>([])
+  const speciesMeta = ref<CompactSpecies[]>([])
   const researcherOptions = ref<Option[]>([])
 
   const experienceLevelOptionsArr: StringOption[] = [
     { label: '\u00A0', value: null },
-    { label: 'Nieuw', value: 'Nieuw' },
-    { label: 'Junior', value: 'Junior' },
-    { label: 'Senior', value: 'Senior' },
-    { label: 'GZ', value: 'GZ' }
+    { label: 'Medior', value: 'Medior' },
+    { label: 'Senior', value: 'Senior' }
   ]
 
   function selectedExperienceOption(v: string | null | undefined): StringOption | undefined {
     if (v === null) return undefined
     return experienceLevelOptionsArr.find((o) => o.value === v)
+  }
+
+  function isVleermuisLabel(value: string | null | undefined): boolean {
+    return (value ?? '').trim().toLowerCase() === 'vleermuis'
+  }
+
+  function hasVleermuisSpecies(species: CompactSpecies[]): boolean {
+    return species.some(
+      (sp) => isVleermuisLabel(sp.family_name) || isVleermuisLabel(sp.name)
+    )
+  }
+
+  function hasVleermuisSpeciesIds(ids: number[]): boolean {
+    if (ids.length === 0) return false
+    const speciesById = new Map(speciesMeta.value.map((sp) => [sp.id, sp]))
+    return ids.some((id) => {
+      const sp = speciesById.get(id)
+      if (!sp) return false
+      return isVleermuisLabel(sp.family_name) || isVleermuisLabel(sp.name)
+    })
+  }
+
+  function hasVleermuisCustomName(value: string | null | undefined): boolean {
+    return (value ?? '').trim().toLowerCase().includes('vleermuis')
+  }
+
+  const showCreateExpertise = computed(() => {
+    if (createCustomVisit.value) {
+      return hasVleermuisCustomName(createCustomSpeciesName.value)
+    }
+    return hasVleermuisSpeciesIds(createSpeciesIds.value)
+  })
+
+  function showRowExpertise(row: VisitListRow): boolean {
+    if (row.custom_species_name) {
+      return hasVleermuisCustomName(row.custom_species_name)
+    }
+    return hasVleermuisSpecies(row.species)
   }
 
   const partOfDayOptions: StringOption[] = [
@@ -1100,13 +1182,29 @@
     const [projects, functions, species, users] = await Promise.all([
       $api<Array<{ id: number; code: string; location: string }>>('/projects'),
       $api<Array<{ id: number; name: string }>>('/visits/options/functions'),
-      $api<Array<{ id: number; name: string; abbreviation?: string | null }>>('/visits/options/species'),
+      $api<
+        Array<{
+          id: number
+          name: string
+          abbreviation?: string | null
+          family_name?: string | null
+        }>
+      >('/visits/options/species'),
       $api<Array<{ id: number; full_name: string | null }>>('/admin/users')
     ])
     projectDetails.value = projects
     projectOptions.value = projects.map((p) => ({ label: p.code, value: p.id }))
     functionOptions.value = functions.map((f) => ({ label: f.name, value: f.id }))
-    speciesOptions.value = species.map((s) => ({ label: s.abbreviation ?? s.name, value: s.id }))
+    speciesMeta.value = species.map((s) => ({
+      id: s.id,
+      name: s.name,
+      abbreviation: s.abbreviation ?? null,
+      family_name: s.family_name ?? null
+    }))
+    speciesOptions.value = speciesMeta.value.map((s) => ({
+      label: s.abbreviation ?? s.name,
+      value: s.id
+    }))
     const mappedUsers = users
       .map((u) => ({ label: u.full_name ?? `Gebruiker #${u.id}`, value: u.id }))
       .sort((a, b) => a.label.localeCompare(b.label))
@@ -1154,6 +1252,7 @@
   const createFromDate = ref('')
   const createToDate = ref('')
   const createPlannedWeek = ref<number | null | ''>(null)
+  const createProvisionalWeek = ref<number | null | ''>(null)
   const createVisitNr = ref<number | null>(null)
   const createStartTimeText = ref('')
   const createPartOfDay = ref<string | null>(null)
@@ -1173,6 +1272,7 @@
   const createCustomVisit = ref(false)
   const createCustomFunctionName = ref('')
   const createCustomSpeciesName = ref('')
+  const createProvisionalLocked = ref(false)
 
   const createFunctions = computed(() =>
     mapIdsToOptions(createFunctionIds.value, functionOptions.value)
@@ -1196,6 +1296,7 @@
     createFromDate.value = ''
     createToDate.value = ''
     createPlannedWeek.value = null
+    createProvisionalWeek.value = null
     createVisitNr.value = null
     createStartTimeText.value = ''
     createPartOfDay.value = null
@@ -1215,6 +1316,7 @@
     createCustomVisit.value = false
     createCustomFunctionName.value = ''
     createCustomSpeciesName.value = ''
+    createProvisionalLocked.value = false
   }
 
   function onStartCreate(): void {
@@ -1237,12 +1339,16 @@
         createDurationHours.value == null ? null : Math.round(createDurationHours.value * 60)
 
       const plannedWeek = createPlannedWeek.value === '' ? null : createPlannedWeek.value
+      const provisionalWeek =
+        createProvisionalWeek.value === '' ? null : createProvisionalWeek.value
 
       const payload = {
         cluster_id: selectedCluster.value.value,
         required_researchers: createRequiredResearchers.value,
         visit_nr: createVisitNr.value,
         planned_week: plannedWeek,
+        provisional_week: provisionalWeek,
+        provisional_locked: createProvisionalLocked.value,
         from_date: createFromDate.value || null,
         to_date: createToDate.value || null,
         duration: durationMinutes,
@@ -1292,10 +1398,18 @@
       const plannedWeek =
         rawPlannedWeek === '' || rawPlannedWeek == null ? null : (rawPlannedWeek as number)
 
+      const rawProvisionalWeek = row.provisional_week as unknown
+      const provisionalWeek =
+        rawProvisionalWeek === '' || rawProvisionalWeek == null
+          ? null
+          : (rawProvisionalWeek as number)
+
       const payload = {
         required_researchers: row.required_researchers,
         visit_nr: row.visit_nr,
         planned_week: plannedWeek,
+        provisional_week: provisionalWeek,
+        provisional_locked: row.provisional_locked,
         from_date: row.from_date,
         to_date: row.to_date,
         duration: row.duration,
@@ -1337,11 +1451,19 @@
       const plannedWeek =
         rawPlannedWeek === '' || rawPlannedWeek == null ? null : (rawPlannedWeek as number)
 
+      const rawProvisionalWeek = row.provisional_week as unknown
+      const provisionalWeek =
+        rawProvisionalWeek === '' || rawProvisionalWeek == null
+          ? null
+          : (rawProvisionalWeek as number)
+
       const payload = {
         cluster_id: row.cluster_id,
         required_researchers: row.required_researchers,
         visit_nr: row.visit_nr,
         planned_week: plannedWeek,
+        provisional_week: provisionalWeek,
+        provisional_locked: row.provisional_locked,
         from_date: row.from_date,
         to_date: row.to_date,
         duration: row.duration,
@@ -1428,12 +1550,26 @@
     } else {
       const [functions, species] = await Promise.all([
         $api<Array<{ id: number; name: string }>>('/visits/options/functions'),
-        $api<Array<{ id: number; name: string; abbreviation?: string | null }>>(
-          '/visits/options/species'
-        )
+        $api<
+          Array<{
+            id: number
+            name: string
+            abbreviation?: string | null
+            family_name?: string | null
+          }>
+        >('/visits/options/species')
       ])
       functionOptions.value = functions.map((f) => ({ label: f.name, value: f.id }))
-      speciesOptions.value = species.map((s) => ({ label: s.abbreviation ?? s.name, value: s.id }))
+      speciesMeta.value = species.map((s) => ({
+        id: s.id,
+        name: s.name,
+        abbreviation: s.abbreviation ?? null,
+        family_name: s.family_name ?? null
+      }))
+      speciesOptions.value = speciesMeta.value.map((s) => ({
+        label: s.abbreviation ?? s.name,
+        value: s.id
+      }))
     }
 
     await loadVisits()

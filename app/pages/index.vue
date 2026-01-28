@@ -40,71 +40,12 @@
                 Geen bezoeken om te behandelen.
               </div>
               <div v-else class="space-y-4">
-                 <UCard
-                    v-for="visit in pendingVisitsPreview"
-                    :key="visit.id"
-                    class="cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all dark:hover:ring-primary-400"
-                    @click="navigateTo(`/visits/${visit.id}`)"
-                 >
-                    <div class="flex items-start justify-between mb-2">
-                       <div>
-                          <div class="font-bold text-gray-900 dark:text-white">
-                             <span v-if="visit.project_location" class="mr-1">{{ visit.project_location }} -</span>
-                             {{ visit.project_code }}
-                             <span class="text-gray-500 font-normal ml-1">
-                                Cluster {{ visit.cluster_number }}
-                                <span v-if="visit.cluster_address">({{ visit.cluster_address }})</span>
-                             </span>
-                          </div>
-                       </div>
-                    </div>
-
-                    <div class="mt-2 pl-3 border-l-2 border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                       <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-                          <div>
-                             <span class="font-semibold text-gray-700 dark:text-gray-300">Functies: </span>
-                             {{
-                                visit.functions.length
-                                ? visit.functions.map((f) => f.name).join(', ')
-                                : visit.custom_function_name || '-'
-                             }}
-                          </div>
-                          <div>
-                             <span class="font-semibold text-gray-700 dark:text-gray-300">Soorten: </span>
-                             {{
-                                visit.species.length
-                                ? visit.species.map((s) => s.abbreviation || s.name).join(', ')
-                                : visit.custom_species_name || '-'
-                             }}
-                          </div>
-                       </div>
-                       <div>
-                          <span class="font-semibold text-gray-700 dark:text-gray-300">Onderzoekers: </span>
-                          {{
-                             visit.researchers.length
-                                ? visit.researchers
-                                    .map((r) => r.full_name || `Gebruiker #${r.id}`)
-                                    .join(', ')
-                                : '-'
-                          }}
-                       </div>
-
-                       <div class="pt-1 flex items-center gap-2 text-primary-600 dark:text-primary-400 font-medium">
-                          <span>{{ visit.part_of_day }}</span>
-                          <span v-if="visit.planned_week"> · Week {{ visit.planned_week }} </span>
-                       </div>
-
-                       <!-- Dates & Status -->
-                       <div class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-                           <div v-if="visit.from_date || visit.to_date" class="mb-1">
-                              {{ formatDate(visit.from_date) }} - {{ formatDate(visit.to_date) }}
-                           </div>
-                           <UBadge size="md" variant="subtle" color="neutral">
-                              {{ statusLabel(visit.status) }}
-                           </UBadge>
-                       </div>
-                    </div>
-                 </UCard>
+                 <VisitPreviewCard
+                   v-for="visit in pendingVisitsPreview"
+                   :key="visit.id"
+                   :visit="visit"
+                   @open="navigateTo(`/visits/${visit.id}`)"
+                 />
 
                  <!-- Pagination -->
                  <div class="flex justify-between items-center pt-2">
@@ -191,9 +132,13 @@
                       </div>
 
                       <!-- Planned details if applicable -->
-                      <div v-if="tv.visit.status === 'planned'" class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-xs">
+                      <div
+                        v-if="tv.visit.status === 'planned'"
+                        class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-xs"
+                      >
                           <div class="flex items-center gap-2">
-                             <span class="font-semibold">Week:</span> {{ tv.visit.planned_week }}
+                             <span class="font-semibold">Week:</span>
+                             <span>{{ plannedWeekDisplay(tv.visit) }}</span>
                           </div>
                           <div class="flex items-center gap-2 mt-1">
                              <span class="font-semibold">Onderzoeker(s):</span>
@@ -301,6 +246,7 @@
   import { storeToRefs } from 'pinia'
   import { useAuthStore } from '~~/stores/auth'
   import { useTestModeStore } from '~~/stores/testMode'
+  import VisitPreviewCard from '../components/VisitPreviewCard.vue'
 
   definePageMeta({ layout: 'default' })
 
@@ -431,6 +377,10 @@
       const visitsLabel = `${count} bezoek${count === 1 ? '' : 'en'} ingepland`
       const weekLabel = week != null ? `week ${week}` : 'deze week'
       return `${actor} heeft de planning gegenereerd voor ${weekLabel} (${visitsLabel}) op ${when}`
+    }
+
+    if (action === 'seasonal_planner_run') {
+      return `${actor} heeft de seizoensplanning uitgevoerd op ${when}`
     }
 
     if (action === 'project_created') {
@@ -584,6 +534,7 @@
     cluster_address: string
     status: VisitStatusCode
     planned_week: number | null
+    provisional_week: number | null
     visit_nr: number | null
     from_date: string | null
     to_date: string | null
@@ -593,6 +544,12 @@
     part_of_day: string | null
     custom_function_name: string | null
     custom_species_name: string | null
+    wbc: boolean
+    fiets: boolean
+    hub: boolean
+    dvp: boolean
+    sleutel: boolean
+    priority: boolean
   }
 
   type VisitListResponse = {
@@ -676,6 +633,16 @@
     const weekNow = currentWeekNumber.value
     return allVisits.value.filter((v) => visitWeekNumber(v) === weekNow)
   })
+
+  function plannedWeekDisplay(visit: VisitListRow): string {
+    if (visit.planned_week != null) {
+      return `${visit.planned_week} (gepland)`
+    }
+    if (visit.provisional_week != null) {
+      return `${visit.provisional_week} (voorlopig)`
+    }
+    return 'onbekend'
+  }
 
   const totalThisWeek = computed<number>(() => visitsThisWeek.value.length)
   const executedThisWeek = computed<number>(

@@ -1,16 +1,14 @@
 <template>
   <div>
     <UPageHeader title="Planning" />
-
-    <UCard class="mt-4">
-      <div class="flex flex-col gap-4">
-        <div v-if="loading" class="text-sm text-gray-500">Bezoeken worden geladen…</div>
-
-        <div v-else>
+    <div>
+      <UCard class="mt-4">
+        <div class="flex flex-col gap-4">
+          <!-- Controls Header -->
           <div class="mb-3">
-             <div class="flex items-end gap-3 flex-wrap">
+            <div class="flex items-end gap-3 flex-wrap">
               <div class="min-w-[200px]">
-                <label class="block mb-1 text-md text-gray-500">Planning en beschikbaarheid voor week</label>
+                <label class="block mb-1 text-md text-gray-500">Selecteer week</label>
                 <USelectMenu
                   v-model="selectedWeekTab"
                   :items="weekTabs"
@@ -40,14 +38,15 @@
               >
                 {{ deleteLabel }}
               </UButton>
-             </div>
+            </div>
           </div>
 
-          <!-- Capacity Section -->
+          <!-- Capacity Header (Always Visible) -->
           <div
             v-if="capacityData.researchers.length > 0"
             class="mb-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden"
           >
+            <!-- Capacity Collapsible (Same as before) -->
             <button
               class="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
               @click="availabilityCollapsed = !availabilityCollapsed"
@@ -117,154 +116,181 @@
             </div>
           </div>
 
-          <div
-            v-if="completedVisits.length === 0 && plannedVisits.length === 0"
-            class="text-sm text-gray-500"
-          >
-            Geen bezoeken gevonden voor deze week.
-          </div>
-
-          <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div v-if="isCurrentWeekTab">
-              <div class="flex items-baseline justify-between mb-2">
-                <h3 class="text-sm font-semibold">
-                  Uitgevoerde bezoeken ({{ completedVisits.length }})
-                </h3>
-              </div>
-
-              <div v-if="completedVisits.length === 0" class="text-xs text-gray-500">
-                Geen uitgevoerde bezoeken voor deze week.
-              </div>
-
-              <div v-else class="space-y-2">
-                <div
-                  v-for="visit in completedVisits"
-                  :key="visit.id"
-                  class="border rounded-md p-3 text-xs hover:bg-gray-50 cursor-pointer"
-                  @click="goToDetail(visit.id)"
-                >
-                  <div class="flex items-start gap-2">
-                    <div class="flex-1 space-y-1">
-                      <div class="flex flex-wrap gap-x-2 gap-y-1">
-                        <span class="font-medium">{{ visit.project_code }}</span>
-                        <span class="text-gray-600">{{ visit.project_location }}</span>
-                        <span class="text-gray-500">· Cluster {{ visit.cluster_number }}</span>
-                      </div>
-                      <div class="text-gray-700">
-                        <span class="font-medium">Functies:</span>
-                        {{
-                            visit.functions.length
-                            ? visit.functions.map((f) => f.name).join(', ')
-                            : visit.custom_function_name || '-'
-                        }}
-                      </div>
-                      <div class="text-gray-700">
-                        <span class="font-medium">Soorten:</span>
-                        {{
-                            visit.species.length
-                            ? visit.species.map((s) => s.abbreviation || s.name).join(', ')
-                            : visit.custom_species_name || '-'
-                        }}
-                      </div>
-                      <div class="text-gray-700">
-                        <span class="font-medium">Dagdeel:</span>
-                        {{ visit.part_of_day || '-' }}
-                      </div>
-                      <div class="text-gray-700">
-                        <span class="font-medium">Onderzoekers:</span>
-                        {{
-                          visit.researchers
-                            .map((r) => r.full_name || `Gebruiker #${r.id}`)
-                            .join(', ') || '-'
-                        }}
-                      </div>
-                    </div>
-                    <UBadge
-                      :label="statusLabel(visit.status)"
-                      variant="subtle"
-                      color="neutral"
-                      class="text-[11px] text-gray-700"
+          <UTabs :items="tabs" class="w-full">
+            <template #status>
+              <!-- STATUS TAB CONTENT (Existing Logic) -->
+              <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <!-- Executed Column -->
+                <div>
+                  <h3 class="font-semibold text-sm mb-2">
+                    Uitgevoerd ({{ completedVisits.length }})
+                  </h3>
+                  <div v-if="completedVisits.length === 0" class="text-xs text-gray-500">
+                    Geen bezoeken.
+                  </div>
+                  <div v-else class="space-y-2">
+                    <VisitPreviewCard
+                      v-for="visit in completedVisits"
+                      :key="visit.id"
+                      :visit="visit"
+                      @open="goToDetail(visit.id)"
                     />
                   </div>
-
-                  <VisitActivityLog :visit-id="visit.id" />
                 </div>
-              </div>
-            </div>
 
-            <div>
-              <div class="flex items-baseline justify-between mb-2">
-                <h3 class="text-sm font-semibold">
-                  Geplande bezoeken ({{ plannedVisits.length }})
-                </h3>
-              </div>
-
-              <div v-if="plannedVisits.length === 0" class="text-xs text-gray-500">
-                Geen geplande bezoeken voor deze week.
-              </div>
-
-              <div v-else class="space-y-2">
-                <div
-                  v-for="visit in plannedVisits"
-                  :key="visit.id"
-                  class="border rounded-md p-3 text-xs hover:bg-gray-50 cursor-pointer"
-                  @click="goToDetail(visit.id)"
-                >
-                  <div class="flex items-start gap-2">
-                    <div class="flex-1 space-y-1">
-                      <div class="flex flex-wrap gap-x-2 gap-y-1">
-                        <span class="font-medium">{{ visit.project_code }}</span>
-                        <span class="text-gray-600">{{ visit.project_location }}</span>
-                        <span class="text-gray-500">· Cluster {{ visit.cluster_number }}</span>
-                      </div>
-                      <div class="text-gray-700">
-                        <span class="font-medium">Functies:</span>
-                        {{
-                            visit.functions.length
-                            ? visit.functions.map((f) => f.name).join(', ')
-                            : visit.custom_function_name || '-'
-                        }}
-                      </div>
-                      <div class="text-gray-700">
-                        <span class="font-medium">Soorten:</span>
-                        {{
-                            visit.species.length
-                            ? visit.species.map((s) => s.abbreviation || s.name).join(', ')
-                            : visit.custom_species_name || '-'
-                        }}
-                      </div>
-                      <div class="text-gray-700">
-                        <span class="font-medium">Dagdeel:</span>
-                        {{ visit.part_of_day || '-' }}
-                      </div>
-                      <div class="text-gray-700">
-                        <span class="font-medium">Onderzoekers:</span>
-                        {{
-                          visit.researchers
-                            .map((r) => r.full_name || `Gebruiker #${r.id}`)
-                            .join(', ') || '-'
-                        }}
-                      </div>
-                    </div>
-                    <UBadge
-                      v-if="visit.status === 'not_executed'"
-                      :label="statusLabel(visit.status)"
-                      variant="subtle"
-                      color="neutral"
-                      class="text-[11px] text-gray-700"
+                <!-- Planned Column -->
+                <div>
+                  <h3 class="font-semibold text-sm mb-2">Gepland ({{ plannedVisits.length }})</h3>
+                  <div v-if="plannedVisits.length === 0" class="text-xs text-gray-500">
+                    Geen geplande bezoeken.
+                  </div>
+                  <div v-else class="space-y-2">
+                    <VisitPreviewCard
+                      v-for="visit in plannedVisits"
+                      :key="visit.id"
+                      :visit="visit"
+                      @open="goToDetail(visit.id)"
                     />
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </template>
+
+            <template #plan>
+              <!-- PLAN TAB CONTENT (New) -->
+              <div
+                v-if="reserveVisits.length > 0"
+                class="mb-4 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden"
+              >
+                <button
+                  class="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
+                  @click="reserveCollapsed = !reserveCollapsed"
+                >
+                  <div
+                    class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700 dark:text-gray-200"
+                  >
+                    <span class="font-semibold text-gray-900 dark:text-white">
+                      Toon reserve bezoeken ({{ reserveVisits.length }})
+                    </span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                      Maximaal 30 weergegeven
+                    </span>
+                  </div>
+                  <UIcon
+                    :name="reserveCollapsed ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-up'"
+                    class="w-5 h-5 text-gray-500"
+                  />
+                </button>
+                <div
+                  v-if="!reserveCollapsed"
+                  class="border-t border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800"
+                >
+                  <div
+                    v-if="reserveVisitsLimited.length === 0"
+                    class="px-4 py-3 text-sm text-gray-500"
+                  >
+                    Geen reserve bezoeken beschikbaar.
+                  </div>
+                  <div v-else class="p-4 space-y-3">
+                    <VisitPreviewCard
+                      v-for="visit in reserveVisitsLimited"
+                      :key="visit.id"
+                      :visit="visit"
+                      @open="goToDetail(visit.id)"
+                    />
+                    <div
+                      v-if="reserveVisits.length > reserveVisitsLimited.length"
+                      class="text-xs text-gray-500"
+                    >
+                      Eerste 30 bezoeken getoond.
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Left: Voorlopig / Proposed -->
+                <div class="bg-gray-50/50 p-4 rounded-lg border border-gray-200">
+                  <h3 class="font-bold text-gray-700 flex items-center justify-between mb-4">
+                    <span>Voorlopig ({{ inboxVisits.length }})</span>
+                    <UTooltip text="Voorgesteld door Seizoensplanner">
+                      <UIcon name="i-heroicons-information-circle" class="text-gray-400" />
+                    </UTooltip>
+                  </h3>
+
+                  <div class="space-y-3">
+                    <div v-for="visit in inboxVisits" :key="visit.id" class="space-y-2">
+                      <VisitPreviewCard
+                        :visit="visit"
+                        @open="((selectedVisit = visit), (showPlanModal = true))"
+                      />
+                    </div>
+                    <div
+                      v-if="inboxVisits.length === 0"
+                      class="text-center text-sm text-gray-400 italic py-8"
+                    >
+                      Geen voorgestelde bezoeken.
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right: Schedule / Locked -->
+                <div class="bg-gray-50/50 p-4 rounded-lg border border-gray-200">
+                  <h3 class="font-bold text-gray-700 flex items-center justify-between mb-4">
+                    <span>Planning ({{ scheduleVisits.length }})</span>
+                  </h3>
+
+                  <div class="space-y-3">
+                    <div v-for="visit in scheduleVisits" :key="visit.id" class="space-y-2">
+                      <VisitPreviewCard :visit="visit" @open="goToDetail(visit.id)" />
+                      <div class="flex justify-end gap-2">
+                        <UButton
+                          size="xs"
+                          color="neutral"
+                          icon="i-heroicons-pencil"
+                          @click="((selectedVisit = visit), (showPlanModal = true))"
+                        />
+                        <UButton
+                          size="xs"
+                          color="neutral"
+                          icon="i-heroicons-arrow-left"
+                          @click="unplan(visit)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </UTabs>
         </div>
-      </div>
-    </UCard>
+      </UCard>
+
+      <!-- Planning Modal (For Manual Assign) -->
+      <UModal v-model="showPlanModal">
+        <UCard v-if="selectedVisit">
+          <template #header>
+            <div class="font-bold">Bezoek inplannen: {{ selectedVisit.project_code }}</div>
+          </template>
+
+          <div class="space-y-4">
+            <UFormField label="Onderzoekers">
+              <!-- Researcher Select (Simple Checkboxes or multi-select could be better) -->
+              <!-- For now minimal placeholder -->
+              <div class="text-sm text-gray-500">Selecteer onderzoekers (Todo)</div>
+            </UFormField>
+          </div>
+
+          <template #footer>
+            <UButton label="Opslaan" @click="showPlanModal = false" />
+          </template>
+        </UCard>
+      </UModal>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+  import VisitPreviewCard from '../../components/VisitPreviewCard.vue'
   import { storeToRefs } from 'pinia'
   import { useTestModeStore } from '~~/stores/testMode'
 
@@ -346,6 +372,8 @@
     researchers: UserName[]
     advertized: boolean
     quote: boolean
+    provisional_week: number | null
+    provisional_locked: boolean
     custom_function_name: string | null
     custom_species_name: string | null
   }
@@ -392,6 +420,7 @@
     users: ApiUserAvailability[]
   }
 
+
   interface ResearcherCapacity {
     id: number
     name: string
@@ -423,6 +452,7 @@
   // Availability data
   const rawAvailability = ref<ApiUserAvailability[]>([])
   const availabilityCollapsed = ref(true)
+  const reserveCollapsed = ref(true)
 
   type WeekTab = { label: string; value: string; week: number }
 
@@ -511,7 +541,7 @@
     return `${start} - ${end}`
   }
 
-  function statusLabel(code: VisitStatusCode): string {
+  function _statusLabel(code: VisitStatusCode): string {
     const found = statusOptions.find((s) => s.value === code)
     return found?.label ?? code
   }
@@ -619,8 +649,6 @@
       : `Verwijder planning week ${activeWeekNumber.value}`
   })
 
-
-
   function _isInSelectedWeek(visit: VisitListRow): boolean {
     if (!weekRange.value) return false
     if (!visit.from_date || !visit.to_date) return false
@@ -640,6 +668,80 @@
   const plannedVisits = computed(() =>
     visits.value.filter((v) => plannedStatusValues.includes(v.status))
   )
+
+  // --- NEW PLAN BOARD LOGIC ---
+
+  const tabs = computed(() => {
+    if (isCurrentWeekTab.value) {
+      return [
+        { label: 'Status', slot: 'status' },
+        { label: 'Planbord', slot: 'plan' }
+      ]
+    }
+    return [{ label: 'Planbord', slot: 'plan' }]
+  })
+
+  const showPlanModal = ref(false)
+  const selectedVisit = ref<VisitListRow | null>(null)
+
+  // Inbox: Visits provisionally planned for this week that are not yet planned.
+  const inboxVisits = computed(() => {
+    const w = activeWeekNumber.value
+    return visits.value.filter((v) => {
+      if (v.provisional_week !== w) return false
+
+      if (v.planned_week != null) return false
+
+      // If it's executed/cancelled, ignore
+      if (['executed', 'executed_with_deviation', 'cancelled', 'rejected'].includes(v.status))
+        return false
+
+      return true
+    })
+  })
+
+  const reserveVisits = computed(() => {
+    const w = activeWeekNumber.value
+    return visits.value.filter((v) => {
+      if (!_isInSelectedWeek(v)) return false
+      if (v.planned_week != null) return false
+      if (['executed', 'executed_with_deviation', 'cancelled', 'rejected'].includes(v.status))
+        return false
+
+      return v.provisional_week !== w
+    })
+  })
+
+  const reserveVisitsLimited = computed(() => reserveVisits.value.slice(0, 30))
+
+  // Schedule: Visits explicitly planned for this week
+  const scheduleVisits = computed(() => {
+    const w = activeWeekNumber.value
+    return visits.value.filter((v) => v.planned_week === w && v.researchers.length > 0)
+  })
+
+  async function unplan(visit: VisitListRow) {
+    if (!confirm('Weet je zeker dat je dit bezoek uit de planning wilt halen?')) return
+
+    try {
+      loading.value = true
+      await $api(`/visits/${visit.id}`, {
+        method: 'PUT', // or specific endpoint
+        body: {
+          planned_week: null,
+          researcher_ids: []
+        }
+      })
+      toast.add({ title: 'Bezoek teruggezet naar inbox', color: 'success' })
+      await loadVisits()
+    } catch {
+      toast.add({ title: 'Fout bij wijzigen', color: 'error' })
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // --- END NEW LOGIC ---
 
   // --- Capacity Calculation ---
 
@@ -751,7 +853,12 @@
     loading.value = true
     try {
       const w = activeWeekNumber.value
-      const statuses: VisitStatusCode[] = [...completedStatusValues, ...plannedStatusValues]
+      const statuses: VisitStatusCode[] = [
+        ...completedStatusValues,
+        ...plannedStatusValues,
+        'open',
+        'created'
+      ]
       const query: Record<string, unknown> = {
         page: 1,
         page_size: 200,
@@ -822,7 +929,6 @@
       clearing.value = false
     }
   }
-
 
   watch(
     () => simulatedDate.value,

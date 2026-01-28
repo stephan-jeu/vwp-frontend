@@ -103,6 +103,16 @@
           </div>
 
           <div>
+            <span class="font-medium">Week:</span>
+            <span class="ml-1">{{ weekDisplay }}</span>
+          </div>
+
+          <div v-if="durationHoursDisplay">
+            <span class="font-medium">Duur:</span>
+            <span class="ml-1">{{ durationHoursDisplay }}</span>
+          </div>
+
+          <div>
             <span class="font-medium">Functies:</span>
             <span class="ml-1">
               {{
@@ -231,6 +241,7 @@
     required_researchers: number | null
     visit_nr: number | null
     planned_week: number | null
+    provisional_week: number | null
     from_date: string | null
     to_date: string | null
     duration: number | null
@@ -316,6 +327,31 @@
   )
 
   const visit = computed<VisitDetailRow | null>(() => data.value ?? null)
+
+  const weekDisplay = computed<string>(() => {
+    if (!visit.value) return ''
+    if (visit.value.planned_week != null) {
+      return `${visit.value.planned_week} (gepland)`
+    }
+    if (visit.value.provisional_week != null) {
+      return `${visit.value.provisional_week} (voorlopig)`
+    }
+    return 'onbekend'
+  })
+
+  function formatDurationHours(minutes: number | null): string {
+    if (minutes == null) return ''
+    const hours = minutes / 60
+    const formatted = new Intl.NumberFormat('nl-NL', {
+      maximumFractionDigits: 2
+    }).format(hours)
+    return `${formatted} uur`
+  }
+
+  const durationHoursDisplay = computed<string>(() => {
+    if (!visit.value) return ''
+    return formatDurationHours(visit.value.duration)
+  })
 
   const pageTitle = computed(() => {
     if (!visit.value) return 'Bezoekdetails'
