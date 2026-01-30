@@ -80,7 +80,7 @@
             </div>
             <div v-if="visit.duration != null">
               <span class="font-medium">Duur:</span>
-              <span class="ml-1">{{ visit.duration }} min</span>
+              <span class="ml-1">{{ formatDurationHours(visit.duration) }}</span>
             </div>
             <div v-if="visit.expertise_level">
               <span class="font-medium">Expertiseniveau:</span>
@@ -238,6 +238,13 @@
       watch: [() => simulatedDate.value, () => testModeEnabled.value]
     }
   )
+
+  function formatDurationHours(durationMinutes: number): string {
+    const hours = durationMinutes / 60
+    const rounded = Math.round(hours * 10) / 10
+    const formatted = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
+    return `${formatted} uur`
+  }
 
   const visits = computed(() => data.value ?? [])
 

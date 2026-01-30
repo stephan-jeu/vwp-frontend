@@ -109,7 +109,6 @@
           />
         </div>
         <div>
-        <div>
           <label class="block text-xs mb-1">Soorten</label>
           <UInput
              v-if="createCustomVisit"
@@ -128,42 +127,6 @@
              <UCheckbox v-model="createCustomVisit" label="Andere soort" class="text-xs" />
           </div>
         </div>
-        </div>
-
-        <div>
-          <label class="block text-xs mb-1">Aantal onderzoekers</label>
-          <UInput v-model.number="createRequiredResearchers" type="number" />
-        </div>
-        <div>
-          <label class="block text-xs mb-1">Voorkeursonderzoeker</label>
-          <USelectMenu
-            :model-value="
-              createPreferredResearcherId === null
-                ? undefined
-                : researcherOptions.find((o) => o.value === createPreferredResearcherId)
-            "
-            :items="researcherOptions"
-            searchable
-            placeholder="Kies onderzoeker"
-            @update:model-value="(opt) => (createPreferredResearcherId = opt?.value ?? null)"
-          />
-        </div>
-
-        <div>
-          <label class="block text-xs mb-1">Onderzoekers</label>
-          <UInputMenu
-            :model-value="createResearchers"
-            :items="researcherOptions"
-            multiple
-            class="w-3xs"
-            @update:model-value="(sel) => (createResearcherIds = sel.map((o) => o.value as number))"
-          />
-        </div>
-
-        <div>
-          <label class="block text-xs mb-1">Bezoek nr</label>
-          <UInput v-model.number="createVisitNr" type="number" />
-        </div>
 
         <div>
           <label class="block text-xs mb-1">Van</label>
@@ -172,11 +135,6 @@
         <div>
           <label class="block text-xs mb-1">Tot</label>
           <UInput v-model="createToDate" type="date" />
-        </div>
-
-        <div>
-          <label class="block text-xs mb-1">Gepland voor week</label>
-          <UInput v-model.number="createPlannedWeek" type="number" min="1" max="53" />
         </div>
 
         <div>
@@ -191,6 +149,35 @@
             /> <UIcon name="i-lucide-info" class="size-4" />
             </UTooltip>
           </div>
+        </div>
+
+        <div>
+          <label class="block text-xs mb-1">Gepland voor week</label>
+          <UInput v-model.number="createPlannedWeek" type="number" min="1" max="53" />
+          <div class="mt-1">
+            <UCheckbox v-model="createPlanningLocked" label="Planning vastzetten" class="text-xs" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs mb-1">Onderzoekers</label>
+          <UInputMenu
+            :model-value="createResearchers"
+            :items="researcherOptions"
+            multiple
+            class="w-3xs"
+            @update:model-value="(sel) => (createResearcherIds = sel.map((o) => o.value as number))"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs mb-1">Aantal onderzoekers</label>
+          <UInput v-model.number="createRequiredResearchers" type="number" />
+        </div>
+
+        <div>
+          <label class="block text-xs mb-1">Bezoek nr</label>
+          <UInput v-model.number="createVisitNr" type="number" />
         </div>
 
         <div>
@@ -514,26 +501,48 @@
                   </div>
 
                   <div>
-                    <label class="block text-xs mb-1">Aantal onderzoekers</label>
-                    <UInput v-model.number="row.original.required_researchers" type="number" />
+                    <label class="block text-xs mb-1">Van</label>
+                    <UInput v-model="row.original.from_date" type="date" />
                   </div>
                   <div>
-                    <label class="block text-xs mb-1">Voorkeursonderzoeker</label>
-                    <USelectMenu
-                      :model-value="
-                        row.original.preferred_researcher_id === null
-                          ? undefined
-                          : researcherOptions.find(
-                              (o) => o.value === row.original.preferred_researcher_id
-                            )
-                      "
-                      :items="researcherOptions"
-                      searchable
-                      placeholder="Kies onderzoeker"
-                      @update:model-value="
-                        (opt) => (row.original.preferred_researcher_id = opt?.value ?? null)
-                      "
+                    <label class="block text-xs mb-1">Tot</label>
+                    <UInput v-model="row.original.to_date" type="date" />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs mb-1">Voorlopige week</label>
+                    <UInput
+                      v-model.number="row.original.provisional_week"
+                      type="number"
+                      min="1"
+                      max="53"
                     />
+                    <div class="mt-1">
+                      <UTooltip text="Seizoensplanning behoudt deze week (tenzij leeg)">
+                      <UCheckbox
+                        v-model="row.original.provisional_locked"
+                        label="Voorlopige week vastzetten"
+                        class="text-xs"
+                      />
+                      </UTooltip>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs mb-1">Gepland voor week</label>
+                    <UInput
+                      v-model.number="row.original.planned_week"
+                      type="number"
+                      min="1"
+                      max="53"
+                    />
+                    <div class="mt-1">
+                      <UCheckbox
+                        v-model="row.original.planning_locked"
+                        label="Planning vastzetten"
+                        class="text-xs"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -559,46 +568,13 @@
                   </div>
 
                   <div>
+                    <label class="block text-xs mb-1">Aantal onderzoekers</label>
+                    <UInput v-model.number="row.original.required_researchers" type="number" />
+                  </div>
+
+                  <div>
                     <label class="block text-xs mb-1">Bezoek nr</label>
                     <UInput v-model.number="row.original.visit_nr" type="number" />
-                  </div>
-
-                  <div>
-                    <label class="block text-xs mb-1">Van</label>
-                    <UInput v-model="row.original.from_date" type="date" />
-                  </div>
-                  <div>
-                    <label class="block text-xs mb-1">Tot</label>
-                    <UInput v-model="row.original.to_date" type="date" />
-                  </div>
-
-                  <div>
-                    <label class="block text-xs mb-1">Gepland voor week</label>
-                    <UInput
-                      v-model.number="row.original.planned_week"
-                      type="number"
-                      min="1"
-                      max="53"
-                    />
-                  </div>
-
-                  <div>
-                    <label class="block text-xs mb-1">Voorlopige week</label>
-                    <UInput
-                      v-model.number="row.original.provisional_week"
-                      type="number"
-                      min="1"
-                      max="53"
-                    />
-                    <div class="mt-1">
-                      <UTooltip text="Seizoensplanning behoudt deze week (tenzij leeg)">
-                      <UCheckbox
-                        v-model="row.original.provisional_locked"
-                        label="Voorlopige week vastzetten"
-                        class="text-xs"
-                      />
-                      </UTooltip>
-                    </div>
                   </div>
 
                   <div>
@@ -845,8 +821,7 @@
     priority: boolean
     part_of_day: string | null
     start_time_text: string | null
-    preferred_researcher_id: number | null
-    preferred_researcher: UserName | null
+    planning_locked: boolean
     researchers: UserName[]
     researcher_ids?: number[]
     advertized: boolean
@@ -1247,12 +1222,12 @@
   const createFunctionIds = ref<number[]>([])
   const createSpeciesIds = ref<number[]>([])
   const createRequiredResearchers = ref<number | null>(null)
-  const createPreferredResearcherId = ref<number | null>(null)
   const createResearcherIds = ref<number[]>([])
   const createFromDate = ref('')
   const createToDate = ref('')
   const createPlannedWeek = ref<number | null | ''>(null)
   const createProvisionalWeek = ref<number | null | ''>(null)
+  const createPlanningLocked = ref(false)
   const createVisitNr = ref<number | null>(null)
   const createStartTimeText = ref('')
   const createPartOfDay = ref<string | null>(null)
@@ -1291,12 +1266,12 @@
     createFunctionIds.value = []
     createSpeciesIds.value = []
     createRequiredResearchers.value = null
-    createPreferredResearcherId.value = null
     createResearcherIds.value = []
     createFromDate.value = ''
     createToDate.value = ''
     createPlannedWeek.value = null
     createProvisionalWeek.value = null
+    createPlanningLocked.value = false
     createVisitNr.value = null
     createStartTimeText.value = ''
     createPartOfDay.value = null
@@ -1333,6 +1308,27 @@
       toast.add({ title: 'Kies eerst een project en cluster', color: 'error' })
       return
     }
+
+    if (createPlanningLocked.value) {
+      const plannedWeek = createPlannedWeek.value === '' ? null : createPlannedWeek.value
+      if (plannedWeek == null) {
+        toast.add({
+          title: 'Bezoek kon niet worden toegevoegd',
+          description: 'Als planning is vastgezet, moet "Gepland voor week" ingevuld zijn.',
+          color: 'error'
+        })
+        return
+      }
+      if (createResearcherIds.value.length === 0) {
+        toast.add({
+          title: 'Bezoek kon niet worden toegevoegd',
+          description: 'Als planning is vastgezet, moet je minimaal één onderzoeker kiezen.',
+          color: 'error'
+        })
+        return
+      }
+    }
+
     creating.value = true
     try {
       const durationMinutes =
@@ -1347,6 +1343,7 @@
         required_researchers: createRequiredResearchers.value,
         visit_nr: createVisitNr.value,
         planned_week: plannedWeek,
+        planning_locked: createPlanningLocked.value,
         provisional_week: provisionalWeek,
         provisional_locked: createProvisionalLocked.value,
         from_date: createFromDate.value || null,
@@ -1366,7 +1363,6 @@
         priority: createPriority.value,
         part_of_day: createPartOfDay.value,
         start_time_text: createStartTimeText.value || null,
-        preferred_researcher_id: createPreferredResearcherId.value,
         function_ids: createCustomVisit.value ? [] : [...createFunctionIds.value],
         species_ids: createCustomVisit.value ? [] : [...createSpeciesIds.value],
         custom_function_name: createCustomVisit.value ? createCustomFunctionName.value : null,
@@ -1392,6 +1388,29 @@
   const duplicatingId = ref<number | null>(null)
 
   async function onSaveVisit(row: VisitListRow): Promise<void> {
+    if (row.planning_locked) {
+      const rawPlannedWeek = row.planned_week as unknown
+      const plannedWeek =
+        rawPlannedWeek === '' || rawPlannedWeek == null ? null : (rawPlannedWeek as number)
+      if (plannedWeek == null) {
+        toast.add({
+          title: 'Opslaan mislukt',
+          description: 'Als planning is vastgezet, moet "Gepland voor week" ingevuld zijn.',
+          color: 'error'
+        })
+        return
+      }
+      const researcherIds = row.researcher_ids ?? row.researchers.map((r) => r.id)
+      if (researcherIds.length === 0) {
+        toast.add({
+          title: 'Opslaan mislukt',
+          description: 'Als planning is vastgezet, moet je minimaal één onderzoeker kiezen.',
+          color: 'error'
+        })
+        return
+      }
+    }
+
     savingId.value = row.id
     try {
       const rawPlannedWeek = row.planned_week as unknown
@@ -1408,6 +1427,7 @@
         required_researchers: row.required_researchers,
         visit_nr: row.visit_nr,
         planned_week: plannedWeek,
+        planning_locked: row.planning_locked,
         provisional_week: provisionalWeek,
         provisional_locked: row.provisional_locked,
         from_date: row.from_date,
@@ -1427,7 +1447,6 @@
         priority: row.priority,
         part_of_day: row.part_of_day,
         start_time_text: row.start_time_text,
-        preferred_researcher_id: row.preferred_researcher_id,
         function_ids: row.function_ids,
         species_ids: row.species_ids,
         custom_function_name: row.custom_function_name,
@@ -1462,6 +1481,7 @@
         required_researchers: row.required_researchers,
         visit_nr: row.visit_nr,
         planned_week: plannedWeek,
+        planning_locked: row.planning_locked,
         provisional_week: provisionalWeek,
         provisional_locked: row.provisional_locked,
         from_date: row.from_date,
@@ -1481,7 +1501,6 @@
         priority: row.priority,
         part_of_day: row.part_of_day,
         start_time_text: row.start_time_text,
-        preferred_researcher_id: row.preferred_researcher_id,
         function_ids: row.function_ids,
         species_ids: row.species_ids,
         custom_function_name: row.custom_function_name,

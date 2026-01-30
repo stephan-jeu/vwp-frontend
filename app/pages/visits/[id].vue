@@ -259,8 +259,7 @@
     priority: boolean
     part_of_day: string | null
     start_time_text: string | null
-    preferred_researcher_id: number | null
-    preferred_researcher: UserName | null
+    planning_locked: boolean
     researchers: UserName[]
     advertized: boolean
     quote: boolean

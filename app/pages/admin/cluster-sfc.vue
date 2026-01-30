@@ -73,22 +73,9 @@
             placeholder="Aantal onderzoekers"
           />
           <USelectMenu
-            :model-value="
-              defaultPreferredResearcherId === null
-                ? undefined
-                : researcherOptions.find((o) => o.value === defaultPreferredResearcherId)
-            "
-            :items="researcherOptions"
-            searchable
-            placeholder="Voorkeursonderzoeker"
-            @update:model-value="
-              (opt) => (defaultPreferredResearcherId = opt?.value ?? null)
-            "
-          />
-          <USelectMenu
             :model-value="selectedExperienceOption(defaultExpertiseLevel)"
             :items="experienceLevelOptionsArr"
-            placeholder="Ervaring"
+            placeholder="Vleermuis ervaring"
             @update:model-value="
               (opt: StringOption | undefined) =>
                 (defaultExpertiseLevel = opt?.value ?? null)
@@ -254,9 +241,7 @@
                     <div class="text-sm text-gray-700 dark:text-gray-400 font-semibold">
                       Bezoek #{{ visit.visit_nr }} · {{ formatDate(visit.from_date) }} –
                       {{ formatDate(visit.to_date) }}
-                      <span v-if="visit.preferred_researcher?.full_name" class="ml-2 text-gray-500">
-                        · Voorkeur: {{ visit.preferred_researcher.full_name }}
-                      </span>
+                      <span v-if="visit.planning_locked" class="ml-2 text-gray-500"> · Vastgezet </span>
                     </div>
                     <div class="flex items-center gap-2">
                       <UModal title="Bezoek verwijderen">
@@ -306,24 +291,30 @@
                   </div>
 
                   <div>
-                    <label class="block text-xs mb-1">Aantal onderzoekers</label>
-                    <UInput v-model.number="visit.required_researchers" type="number" />
+                    <label class="block text-xs mb-1">Gepland voor week</label>
+                    <UInput v-model.number="visit.planned_week" type="number" min="1" max="53" />
+                    <div class="mt-1">
+                      <UCheckbox v-model="visit.planning_locked" label="Planning vastzetten" class="text-xs" />
+                    </div>
                   </div>
-                  <div class="md:col-start-2">
-                    <label class="block text-xs mb-1">Voorkeursonderzoeker</label>
-                    <USelectMenu
-                      :model-value="
-                        visit.preferred_researcher_id === null
-                          ? undefined
-                          : researcherOptions.find((o) => o.value === visit.preferred_researcher_id)
-                      "
-                      :items="researcherOptions"
+
+                  <div>
+                    <label class="block text-xs mb-1">Onderzoekers</label>
+                    <UInputMenu
+                      :model-value="mapIdsToOptions(visit.researcher_ids, researcherOptions)"
+                      :items="researcherOptions.filter((o) => o.value !== null)"
+                      multiple
                       searchable
-                      placeholder="Kies onderzoeker"
+                      class="w-3xs"
                       @update:model-value="
-                        (opt) => (visit.preferred_researcher_id = opt?.value ?? null)
+                        (sel) => (visit.researcher_ids = sel.map((o) => o.value as number))
                       "
                     />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs mb-1">Aantal onderzoekers</label>
+                    <UInput v-model.number="visit.required_researchers" type="number" />
                   </div>
 
                   <div>
@@ -437,7 +428,6 @@
 
   // Defaults
   const defaultRequiredResearchers = ref<number | null>(null)
-  const defaultPreferredResearcherId = ref<number | null>(null)
   const defaultExpertiseLevel = ref<string | null>(null)
   const defaultWbc = ref(false)
   const defaultFiets = ref(false)
@@ -455,7 +445,6 @@
     cluster_number: number
     combos: { function_ids: number[]; species_ids: number[] }[]
     default_required_researchers?: number | null
-    default_preferred_researcher_id?: number | null
     default_expertise_level?: string | null
     default_wbc?: boolean
     default_fiets?: boolean
@@ -516,8 +505,10 @@
     part_of_day?: string | null
     start_time?: number | null
     priority?: boolean
-    preferred_researcher_id?: number | null
-    preferred_researcher?: { id: number; full_name?: string | null } | null
+    planned_week?: number | null
+    planning_locked?: boolean
+    researcher_ids: number[]
+    researchers: Array<{ id: number; full_name?: string | null }>
   }
 
   async function onConfirmMerge(): Promise<void> {
@@ -649,6 +640,7 @@
 
   async function onCreate(): Promise<void> {
     if (!canCreate.value) return
+
     const exists = !!clusters.value.find(
       (c) =>
         c.project_id === selectedProject.value!.value && c.cluster_number === clusterNumber.value
@@ -663,7 +655,6 @@
           species_ids: r.species.map((o) => o.value as number)
         })),
         default_required_researchers: cleanInt(defaultRequiredResearchers.value),
-        default_preferred_researcher_id: defaultPreferredResearcherId.value,
         default_expertise_level: defaultExpertiseLevel.value,
         default_wbc: defaultWbc.value,
         default_fiets: defaultFiets.value,
@@ -688,7 +679,6 @@
             species_ids: r.species.map((o) => o.value as number)
           })),
           default_required_researchers: cleanInt(defaultRequiredResearchers.value),
-          default_preferred_researcher_id: defaultPreferredResearcherId.value,
           default_expertise_level: defaultExpertiseLevel.value,
           default_wbc: defaultWbc.value,
           default_fiets: defaultFiets.value,
@@ -762,6 +752,25 @@
   }
 
   async function onSaveVisit(clusterId: number, visit: CompactVisit): Promise<void> {
+    if (visit.planning_locked) {
+      if (visit.planned_week == null) {
+        toast.add({
+          title: 'Fout bij opslaan bezoek',
+          description: 'Als planning is vastgezet, moet "Gepland voor week" ingevuld zijn.',
+          color: 'error'
+        })
+        return
+      }
+      if (!visit.researcher_ids || visit.researcher_ids.length === 0) {
+        toast.add({
+          title: 'Fout bij opslaan bezoek',
+          description: 'Als planning is vastgezet, moet je minimaal één onderzoeker kiezen.',
+          color: 'error'
+        })
+        return
+      }
+    }
+
     const payload = {
       required_researchers: cleanInt(visit.required_researchers),
       visit_nr: cleanInt(visit.visit_nr),
@@ -784,7 +793,9 @@
       part_of_day: visit.part_of_day,
       start_time_text: visit.start_time_text,
       priority: visit.priority,
-      preferred_researcher_id: visit.preferred_researcher_id
+      planned_week: cleanInt(visit.planned_week),
+      planning_locked: !!visit.planning_locked,
+      researcher_ids: visit.researcher_ids
       // no start_time minutes in UI
     }
     await $api(`/visits/${visit.id}`, { method: 'PUT', body: payload })

@@ -207,6 +207,16 @@
                   </div>
                 </div>
               </div>
+
+              <UAlert
+                v-if="overplanningMessages.length > 0"
+                class="mb-4 mt-2"
+                color="warning"
+                variant="soft"
+                icon="i-heroicons-exclamation-triangle"
+                title="Overplanning"
+                :description="overplanningMessages.join(' | ')"
+              />
               <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Left: Voorlopig / Proposed -->
                 <div class="bg-gray-50/50 p-4 rounded-lg border border-gray-200">
@@ -367,8 +377,7 @@
     priority: boolean
     part_of_day: string | null
     start_time_text: string | null
-    preferred_researcher_id: number | null
-    preferred_researcher: UserName | null
+    planning_locked: boolean
     researchers: UserName[]
     advertized: boolean
     quote: boolean
@@ -833,6 +842,82 @@
     }
 
     return { researchers, totals }
+  })
+
+  type OverplanningWarning = {
+    researcher_id: number
+    researcher_name: string
+    available_total: number
+    assigned_total: number
+  }
+
+  const overplanningWarnings = computed<OverplanningWarning[]>(() => {
+    const targetWeek = activeWeekNumber.value
+    const statuses: VisitStatusCode[] = ['planned', 'executed', 'executed_with_deviation']
+
+    const map = new Map<
+      number,
+      {
+        id: number
+        name: string
+        available_total: number
+        assigned_total: number
+      }
+    >()
+
+    for (const user of rawAvailability.value) {
+      const entry = user.availability.find((a) => a.week === targetWeek)
+      const available =
+        (entry?.morning_days ?? 0) +
+        (entry?.daytime_days ?? 0) +
+        (entry?.nighttime_days ?? 0) +
+        (entry?.flex_days ?? 0)
+
+      map.set(user.id, {
+        id: user.id,
+        name: user.name,
+        available_total: available,
+        assigned_total: 0
+      })
+    }
+
+    for (const v of visits.value) {
+      if (!statuses.includes(v.status)) continue
+      if (visitWeekNumber(v) !== targetWeek) continue
+
+      for (const r of v.researchers) {
+        const name = r.full_name ?? `#${r.id}`
+        const existing = map.get(r.id)
+        if (!existing) {
+          map.set(r.id, {
+            id: r.id,
+            name,
+            available_total: 0,
+            assigned_total: 1
+          })
+          continue
+        }
+
+        existing.assigned_total += 1
+      }
+    }
+
+    const warnings: OverplanningWarning[] = []
+    for (const r of map.values()) {
+      if (r.assigned_total <= r.available_total) continue
+      warnings.push({
+        researcher_id: r.id,
+        researcher_name: r.name,
+        available_total: r.available_total,
+        assigned_total: r.assigned_total
+      })
+    }
+
+    return warnings.sort((a, b) => a.researcher_name.localeCompare(b.researcher_name))
+  })
+
+  const overplanningMessages = computed<string[]>(() => {
+    return overplanningWarnings.value.map((w) => `${w.researcher_name} heeft te veel bezoeken`)
   })
 
   async function loadAvailability(): Promise<void> {
