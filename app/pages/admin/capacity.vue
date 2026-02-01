@@ -394,6 +394,19 @@
   const { $api } = useNuxtApp()
   const toast = useToast()
 
+  type ApiErrorShape = {
+    data?: { detail?: unknown } | null
+    response?: { _data?: { detail?: unknown } | null } | null
+  }
+
+  function errorDescription(error: unknown): string {
+    const err = error as ApiErrorShape
+    const detail = err?.data?.detail ?? err?.response?._data?.detail
+    if (typeof detail === 'string' && detail.trim()) return detail
+    if (error instanceof Error && error.message) return error.message
+    return 'Onbekende fout'
+  }
+
   const loading = ref(false)
   const response = ref<CapacitySimulationResponse | null>(null)
 
@@ -452,8 +465,12 @@
         })
 
       notPlannableVisits.value = filtered
-    } catch {
-      toast.add({ title: 'Kon bezoeken niet laden', color: 'error' })
+    } catch (error: unknown) {
+      toast.add({
+        title: 'Kon bezoeken niet laden',
+        description: errorDescription(error),
+        color: 'error'
+      })
     } finally {
       notPlannableVisitsLoading.value = false
     }
@@ -568,8 +585,12 @@
       )
       response.value = result
       void loadSeasonPlannerStatus()
-    } catch {
-      toast.add({ title: 'Kon capaciteitssimulatie niet laden', color: 'error' })
+    } catch (error: unknown) {
+      toast.add({
+        title: 'Kon capaciteitssimulatie niet laden',
+        description: errorDescription(error),
+        color: 'error'
+      })
     } finally {
       loading.value = false
     }
@@ -604,8 +625,12 @@
           // Keep the "Niet in te plannen" view in sync as well.
           await loadNotPlannableVisits()
           toast.add({ title: 'Simulatie opnieuw berekend', color: 'success' })
-      } catch {
-          toast.add({ title: 'Fout bij herberekenen', color: 'error' })
+      } catch (error: unknown) {
+          toast.add({
+            title: 'Fout bij herberekenen',
+            description: errorDescription(error),
+            color: 'error'
+          })
       } finally {
           loading.value = false
       }

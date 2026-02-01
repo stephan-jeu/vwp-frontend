@@ -455,6 +455,19 @@
   const currentWeekNumber = computed<number>(() => currentIsoWeek(effectiveToday.value))
   const toast = useToast()
 
+  type ApiErrorShape = {
+    data?: { detail?: unknown } | null
+    response?: { _data?: { detail?: unknown } | null } | null
+  }
+
+  function errorDescription(error: unknown): string {
+    const err = error as ApiErrorShape
+    const detail = err?.data?.detail ?? err?.response?._data?.detail
+    if (typeof detail === 'string' && detail.trim()) return detail
+    if (error instanceof Error && error.message) return error.message
+    return 'Onbekende fout'
+  }
+
   // const week = ref<number>(currentWeekNumber.value) // REMOVED
   const visits = ref<VisitListRow[]>([])
 
@@ -999,6 +1012,14 @@
 
       // 4. Load visits for the newly selected week
       await loadVisits()
+    } catch (error: unknown) {
+      const w = activeWeekNumber.value
+      const description = errorDescription(error)
+      toast.add({
+        title: 'Fout bij planning genereren',
+        description: `Week ${w}: ${description}`,
+        color: 'error'
+      })
     } finally {
       loading.value = false
     }

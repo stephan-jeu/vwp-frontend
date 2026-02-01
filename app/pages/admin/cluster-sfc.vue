@@ -513,6 +513,19 @@
     researchers: Array<{ id: number; full_name?: string | null }>
   }
 
+  type ApiErrorShape = {
+    data?: { detail?: unknown } | null
+    response?: { _data?: { detail?: unknown } | null } | null
+  }
+
+  function errorDescription(error: unknown): string {
+    const err = error as ApiErrorShape
+    const detail = err?.data?.detail ?? err?.response?._data?.detail
+    if (typeof detail === 'string' && detail.trim()) return detail
+    if (error instanceof Error && error.message) return error.message
+    return 'Onbekende fout'
+  }
+
   async function onConfirmMerge(): Promise<void> {
     if (!pendingCreatePayload.value) {
       showMergeConfirm.value = false
@@ -532,7 +545,7 @@
         await expandAndScrollToCluster(res.id)
       }
     } catch (error: unknown) {
-      const description = error instanceof Error ? error.message : 'Onbekende fout'
+      const description = errorDescription(error)
       toast.add({
         title: 'Fout bij toevoegen bezoeken aan cluster',
         description,
@@ -697,7 +710,7 @@
         await expandAndScrollToCluster(res.id)
       }
     } catch (error: unknown) {
-      const description = error instanceof Error ? error.message : 'Onbekende fout'
+      const description = errorDescription(error)
       toast.add({
         title: 'Fout bij aanmaken cluster',
         description,
