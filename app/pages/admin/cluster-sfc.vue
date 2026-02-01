@@ -415,6 +415,8 @@
 </template>
 
 <script setup lang="ts">
+  import { validateIsoWeekWithinDateWindow } from '../../utils/visitWeekWindow'
+
   type Option = { label: string; value: number | null }
   type StringOption = { label: string; value: string | null }
 
@@ -752,6 +754,23 @@
   }
 
   async function onSaveVisit(clusterId: number, visit: CompactVisit): Promise<void> {
+    if (visit.planned_week != null) {
+      const plannedWeekError = validateIsoWeekWithinDateWindow({
+        week: visit.planned_week,
+        fromDate: visit.from_date,
+        toDate: visit.to_date,
+        label: 'Gepland voor week'
+      })
+      if (plannedWeekError) {
+        toast.add({
+          title: 'Fout bij opslaan bezoek',
+          description: plannedWeekError,
+          color: 'error'
+        })
+        return
+      }
+    }
+
     if (visit.planning_locked) {
       if (visit.planned_week == null) {
         toast.add({
@@ -761,6 +780,7 @@
         })
         return
       }
+
       if (!visit.researcher_ids || visit.researcher_ids.length === 0) {
         toast.add({
           title: 'Fout bij opslaan bezoek',

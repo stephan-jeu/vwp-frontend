@@ -763,6 +763,7 @@
   import { storeToRefs } from 'pinia'
   import { useAuthStore } from '~~/stores/auth'
   import { useTestModeStore } from '~~/stores/testMode'
+  import { validateIsoWeekWithinDateWindow } from '../../utils/visitWeekWindow'
 
   type VisitStatusCode =
     | 'created'
@@ -1309,8 +1310,54 @@
       return
     }
 
+    const plannedWeek = createPlannedWeek.value === '' ? null : createPlannedWeek.value
+    const provisionalWeek =
+      createProvisionalWeek.value === '' ? null : createProvisionalWeek.value
+
+    if (plannedWeek != null) {
+      const plannedWeekError = validateIsoWeekWithinDateWindow({
+        week: plannedWeek,
+        fromDate: createFromDate.value || null,
+        toDate: createToDate.value || null,
+        label: 'Gepland voor week'
+      })
+      if (plannedWeekError) {
+        toast.add({
+          title: 'Bezoek kon niet worden toegevoegd',
+          description: plannedWeekError,
+          color: 'error'
+        })
+        return
+      }
+    }
+
+    if (provisionalWeek != null) {
+      const provisionalWeekError = validateIsoWeekWithinDateWindow({
+        week: provisionalWeek,
+        fromDate: createFromDate.value || null,
+        toDate: createToDate.value || null,
+        label: 'Voorlopige week'
+      })
+      if (provisionalWeekError) {
+        toast.add({
+          title: 'Bezoek kon niet worden toegevoegd',
+          description: provisionalWeekError,
+          color: 'error'
+        })
+        return
+      }
+    }
+
+    if (createProvisionalLocked.value && provisionalWeek == null) {
+      toast.add({
+        title: 'Bezoek kon niet worden toegevoegd',
+        description: 'Als voorlopige week is vastgezet, moet "Voorlopige week" ingevuld zijn.',
+        color: 'error'
+      })
+      return
+    }
+
     if (createPlanningLocked.value) {
-      const plannedWeek = createPlannedWeek.value === '' ? null : createPlannedWeek.value
       if (plannedWeek == null) {
         toast.add({
           title: 'Bezoek kon niet worden toegevoegd',
@@ -1333,10 +1380,6 @@
     try {
       const durationMinutes =
         createDurationHours.value == null ? null : Math.round(createDurationHours.value * 60)
-
-      const plannedWeek = createPlannedWeek.value === '' ? null : createPlannedWeek.value
-      const provisionalWeek =
-        createProvisionalWeek.value === '' ? null : createProvisionalWeek.value
 
       const payload = {
         cluster_id: selectedCluster.value.value,
@@ -1388,10 +1431,56 @@
   const duplicatingId = ref<number | null>(null)
 
   async function onSaveVisit(row: VisitListRow): Promise<void> {
+    const rawPlannedWeek = row.planned_week as unknown
+    const plannedWeek =
+      rawPlannedWeek === '' || rawPlannedWeek == null ? null : (rawPlannedWeek as number)
+    if (plannedWeek != null) {
+      const plannedWeekError = validateIsoWeekWithinDateWindow({
+        week: plannedWeek,
+        fromDate: row.from_date,
+        toDate: row.to_date,
+        label: 'Gepland voor week'
+      })
+      if (plannedWeekError) {
+        toast.add({
+          title: 'Opslaan mislukt',
+          description: plannedWeekError,
+          color: 'error'
+        })
+        return
+      }
+    }
+
+    const rawProvisionalWeek = row.provisional_week as unknown
+    const provisionalWeek =
+      rawProvisionalWeek === '' || rawProvisionalWeek == null ? null : (rawProvisionalWeek as number)
+    if (provisionalWeek != null) {
+      const provisionalWeekError = validateIsoWeekWithinDateWindow({
+        week: provisionalWeek,
+        fromDate: row.from_date,
+        toDate: row.to_date,
+        label: 'Voorlopige week'
+      })
+      if (provisionalWeekError) {
+        toast.add({
+          title: 'Opslaan mislukt',
+          description: provisionalWeekError,
+          color: 'error'
+        })
+        return
+      }
+    }
+
+    if (row.provisional_locked && provisionalWeek == null) {
+      toast.add({
+        title: 'Opslaan mislukt',
+        description: 'Als voorlopige week is vastgezet, moet "Voorlopige week" ingevuld zijn.',
+        color: 'error'
+      })
+      return
+    }
+
     if (row.planning_locked) {
-      const rawPlannedWeek = row.planned_week as unknown
-      const plannedWeek =
-        rawPlannedWeek === '' || rawPlannedWeek == null ? null : (rawPlannedWeek as number)
       if (plannedWeek == null) {
         toast.add({
           title: 'Opslaan mislukt',
@@ -1413,16 +1502,6 @@
 
     savingId.value = row.id
     try {
-      const rawPlannedWeek = row.planned_week as unknown
-      const plannedWeek =
-        rawPlannedWeek === '' || rawPlannedWeek == null ? null : (rawPlannedWeek as number)
-
-      const rawProvisionalWeek = row.provisional_week as unknown
-      const provisionalWeek =
-        rawProvisionalWeek === '' || rawProvisionalWeek == null
-          ? null
-          : (rawProvisionalWeek as number)
-
       const payload = {
         required_researchers: row.required_researchers,
         visit_nr: row.visit_nr,
@@ -1475,6 +1554,49 @@
         rawProvisionalWeek === '' || rawProvisionalWeek == null
           ? null
           : (rawProvisionalWeek as number)
+
+      if (plannedWeek != null) {
+        const plannedWeekError = validateIsoWeekWithinDateWindow({
+          week: plannedWeek,
+          fromDate: row.from_date,
+          toDate: row.to_date,
+          label: 'Gepland voor week'
+        })
+        if (plannedWeekError) {
+          toast.add({
+            title: 'Dupliceren mislukt',
+            description: plannedWeekError,
+            color: 'error'
+          })
+          return
+        }
+      }
+
+      if (provisionalWeek != null) {
+        const provisionalWeekError = validateIsoWeekWithinDateWindow({
+          week: provisionalWeek,
+          fromDate: row.from_date,
+          toDate: row.to_date,
+          label: 'Voorlopige week'
+        })
+        if (provisionalWeekError) {
+          toast.add({
+            title: 'Dupliceren mislukt',
+            description: provisionalWeekError,
+            color: 'error'
+          })
+          return
+        }
+      }
+
+      if (row.provisional_locked && provisionalWeek == null) {
+        toast.add({
+          title: 'Dupliceren mislukt',
+          description: 'Als voorlopige week is vastgezet, moet "Voorlopige week" ingevuld zijn.',
+          color: 'error'
+        })
+        return
+      }
 
       const payload = {
         cluster_id: row.cluster_id,
