@@ -231,7 +231,7 @@
                     <div v-for="visit in inboxVisits" :key="visit.id" class="space-y-2">
                       <VisitPreviewCard
                         :visit="visit"
-                        @open="((selectedVisit = visit), (showPlanModal = true))"
+                        @open="goToDetail(visit.id)"
                       />
                     </div>
                     <div
@@ -253,12 +253,6 @@
                     <div v-for="visit in scheduleVisits" :key="visit.id" class="space-y-2">
                       <VisitPreviewCard :visit="visit" @open="goToDetail(visit.id)" />
                       <div class="flex justify-end gap-2">
-                        <UButton
-                          size="xs"
-                          color="neutral"
-                          icon="i-heroicons-pencil"
-                          @click="((selectedVisit = visit), (showPlanModal = true))"
-                        />
                         <UButton
                           size="xs"
                           color="neutral"
@@ -754,7 +748,7 @@
           researcher_ids: []
         }
       })
-      toast.add({ title: 'Bezoek teruggezet naar inbox', color: 'success' })
+      toast.add({ title: 'Bezoek teruggezet naar voorlopig', color: 'success' })
       await loadVisits()
     } catch {
       toast.add({ title: 'Fout bij wijzigen', color: 'error' })

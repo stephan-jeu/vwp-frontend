@@ -386,7 +386,7 @@
   const canAdminEditStatus = computed(() => {
     if (!visit.value) return false
     return (
-      ['missed', 'rejected', 'executed_with_deviation', 'not_executed'].includes(
+      ['open', 'planned', 'missed', 'rejected', 'executed_with_deviation', 'not_executed'].includes(
         visit.value.status
       ) && isAdmin.value
     )
