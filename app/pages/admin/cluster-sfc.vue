@@ -77,19 +77,17 @@
             :items="experienceLevelOptionsArr"
             placeholder="Vleermuis ervaring"
             @update:model-value="
-              (opt: StringOption | undefined) =>
-                (defaultExpertiseLevel = opt?.value ?? null)
+              (opt: StringOption | undefined) => (defaultExpertiseLevel = opt?.value ?? null)
             "
           />
-
         </div>
-         <div class="flex gap-8 items-center flex-wrap my-4">
-            <UCheckbox v-model="defaultWbc" label="WBC" />
-            <UCheckbox v-model="defaultFiets" label="Fiets" />
-            <UCheckbox v-model="defaultHub" label="HUB" />
-            <UCheckbox v-model="defaultDvp" label="DVP" />
-            <UCheckbox v-model="defaultSleutel" label="Sleutel" />
-          </div>
+        <div class="flex gap-8 items-center flex-wrap my-4">
+          <UCheckbox v-model="defaultWbc" label="WBC" />
+          <UCheckbox v-model="defaultFiets" label="Fiets" />
+          <UCheckbox v-model="defaultHub" label="HUB" />
+          <UCheckbox v-model="defaultDvp" label="DVP" />
+          <UCheckbox v-model="defaultSleutel" label="Sleutel" />
+        </div>
         <div class="mt-2">
           <UTextarea
             v-model="defaultRemarksField"
@@ -241,7 +239,9 @@
                     <div class="text-sm text-gray-700 dark:text-gray-400 font-semibold">
                       Bezoek #{{ visit.visit_nr }} · {{ formatDate(visit.from_date) }} –
                       {{ formatDate(visit.to_date) }}
-                      <span v-if="visit.planning_locked" class="ml-2 text-gray-500"> · Vastgezet </span>
+                      <span v-if="visit.planning_locked" class="ml-2 text-gray-500">
+                        · Vastgezet
+                      </span>
                     </div>
                     <div class="flex items-center gap-2">
                       <UModal title="Bezoek verwijderen">
@@ -276,7 +276,9 @@
                       :items="functionOptions"
                       multiple
                       class="w-2xs"
-                      @update:model-value="(sel) => (visit.function_ids = sel.map((o) => o.value as number))"
+                      @update:model-value="
+                        (sel) => (visit.function_ids = sel.map((o) => o.value as number))
+                      "
                     />
                   </div>
                   <div>
@@ -286,7 +288,9 @@
                       :items="speciesOptions"
                       multiple
                       class="w-3xs"
-                      @update:model-value="(sel) => (visit.species_ids = sel.map((o) => o.value as number))"
+                      @update:model-value="
+                        (sel) => (visit.species_ids = sel.map((o) => o.value as number))
+                      "
                     />
                   </div>
 
@@ -294,7 +298,11 @@
                     <label class="block text-xs mb-1">Gepland voor week</label>
                     <UInput v-model.number="visit.planned_week" type="number" min="1" max="53" />
                     <div class="mt-1">
-                      <UCheckbox v-model="visit.planning_locked" label="Planning vastzetten" class="text-xs" />
+                      <UCheckbox
+                        v-model="visit.planning_locked"
+                        label="Planning vastzetten"
+                        class="text-xs"
+                      />
                     </div>
                   </div>
 
@@ -318,17 +326,17 @@
                   </div>
 
                   <div>
+                    <label class="block text-xs mb-1">Bezoek nr</label>
+                    <UInput v-model.number="visit.visit_nr" type="number" />
+                  </div>
+
+                  <div>
                     <label class="block text-xs mb-1">Van</label>
                     <UInput v-model="visit.from_date" type="date" />
                   </div>
                   <div>
                     <label class="block text-xs mb-1">Tot</label>
                     <UInput v-model="visit.to_date" type="date" />
-                  </div>
-
-                  <div>
-                    <label class="block text-xs mb-1">Bezoek nr</label>
-                    <UInput v-model.number="visit.visit_nr" type="number" />
                   </div>
 
                   <div>
