@@ -256,7 +256,12 @@ function resetState() {
   // Reuse logic from original modals.
   
   const s = props.visit.status
-  if (['executed', 'executed_with_deviation', 'not_executed', 'planned', 'open', 'cancelled'].includes(s)) {
+  
+  // If not admin and status is planned/open, default to 'executed' (start of flow)
+  if (!props.isAdmin && (s === 'planned' || s === 'open')) {
+      localStatus.value = 'executed'
+  }
+  else if (['executed', 'executed_with_deviation', 'not_executed', 'planned', 'open', 'cancelled'].includes(s)) {
       localStatus.value = s
   } else {
       // For statuses like 'created', 'created' isn't usually an edit target state, 

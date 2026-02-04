@@ -39,30 +39,20 @@
             </div>
             <div class="flex flex-col items-end gap-2">
               <div class="flex items-center gap-2">
-                <div v-if="canResearcherEditStatus">
-                  <UButton
-                    size="sm"
-                    icon="i-lucide-shield-check"
-                    class="dark:text-gray-300"
-                    @click="openStatusModal"
-                  >
-                    Status aanpassen
-                  </UButton>
-                </div>
-                <div v-else>
-                  <UBadge :color="statusBadgeColor(visit.status)" variant="solid">
-                    {{ statusLabel(visit.status) }}
-                  </UBadge>
-                </div>
+              <div class="flex items-center gap-2">
+                <UBadge :color="statusBadgeColor(visit.status)" variant="solid">
+                  {{ statusLabel(visit.status) }}
+                </UBadge>
                 <UButton
-                  v-if="canAdminEditStatus"
-                  size="xs"
-                  variant="ghost"
-                  icon="i-lucide-calendar-clock"
-                  @click="onOpenAdminPlanning"
+                  v-if="canEditStatus"
+                  size="sm"
+                  icon="i-lucide-shield-check"
+                  class="dark:text-gray-300"
+                  @click="openStatusModal"
                 >
                   Status aanpassen
                 </UButton>
+              </div>
               </div>
             </div>
           </div>
@@ -392,6 +382,10 @@
     )
   })
 
+  const canEditStatus = computed(() => {
+    return canResearcherEditStatus.value || canAdminEditStatus.value
+  })
+
   function statusLabel(code: VisitStatusCode): string {
     switch (code) {
       case 'created':
@@ -543,13 +537,6 @@
     }
   }
 
-  // Alias for old admin open handler if needed, or simply replace usage
-  async function onOpenAdminPlanning(): Promise<void> {
-    if (!visit.value || !isAdmin.value) return
-    await ensureAdminPlanningOptionsLoaded()
-    if (!adminPlanningOptionsLoaded.value) return
-    statusModalOpen.value = true
-  }
 
   function goBack(): void {
     const back = route.query.back as string | undefined

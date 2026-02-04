@@ -2,134 +2,177 @@
   <div>
     <UPageHeader title="Mijn bezoeken" />
 
-    <UCard class="mt-4">
-      <div class="flex flex-col gap-3">
-        <div v-if="pending" class="text-sm text-gray-700 dark:text-gray-300">
-          Bezoeken worden geladen…
-        </div>
-        <div v-else-if="error" class="text-sm text-red-500">Kon bezoeken niet laden.</div>
-        <div v-else class="flex flex-col gap-3">
-          <div class="w-64">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-              Bekijk bezoeken voor week
-            </label>
-            <USelectMenu
-              v-model="selectedWeekTab"
-              :items="weekTabs"
-              option-attribute="label"
-              placeholder="Selecteer week"
-              class="w-sm"
-            />
-          </div>
+    <UTabs :items="tabs" class="mt-4">
+      <template #visits>
+        <UCard>
+          <div class="flex flex-col gap-3">
+            <div v-if="pending" class="text-sm text-gray-700 dark:text-gray-300">
+              Bezoeken worden geladen…
+            </div>
+            <div v-else-if="error" class="text-sm text-red-500">Kon bezoeken niet laden.</div>
+            <div v-else class="flex flex-col gap-3">
+              <div class="w-64">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                  Bekijk bezoeken voor week
+                </label>
+                <USelectMenu
+                  v-model="selectedWeekTab"
+                  :items="weekTabs"
+                  option-attribute="label"
+                  placeholder="Selecteer week"
+                  class="w-sm"
+                />
+              </div>
 
-          <div
-            v-if="visitsForActiveWeek.length === 0"
-            class="text-sm text-gray-700 dark:text-gray-300"
-          >
-            Er zijn geen bezoeken voor deze week.
-          </div>
+              <div
+                v-if="visitsForActiveWeek.length === 0"
+                class="text-sm text-gray-700 dark:text-gray-300"
+              >
+                Er zijn geen bezoeken voor deze week.
+              </div>
 
-          <div v-else class="flex flex-col gap-3">
-            <UCard
-              v-for="visit in visitsForActiveWeek"
-              :key="visit.id"
-              class="cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-              @click="goToDetail(visit.id)"
+              <div v-else class="flex flex-col gap-3">
+                <UCard
+                  v-for="visit in visitsForActiveWeek"
+                  :key="visit.id"
+                  class="cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                  @click="goToDetail(visit.id)"
+                >
+                  <div class="flex flex-col gap-1">
+                    <div class="flex items-center justify-between gap-2">
+                      <div>
+                        <div class="text-sm text-gray-700 dark:text-gray-300">
+                          {{ visit.project_code }} · {{ visit.project_location }}
+                        </div>
+                        <div class="text-sm text-gray-700 dark:text-gray-300 font-semibold">
+                          Cluster {{ visit.cluster_number }} · {{ visit.cluster_address }}
+                        </div>
+                      </div>
+                      <div class="flex flex-col items-end gap-1">
+                        <UBadge :color="statusBadgeColor(visit.status)" variant="solid">
+                          {{ statusLabel(visit.status) }}
+                        </UBadge>
+                        <UBadge v-if="weekBadge(visit)" color="warning">
+                          {{ weekBadge(visit) }}
+                        </UBadge>
+                      </div>
+                    </div>
+                    <div
+                      v-if="visit.part_of_day"
+                      class="mt-2 flex flex-wrap gap-1 text-[12px] text-gray-700 dark:text-gray-300"
+                    >
+                      <span>Dagdeel: </span><span>{{ visit.part_of_day }}</span>
+                    </div>
+                    <div
+                      v-if="visit.start_time_text"
+                      class="mt-1 flex flex-wrap gap-1 text-[12px] text-gray-700 dark:text-gray-300"
+                    >
+                      <span v-if="visit.start_time_text">Start: {{ visit.start_time_text }}</span>
+                      <span v-else
+                        >Periode: {{ formatDate(visit.from_date) }} –
+                        {{ formatDate(visit.to_date) }}</span
+                      >
+                    </div>
+
+                    <div class="mt-1 text-[12px] text-gray-700 dark:text-gray-300">
+                      <span class="font-medium mr-1">Functies:</span>
+                      <span>{{
+                          visit.functions.length
+                          ? visit.functions.map((f) => f.name).join(', ')
+                          : visit.custom_function_name || '-'
+                      }}</span>
+                    </div>
+                    <div class="mt-1 text-[12px] text-gray-700 dark:text-gray-300">
+                      <span class="font-medium mr-1">Soorten:</span>
+                      <span>
+                        {{
+                            visit.species.length
+                            ? visit.species.map((s) => s.abbreviation || s.name).join(', ')
+                            : visit.custom_species_name || '-'
+                        }}
+                      </span>
+                    </div>
+
+                    <div class="mt-1 text-[12px] text-gray-700 dark:text-gray-300">
+                      <span class="font-medium mr-1">Onderzoekers:</span>
+                      <span>
+                        {{
+                          visit.researchers
+                            .map((r) => r.full_name || `Gebruiker #${r.id}`)
+                            .join(', ') || '-'
+                        }}
+                      </span>
+                    </div>
+
+                    <div
+                      v-if="
+                        visit.wbc ||
+                        visit.fiets ||
+                        visit.hub ||
+                        visit.dvp ||
+                        visit.sleutel ||
+                        visit.priority
+                      "
+                      class="mt-2 text-sm text-gray-700 dark:text-gray-300 font-medium"
+                    >
+                      Bijzonderheden:
+                    </div>
+                    <div class="mt-2 flex flex-wrap gap-1">
+                      <UBadge v-if="visit.wbc" class="bg-amber-600 mr-1">WBC</UBadge>
+                      <UBadge v-if="visit.fiets" class="bg-amber-600 mr-1">Fiets</UBadge>
+                      <UBadge v-if="visit.hub" class="bg-amber-600 mr-1">HUB</UBadge>
+                      <UBadge v-if="visit.dvp" class="bg-amber-600 mr-1">DVP</UBadge>
+                      <UBadge v-if="visit.sleutel" class="bg-amber-600 mr-1">Sleutel</UBadge>
+                      <UBadge v-if="visit.priority" class="bg-amber-600 mr-1"> Prioriteit </UBadge>
+                    </div>
+                  </div>
+                </UCard>
+              </div>
+            </div>
+          </div>
+        </UCard>
+      </template>
+
+      <template #availability>
+        <UCard>
+          <div v-if="avPending" class="text-sm text-gray-700 dark:text-gray-300">
+            Beschikbaarheid laden…
+          </div>
+          <div v-else-if="avError" class="text-sm text-red-500">
+            Kon beschikbaarheid niet laden.
+          </div>
+          <div v-else class="flex flex-col gap-4">
+            <div
+              v-if="availabilityList.length === 0"
+              class="text-sm text-gray-700 dark:text-gray-300"
             >
-              <div class="flex flex-col gap-1">
-                <div class="flex items-center justify-between gap-2">
-                  <div>
-                    <div class="text-sm text-gray-700 dark:text-gray-300">
-                      {{ visit.project_code }} · {{ visit.project_location }}
-                    </div>
-                    <div class="text-sm text-gray-700 dark:text-gray-300 font-semibold">
-                      Cluster {{ visit.cluster_number }} · {{ visit.cluster_address }}
-                    </div>
-                  </div>
-                  <div class="flex flex-col items-end gap-1">
-                    <UBadge :color="statusBadgeColor(visit.status)" variant="solid">
-                      {{ statusLabel(visit.status) }}
-                    </UBadge>
-                    <UBadge v-if="weekBadge(visit)" color="warning">
-                      {{ weekBadge(visit) }}
-                    </UBadge>
-                  </div>
+              Geen beschikbaarheid opgegeven.
+            </div>
+            <div v-else class="space-y-4">
+              <div
+                v-for="item in availabilityList"
+                :key="item.week"
+                class="border-b border-gray-100 dark:border-gray-800 last:border-0 pb-4 last:pb-0"
+              >
+                <div class="font-semibold text-gray-900 dark:text-white mb-2">
+                  {{ formatAvWeekLabel(item.week) }}
                 </div>
-                <div
-                  v-if="visit.part_of_day"
-                  class="mt-2 flex flex-wrap gap-1 text-[12px] text-gray-700 dark:text-gray-300"
-                >
-                  <span>Dagdeel: </span><span>{{ visit.part_of_day }}</span>
-                </div>
-                <div
-                  v-if="visit.start_time_text"
-                  class="mt-1 flex flex-wrap gap-1 text-[12px] text-gray-700 dark:text-gray-300"
-                >
-                  <span v-if="visit.start_time_text">Start: {{ visit.start_time_text }}</span>
-                  <span v-else
-                    >Periode: {{ formatDate(visit.from_date) }} –
-                    {{ formatDate(visit.to_date) }}</span
+                <div class="flex flex-wrap gap-4 text-sm">
+                  <div
+                    v-for="part in item.parts"
+                    :key="part.label"
+                    class="flex items-center gap-2"
                   >
-                </div>
-
-                <div class="mt-1 text-[12px] text-gray-700 dark:text-gray-300">
-                  <span class="font-medium mr-1">Functies:</span>
-                  <span>{{
-                      visit.functions.length
-                      ? visit.functions.map((f) => f.name).join(', ')
-                      : visit.custom_function_name || '-'
-                  }}</span>
-                </div>
-                <div class="mt-1 text-[12px] text-gray-700 dark:text-gray-300">
-                  <span class="font-medium mr-1">Soorten:</span>
-                  <span>
-                    {{
-                        visit.species.length
-                        ? visit.species.map((s) => s.abbreviation || s.name).join(', ')
-                        : visit.custom_species_name || '-'
-                    }}
-                  </span>
-                </div>
-
-                <div class="mt-1 text-[12px] text-gray-700 dark:text-gray-300">
-                  <span class="font-medium mr-1">Onderzoekers:</span>
-                  <span>
-                    {{
-                      visit.researchers
-                        .map((r) => r.full_name || `Gebruiker #${r.id}`)
-                        .join(', ') || '-'
-                    }}
-                  </span>
-                </div>
-
-                <div
-                  v-if="
-                    visit.wbc ||
-                    visit.fiets ||
-                    visit.hub ||
-                    visit.dvp ||
-                    visit.sleutel ||
-                    visit.priority
-                  "
-                  class="mt-2 text-sm text-gray-700 dark:text-gray-300 font-medium"
-                >
-                  Bijzonderheden:
-                </div>
-                <div class="mt-2 flex flex-wrap gap-1">
-                  <UBadge v-if="visit.wbc" class="bg-amber-600 mr-1">WBC</UBadge>
-                  <UBadge v-if="visit.fiets" class="bg-amber-600 mr-1">Fiets</UBadge>
-                  <UBadge v-if="visit.hub" class="bg-amber-600 mr-1">HUB</UBadge>
-                  <UBadge v-if="visit.dvp" class="bg-amber-600 mr-1">DVP</UBadge>
-                  <UBadge v-if="visit.sleutel" class="bg-amber-600 mr-1">Sleutel</UBadge>
-                  <UBadge v-if="visit.priority" class="bg-amber-600 mr-1"> Prioriteit </UBadge>
+                    <span class="text-gray-600 dark:text-gray-400">{{ part.label }}:</span>
+                    <span class="font-medium text-gray-900 dark:text-white">{{ part.value }}</span>
+                  </div>
                 </div>
               </div>
-            </UCard>
+            </div>
           </div>
-        </div>
-      </div>
-    </UCard>
-  </div>
+        </UCard>
+      </template>
+    </UTabs>  </div>
 </template>
 
 <script setup lang="ts">
@@ -432,6 +475,68 @@
       return a.id - b.id
     })
   })
+
+  // --- Availability Tab Logic ---
+  const tabs = [
+    { label: 'Mijn bezoeken', slot: 'visits' },
+    { label: 'Mijn beschikbaarheid', slot: 'availability' }
+  ]
+
+  type AvailabilityWeekOut = {
+    week: number
+    morning_days: number
+    daytime_days: number
+    nighttime_days: number
+    flex_days: number
+  }
+
+  // Fetch availability
+  const {
+    data: avData,
+    pending: avPending,
+    error: avError
+  } = useAsyncData('my-availability', async () => {
+    await auth.ensureLoaded()
+    const currentWeek = getIsoWeekNumber(effectiveToday.value)
+    // Fetch a generous range, e.g., current week to current + 20
+    return await $api<AvailabilityWeekOut[]>('/availability/me', {
+      query: {
+        week_start: currentWeek,
+        week_end: currentWeek + 30
+      }
+    })
+  })
+
+  // Computed list for display
+  const availabilityList = computed(() => {
+    if (!avData.value) return []
+    const list = []
+    for (const weekData of avData.value) {
+      if (
+        weekData.morning_days === 0 &&
+        weekData.daytime_days === 0 &&
+        weekData.nighttime_days === 0 &&
+        weekData.flex_days === 0
+      ) {
+        continue
+      }
+
+      const parts = []
+      if (weekData.morning_days > 0) parts.push({ label: 'Ochtend', value: weekData.morning_days })
+      if (weekData.daytime_days > 0) parts.push({ label: 'Dag', value: weekData.daytime_days })
+      if (weekData.nighttime_days > 0)
+        parts.push({ label: 'Avond', value: weekData.nighttime_days })
+      if (weekData.flex_days > 0) parts.push({ label: 'Flex', value: weekData.flex_days })
+
+      list.push({ week: weekData.week, parts })
+    }
+    return list
+  })
+
+  function formatAvWeekLabel(week: number): string {
+    const range = weekRangeLabel(week)
+    return range ? `Week ${week} (${range})` : `Week ${week}`
+  }
 
   // ...
   function formatDate(d: string | null): string {
