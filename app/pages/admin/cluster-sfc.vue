@@ -103,6 +103,28 @@
     </UCard>
 
     <UCard>
+      <UModal v-model:open="showDeleteClusterConfirm" title="Cluster verwijderen">
+        <template #content>
+          <UCard>
+            <div class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              Weet je zeker dat je dit cluster en alle bezoeken wilt verwijderen?
+            </div>
+            <template #footer>
+              <div class="flex justify-end gap-2">
+                <UButton color="neutral" variant="soft" @click="showDeleteClusterConfirm = false"
+                  >Annuleren</UButton
+                >
+                <UButton
+                  color="error"
+                  :loading="deletingCluster"
+                  @click="onConfirmDeleteClusterAction"
+                  >Verwijder</UButton
+                >
+              </div>
+            </template>
+          </UCard>
+        </template>
+      </UModal>
       <UModal v-model:open="showMergeConfirm" title="Dit cluster bestaat al">
         <template #content>
           <UCard>
@@ -198,25 +220,12 @@
                 </template>
               </UModal>
 
-              <UModal title="Cluster verwijderen">
-                <UButton color="error" variant="ghost" icon="i-heroicons-trash" />
-                <template #content>
-                  <UCard>
-                    <div>Weet je zeker dat je dit cluster en alle bezoeken wilt verwijderen?</div>
-                    <template #footer>
-                      <div class="flex justify-end gap-2">
-                        <UButton color="neutral" variant="ghost">Annuleer</UButton>
-                        <UButton
-                          color="error"
-                          :loading="deletingCluster"
-                          @click="confirmDeleteCluster(cluster.id)"
-                          >Verwijder</UButton
-                        >
-                      </div>
-                    </template>
-                  </UCard>
-                </template>
-              </UModal>
+              <UButton
+                color="error"
+                variant="ghost"
+                icon="i-heroicons-trash"
+                @click="onOpenDeleteCluster(cluster)"
+              />
             </div>
           </div>
 
@@ -858,6 +867,20 @@
 
   // Cluster delete
   const deletingCluster = ref(false)
+  const showDeleteClusterConfirm = ref(false)
+  const clusterIdToDelete = ref<number | null>(null)
+
+  function onOpenDeleteCluster(cluster: Cluster) {
+    clusterIdToDelete.value = cluster.id
+    showDeleteClusterConfirm.value = true
+  }
+
+  async function onConfirmDeleteClusterAction() {
+    if (clusterIdToDelete.value === null) return
+    await confirmDeleteCluster(clusterIdToDelete.value)
+    showDeleteClusterConfirm.value = false
+    clusterIdToDelete.value = null
+  }
 
   async function confirmDeleteCluster(id: number): Promise<void> {
     deletingCluster.value = true
