@@ -328,8 +328,7 @@
         vrfg: false,
         vleermuis: false,
         zwaluw: false,
-        grote_vos: false,
-        iepenpage: false,
+        vlinder: false,
         teunisbloempijlstaart: false,
         zangvogel: false,
         biggenkruid: false,
@@ -337,8 +336,14 @@
       })
       showCreate.value = false
       toast.add({ title: 'Onderzoeker opgeslagen', color: 'success' })
-    } catch {
-      toast.add({ title: 'Onderzoeker kon niet worden opgeslagen', color: 'error' })
+    } catch (err: unknown) {
+      const e = err as { response?: { _data?: { detail?: string }; status?: number } }
+      const detail = e.response?._data?.detail
+      if (e.response?.status === 409 || detail === 'email_already_exists') {
+         toast.add({ title: 'Dit e-mailadres is al in gebruik.', color: 'error' })
+      } else {
+         toast.add({ title: 'Onderzoeker kon niet worden opgeslagen', color: 'error' })
+      }
     } finally {
       creating.value = false
     }
@@ -360,8 +365,14 @@
       const next = new Set(expanded.value)
       next.delete(u.id)
       expanded.value = next
-    } catch {
-      toast.add({ title: 'Opslaan mislukt', color: 'error' })
+    } catch (err: unknown) {
+      const e = err as { response?: { _data?: { detail?: string }; status?: number } }
+      const detail = e.response?._data?.detail
+      if (e.response?.status === 409 || detail === 'email_already_exists') {
+         toast.add({ title: 'Dit e-mailadres is al in gebruik.', color: 'error' })
+      } else {
+         toast.add({ title: 'Opslaan mislukt', color: 'error' })
+      }
     } finally {
       savingId.value = null
     }
