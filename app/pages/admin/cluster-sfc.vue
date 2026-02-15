@@ -304,8 +304,9 @@
                   </div>
 
                   <div>
-                    <label class="block text-xs mb-1">Gepland voor week</label>
-                    <UInput v-model.number="visit.planned_week" type="number" min="1" max="53" />
+                    <label class="block text-xs mb-1">{{ featureDailyPlanning ? 'Geplande datum' : 'Gepland voor week' }}</label>
+                    <UInput v-if="featureDailyPlanning" v-model="visit.planned_date" type="date" />
+                    <UInput v-else v-model.number="visit.planned_week" type="number" min="1" max="53" />
                     <div class="mt-1">
                       <UCheckbox
                         v-model="visit.planning_locked"
@@ -438,6 +439,15 @@
   type StringOption = { label: string; value: string | null }
 
   const { $api } = useNuxtApp()
+  const runtimeConfig = useRuntimeConfig()
+
+  const featureDailyPlanning = computed<boolean>(() => {
+    const raw = runtimeConfig.public.featureDailyPlanning
+    if (typeof raw === 'string') {
+      return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
 
   const selectedProject = ref<Option | undefined>(undefined)
   const address = ref('')
@@ -524,6 +534,7 @@
     start_time?: number | null
     priority?: boolean
     planned_week?: number | null
+    planned_date?: string | null
     planning_locked?: boolean
     researcher_ids: number[]
     researchers: Array<{ id: number; full_name?: string | null }>
@@ -783,7 +794,7 @@
   }
 
   async function onSaveVisit(clusterId: number, visit: CompactVisit): Promise<void> {
-    if (visit.planned_week != null) {
+    if (!featureDailyPlanning.value && visit.planned_week != null) {
       const plannedWeekError = validateIsoWeekWithinDateWindow({
         week: visit.planned_week,
         fromDate: visit.from_date,
@@ -801,7 +812,16 @@
     }
 
     if (visit.planning_locked) {
-      if (visit.planned_week == null) {
+      if (featureDailyPlanning.value) {
+        if (!visit.planned_date) {
+          toast.add({
+            title: 'Fout bij opslaan bezoek',
+            description: 'Als planning is vastgezet, moet "Geplande datum" ingevuld zijn.',
+            color: 'error'
+          })
+          return
+        }
+      } else if (visit.planned_week == null) {
         toast.add({
           title: 'Fout bij opslaan bezoek',
           description: 'Als planning is vastgezet, moet "Gepland voor week" ingevuld zijn.',
@@ -843,6 +863,7 @@
       start_time_text: visit.start_time_text,
       priority: visit.priority,
       planned_week: cleanInt(visit.planned_week),
+      planned_date: visit.planned_date || null,
       planning_locked: !!visit.planning_locked,
       researcher_ids: visit.researcher_ids
       // no start_time minutes in UI

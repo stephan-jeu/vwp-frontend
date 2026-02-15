@@ -92,7 +92,12 @@
             </span>
           </div>
 
-          <div>
+          <div v-if="featureDailyPlanning">
+            <span class="font-medium">Datum:</span>
+            <span class="ml-1">{{ formatDate(visit.planned_date) || '-' }}</span>
+          </div>
+
+          <div v-else>
             <span class="font-medium">Week:</span>
             <span class="ml-1">{{ weekDisplay }}</span>
           </div>
@@ -253,6 +258,7 @@
     researchers: UserName[]
     advertized: boolean
     quote: boolean
+    planned_date: string | null
   }
 
   type BadgeColor = 'primary' | 'warning' | 'success' | 'error' | 'neutral' | 'secondary' | 'info'
@@ -285,6 +291,14 @@
 
   const testModeEnabled = computed<boolean>(() => {
     const raw = runtimeConfig.public.testModeEnabled
+    if (typeof raw === 'string') {
+      return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
+
+  const featureDailyPlanning = computed<boolean>(() => {
+    const raw = runtimeConfig.public.featureDailyPlanning
     if (typeof raw === 'string') {
       return raw === 'true' || raw === '1'
     }

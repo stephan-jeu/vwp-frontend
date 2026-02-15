@@ -20,7 +20,11 @@
       class="mt-2 pl-3 border-l-2 border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400 space-y-1"
     >
       <div class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800 font-semibold">
-        <div v-if="visit.from_date || visit.to_date" class="mb-1">
+        <div v-if="featureDailyPlanning && visit.planned_date" class="mb-1 text-primary-600 dark:text-primary-400 font-bold">
+          {{ formatDate(visit.planned_date) }}
+          <span v-if="visit.part_of_day"> · {{ visit.part_of_day }}</span>
+        </div>
+        <div v-else-if="visit.from_date || visit.to_date" class="mb-1">
           {{ formatDate(visit.from_date) }} - {{ formatDate(visit.to_date) }}
           <span v-if="visit.part_of_day"> · {{ visit.part_of_day }}</span>
         </div>
@@ -99,6 +103,7 @@
     cluster_address: string
     status: VisitStatusCode
     planned_week: number | null
+    planned_date: string | null
     provisional_week: number | null
     visit_nr: number | null
     from_date: string | null
@@ -132,6 +137,13 @@
   )
 
   const weekDisplay = computed<string>(() => {
+    if (featureDailyPlanning.value) {
+      if (props.visit.provisional_week != null) {
+        return `Voorlopige week: ${props.visit.provisional_week}`
+      }
+      return ''
+    }
+
     if (props.visit.planned_week != null) {
       return `Geplande week: ${props.visit.planned_week}`
     }
@@ -139,6 +151,16 @@
       return `Voorlopige week: ${props.visit.provisional_week}`
     }
     return 'Week: onbekend'
+  })
+
+  const runtimeConfig = useRuntimeConfig()
+
+  const featureDailyPlanning = computed<boolean>(() => {
+    const raw = runtimeConfig.public.featureDailyPlanning
+    if (typeof raw === 'string') {
+      return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
   })
 
   function statusLabel(code: VisitStatusCode): string {

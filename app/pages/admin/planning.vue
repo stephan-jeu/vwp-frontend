@@ -354,6 +354,7 @@
     required_researchers: number | null
     visit_nr: number | null
     planned_week: number | null
+    planned_date: string | null
     from_date: string | null
     to_date: string | null
     duration: number | null

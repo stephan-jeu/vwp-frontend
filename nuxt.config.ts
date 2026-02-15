@@ -13,9 +13,10 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       // NUXT_PUBLIC_API_BASE env var will override this at runtime automatically
-      apiBase: 'http://localhost:8000',
+      apiBase: 'http://127.0.0.1:8000',
       testModeEnabled: true,
-      demoMode: false
+      demoMode: false,
+      featureDailyPlanning: false // Overridden by NUXT_PUBLIC_FEATURE_DAILY_PLANNING
     }
   },
 

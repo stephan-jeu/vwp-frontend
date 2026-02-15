@@ -152,8 +152,9 @@
         </div>
 
         <div>
-          <label class="block text-xs mb-1">Gepland voor week</label>
-          <UInput v-model.number="createPlannedWeek" type="number" min="1" max="53" />
+          <label class="block text-xs mb-1">{{ featureDailyPlanning ? 'Geplande datum' : 'Gepland voor week' }}</label>
+          <UInput v-if="featureDailyPlanning" v-model="createPlannedDate" type="date" />
+          <UInput v-else v-model.number="createPlannedWeek" type="number" min="1" max="53" />
           <div class="mt-1">
             <UCheckbox v-model="createPlanningLocked" label="Planning vastzetten" class="text-xs" />
           </div>
@@ -529,8 +530,10 @@
                   </div>
 
                   <div>
-                    <label class="block text-xs mb-1">Gepland voor week</label>
+                    <label class="block text-xs mb-1">{{ featureDailyPlanning ? 'Geplande datum' : 'Gepland voor week' }}</label>
+                    <UInput v-if="featureDailyPlanning" v-model="row.original.planned_date" type="date" />
                     <UInput
+                      v-else
                       v-model.number="row.original.planned_week"
                       type="number"
                       min="1"
@@ -803,6 +806,7 @@
     required_researchers: number | null
     visit_nr: number | null
     planned_week: number | null
+    planned_date: string | null
     provisional_week: number | null
     provisional_locked: boolean
     from_date: string | null
@@ -863,6 +867,14 @@
     return Boolean(raw)
   })
 
+  const featureDailyPlanning = computed<boolean>(() => {
+    const raw = runtimeConfig.public.featureDailyPlanning
+    if (typeof raw === 'string') {
+      return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
+
   const rows = ref<VisitListRow[]>([])
   const loading = ref(false)
   const page = ref(1)
@@ -904,21 +916,45 @@
     { label: 'Geannuleerd', value: 'cancelled' }
   ] satisfies { label: string; value: VisitStatusCode }[]
 
-  const columns: TableColumn<VisitListRow>[] = [
-    { id: 'expand', header: '', enableSorting: false, cell: 'expand' },
-    // { accessorKey: 'id', header: 'ID' },
-    { accessorKey: 'project_code', header: 'Projectcode' },
-    { accessorKey: 'project_location', header: 'Locatie' },
-    { accessorKey: 'cluster_number', header: 'Cluster' },
-    { accessorKey: 'visit_nr', header: 'Bezoek nr' },
-    { id: 'status', header: 'Status' },
-    { id: 'week', header: 'Week' },
-    { id: 'functions', header: 'Functies' },
-    { id: 'species', header: 'Soorten' },
-    { id: 'period', header: 'Periode' },
-    { accessorKey: 'part_of_day', header: 'Dagdeel' },
-    { id: 'researchers', header: 'Onderzoekers' }
-  ]
+  const columns = computed<TableColumn<VisitListRow>[]>(() => {
+    const cols: TableColumn<VisitListRow>[] = [
+      { id: 'expand', header: '', enableSorting: false, cell: 'expand' },
+      // { accessorKey: 'id', header: 'ID' },
+      { accessorKey: 'project_code', header: 'Projectcode' },
+      { accessorKey: 'project_location', header: 'Locatie' },
+      { accessorKey: 'cluster_number', header: 'Cluster' },
+      { accessorKey: 'visit_nr', header: 'Bezoek nr' },
+      { id: 'status', header: 'Status' }
+    ]
+
+    if (featureDailyPlanning.value) {
+      cols.push({
+        id: 'date',
+        header: 'Datum',
+        accessorKey: 'planned_date',
+        cell: ({ row }) => {
+          if (row.original.planned_date) {
+            return formatDate(row.original.planned_date)
+          }
+          if (row.original.provisional_week) {
+            return `W${row.original.provisional_week}`
+          }
+          return '-'
+        }
+      })
+    } else {
+      cols.push({ id: 'week', header: 'Week' })
+    }
+
+    cols.push(
+      { id: 'functions', header: 'Functies' },
+      { id: 'species', header: 'Soorten' },
+      { id: 'period', header: 'Periode' },
+      { accessorKey: 'part_of_day', header: 'Dagdeel' },
+      { id: 'researchers', header: 'Onderzoekers' }
+    )
+    return cols
+  })
 
   const maxPage = computed(() => {
     if (total.value === 0) return 1
@@ -1226,6 +1262,7 @@
   const createResearcherIds = ref<number[]>([])
   const createFromDate = ref('')
   const createToDate = ref('')
+  const createPlannedDate = ref('')
   const createPlannedWeek = ref<number | null | ''>(null)
   const createProvisionalWeek = ref<number | null | ''>(null)
   const createPlanningLocked = ref(false)
@@ -1270,6 +1307,7 @@
     createResearcherIds.value = []
     createFromDate.value = ''
     createToDate.value = ''
+    createPlannedDate.value = ''
     createPlannedWeek.value = null
     createProvisionalWeek.value = null
     createPlanningLocked.value = false
@@ -1314,7 +1352,7 @@
     const provisionalWeek =
       createProvisionalWeek.value === '' ? null : createProvisionalWeek.value
 
-    if (plannedWeek != null) {
+    if (!featureDailyPlanning.value && plannedWeek != null) {
       const plannedWeekError = validateIsoWeekWithinDateWindow({
         week: plannedWeek,
         fromDate: createFromDate.value || null,
@@ -1358,7 +1396,16 @@
     }
 
     if (createPlanningLocked.value) {
-      if (plannedWeek == null) {
+      if (featureDailyPlanning.value) {
+        if (!createPlannedDate.value) {
+          toast.add({
+            title: 'Bezoek kon niet worden toegevoegd',
+            description: 'Als planning is vastgezet, moet "Geplande datum" ingevuld zijn.',
+            color: 'error'
+          })
+          return
+        }
+      } else if (plannedWeek == null) {
         toast.add({
           title: 'Bezoek kon niet worden toegevoegd',
           description: 'Als planning is vastgezet, moet "Gepland voor week" ingevuld zijn.',
@@ -1386,6 +1433,7 @@
         required_researchers: createRequiredResearchers.value,
         visit_nr: createVisitNr.value,
         planned_week: plannedWeek,
+        planned_date: createPlannedDate.value || null,
         planning_locked: createPlanningLocked.value,
         provisional_week: provisionalWeek,
         provisional_locked: createProvisionalLocked.value,
@@ -1434,7 +1482,7 @@
     const rawPlannedWeek = row.planned_week as unknown
     const plannedWeek =
       rawPlannedWeek === '' || rawPlannedWeek == null ? null : (rawPlannedWeek as number)
-    if (plannedWeek != null) {
+    if (!featureDailyPlanning.value && plannedWeek != null) {
       const plannedWeekError = validateIsoWeekWithinDateWindow({
         week: plannedWeek,
         fromDate: row.from_date,
@@ -1481,7 +1529,16 @@
     }
 
     if (row.planning_locked) {
-      if (plannedWeek == null) {
+      if (featureDailyPlanning.value) {
+        if (!row.planned_date) {
+          toast.add({
+            title: 'Opslaan mislukt',
+            description: 'Als planning is vastgezet, moet "Geplande datum" ingevuld zijn.',
+            color: 'error'
+          })
+          return
+        }
+      } else if (plannedWeek == null) {
         toast.add({
           title: 'Opslaan mislukt',
           description: 'Als planning is vastgezet, moet "Gepland voor week" ingevuld zijn.',
@@ -1506,6 +1563,7 @@
         required_researchers: row.required_researchers,
         visit_nr: row.visit_nr,
         planned_week: plannedWeek,
+        planned_date: row.planned_date || null,
         planning_locked: row.planning_locked,
         provisional_week: provisionalWeek,
         provisional_locked: row.provisional_locked,
@@ -1555,7 +1613,7 @@
           ? null
           : (rawProvisionalWeek as number)
 
-      if (plannedWeek != null) {
+      if (!featureDailyPlanning.value && plannedWeek != null) {
         const plannedWeekError = validateIsoWeekWithinDateWindow({
           week: plannedWeek,
           fromDate: row.from_date,
@@ -1603,6 +1661,7 @@
         required_researchers: row.required_researchers,
         visit_nr: row.visit_nr,
         planned_week: plannedWeek,
+        planned_date: row.planned_date || null,
         planning_locked: row.planning_locked,
         provisional_week: provisionalWeek,
         provisional_locked: row.provisional_locked,
