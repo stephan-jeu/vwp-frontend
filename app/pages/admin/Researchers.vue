@@ -155,6 +155,12 @@
                 </template>
               </UModal>
             </div>
+
+            <!-- Availability Patterns (Strict Availability Mode) -->
+            <div v-if="featureStrictAvailability" class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div class="font-semibold mb-2">Beschikbaarheidsperiodes</div>
+                <AvailabilityPatternManager :user-id="u.id" />
+            </div>
           </div>
         </div>
       </div>
@@ -208,6 +214,15 @@
   const toDelete = ref<User | null>(null)
   const showCreate = ref(false)
   const toast = useToast()
+  
+  const runtimeConfig = useRuntimeConfig()
+  const featureStrictAvailability = computed<boolean>(() => {
+    const raw = runtimeConfig.public.featureStrictAvailability
+    if (typeof raw === 'string') {
+        return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
 
   const contractOptions = [
     { label: 'Intern', value: 'Intern' },

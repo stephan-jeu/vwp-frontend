@@ -135,36 +135,45 @@
 
       <template #availability>
         <UCard>
-          <div v-if="avPending" class="text-sm text-gray-700 dark:text-gray-300">
-            Beschikbaarheid laden…
+          <div v-if="featureStrictAvailability" class="space-y-4">
+            <h3 class="font-semibold text-lg">Mijn beschikbaarheidspatronen</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              Beheer hier je beschikbaarheidsperioden.
+            </p>
+            <AvailabilityPatternManager v-if="identity?.id" :user-id="identity.id" />
           </div>
-          <div v-else-if="avError" class="text-sm text-red-500">
-            Kon beschikbaarheid niet laden.
-          </div>
-          <div v-else class="flex flex-col gap-4">
-            <div
-              v-if="availabilityList.length === 0"
-              class="text-sm text-gray-700 dark:text-gray-300"
-            >
-              Geen beschikbaarheid opgegeven.
+          <div v-else>
+            <div v-if="avPending" class="text-sm text-gray-700 dark:text-gray-300">
+              Beschikbaarheid laden…
             </div>
-            <div v-else class="space-y-4">
+            <div v-else-if="avError" class="text-sm text-red-500">
+              Kon beschikbaarheid niet laden.
+            </div>
+            <div v-else class="flex flex-col gap-4">
               <div
-                v-for="item in availabilityList"
-                :key="item.week"
-                class="border-b border-gray-100 dark:border-gray-800 last:border-0 pb-4 last:pb-0"
+                v-if="availabilityList.length === 0"
+                class="text-sm text-gray-700 dark:text-gray-300"
               >
-                <div class="font-semibold text-gray-900 dark:text-white mb-2">
-                  {{ formatAvWeekLabel(item.week) }}
-                </div>
-                <div class="flex flex-wrap gap-4 text-sm">
-                  <div
-                    v-for="part in item.parts"
-                    :key="part.label"
-                    class="flex items-center gap-2"
-                  >
-                    <span class="text-gray-600 dark:text-gray-400">{{ part.label }}:</span>
-                    <span class="font-medium text-gray-900 dark:text-white">{{ part.value }}</span>
+                Geen beschikbaarheid opgegeven.
+              </div>
+              <div v-else class="space-y-4">
+                <div
+                  v-for="item in availabilityList"
+                  :key="item.week"
+                  class="border-b border-gray-100 dark:border-gray-800 last:border-0 pb-4 last:pb-0"
+                >
+                  <div class="font-semibold text-gray-900 dark:text-white mb-2">
+                    {{ formatAvWeekLabel(item.week) }}
+                  </div>
+                  <div class="flex flex-wrap gap-4 text-sm">
+                    <div
+                      v-for="part in item.parts"
+                      :key="part.label"
+                      class="flex items-center gap-2"
+                    >
+                      <span class="text-gray-600 dark:text-gray-400">{{ part.label }}:</span>
+                      <span class="font-medium text-gray-900 dark:text-white">{{ part.value }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -258,6 +267,14 @@
     const raw = runtimeConfig.public.testModeEnabled
     if (typeof raw === 'string') {
       return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
+
+  const featureStrictAvailability = computed<boolean>(() => {
+    const raw = runtimeConfig.public.featureStrictAvailability
+    if (typeof raw === 'string') {
+        return raw === 'true' || raw === '1'
     }
     return Boolean(raw)
   })

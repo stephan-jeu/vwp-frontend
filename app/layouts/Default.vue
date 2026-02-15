@@ -209,9 +209,13 @@
     }
 
     if (isAdmin.value) {
+      const strictAvailability = runtimeConfig.public.featureStrictAvailability
+      
       const clonedAdmin: NavigationMenuItem = {
         ...adminGroup,
-        children: adminGroup.children?.map((c) => ({ ...c }))
+        children: adminGroup.children
+          ?.filter(c => !(strictAvailability && c.label === 'Beschikbaarheid'))
+          .map((c) => ({ ...c }))
       }
       items.push(clonedAdmin)
     }

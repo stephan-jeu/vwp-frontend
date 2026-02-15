@@ -16,7 +16,8 @@ export default defineNuxtConfig({
       apiBase: 'http://127.0.0.1:8000',
       testModeEnabled: true,
       demoMode: false,
-      featureDailyPlanning: false // Overridden by NUXT_PUBLIC_FEATURE_DAILY_PLANNING
+      featureDailyPlanning: false, // Overridden by NUXT_PUBLIC_FEATURE_DAILY_PLANNING
+      featureStrictAvailability: false, // Overridden by NUXT_PUBLIC_FEATURE_STRICT_AVAILABILITY
     }
   },
 
