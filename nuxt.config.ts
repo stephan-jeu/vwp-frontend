@@ -18,6 +18,7 @@ export default defineNuxtConfig({
       demoMode: false,
       featureDailyPlanning: false, // Overridden by NUXT_PUBLIC_FEATURE_DAILY_PLANNING
       featureStrictAvailability: false, // Overridden by NUXT_PUBLIC_FEATURE_STRICT_AVAILABILITY
+      featureLanguageSupport: false, // Overridden by NUXT_PUBLIC_FEATURE_LANGUAGE_SUPPORT
     }
   },
 

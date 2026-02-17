@@ -165,6 +165,8 @@
 
   const simulateWithQuotes = ref(false)
 
+  const viewMode = ref<ViewMode>('week')
+
   // Force table re-render when structure changes significantly to avoid patch errors
   const tableKey = computed(() => {
      const modeStr = viewMode.value
@@ -212,6 +214,7 @@
     cluster_address: string
     status: VisitStatusCode
     planned_week: number | null
+    planned_date: string | null
     provisional_week: number | null
     visit_nr: number | null
     from_date: string | null
@@ -415,8 +418,6 @@
   const notPlannableVisitsLoading = ref(false)
   const notPlannableVisits = ref<VisitCardRow[]>([])
 
-  const viewMode = ref<ViewMode>('week')
-
 
 
   const hasData = computed(() => {
@@ -482,7 +483,7 @@
     if (!ts) return ''
 
     const d = new Date(ts)
-    if (isNaN(d.getTime())) return ''
+    if (Number.isNaN(d.getTime())) return ''
 
     const day = d.getDate()
     const month = d.getMonth() + 1
@@ -514,7 +515,7 @@
 
         // Filter weeks to only those that have data in at least one row
         const weeks = wv.weeks ?? []
-        const relevantWeeks = weeks.filter(week => {
+        const relevantWeeks = weeks.filter((week) => {
              // Check all rows for this week
              for (const row of Object.values(wv.rows)) {
                  const cell = row[week]
@@ -552,7 +553,7 @@
       let label = wk
 
       if (viewMode.value === 'deadline') {
-           if (wk === "No Deadline") label = "Geen deadline"
+           if (wk === 'No Deadline') label = 'Geen deadline'
            else {
                const [y, m, d] = wk.split('-')
                if (y && m && d && d.length === 2 && m.length === 2) {

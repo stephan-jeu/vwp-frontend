@@ -142,7 +142,7 @@
                           </div>
                           <div class="flex items-center gap-2 mt-1">
                              <span class="font-semibold">Onderzoeker(s):</span>
-                             <span>{{ tv.visit.researchers.map((u: any) => u.full_name).join(', ') || 'Nog niet toegewezen' }}</span>
+                             <span>{{ tv.visit.researchers.map((u) => u.full_name).filter(Boolean).join(', ') || 'Nog niet toegewezen' }}</span>
                           </div>
                       </div>
                   </div>
@@ -391,9 +391,10 @@
     }
 
     if (action === 'cluster_deleted') {
-      const clusterNumber = (details.cluster_number as number | undefined) ?? null
+      const deletedClusterNumber = (details.cluster_number as number | undefined) ?? null
       const projectCode = (details.project_code as string | undefined) ?? 'onbekend project'
-      const clusterLabel = clusterNumber != null ? `cluster ${clusterNumber}` : 'een cluster'
+      const clusterLabel =
+        deletedClusterNumber != null ? `cluster ${deletedClusterNumber}` : 'een cluster'
       return `${actor} heeft ${clusterLabel} van project ${projectCode} verwijderd op ${when}`
     }
 
@@ -534,6 +535,7 @@
     cluster_address: string
     status: VisitStatusCode
     planned_week: number | null
+    planned_date: string | null
     provisional_week: number | null
     visit_nr: number | null
     from_date: string | null

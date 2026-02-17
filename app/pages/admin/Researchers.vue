@@ -25,6 +25,13 @@
         />
         <UInput v-model="createForm.city" placeholder="Plaats" />
         <UInput v-model="createForm.address" placeholder="Straatnaam" />
+        <USelect
+          v-if="featureLanguageSupport"
+          v-model="createForm.language"
+          :items="languageOptions"
+          label="Taal"
+          placeholder="Kies taal..."
+        />
       </div>
       <div class="mt-4"><UCheckbox v-model="createForm.admin" label="Admin" /></div>
       <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -95,6 +102,13 @@
 
               <UInput v-model="u.city" placeholder="Stad" />
               <UInput v-model="u.address" placeholder="Straat (optioneel)" />
+              <USelect
+                v-if="featureLanguageSupport"
+                v-model="u.language"
+                :items="languageOptions"
+                label="Taal"
+                placeholder="Kies taal..."
+              />
             </div>
             <div><UCheckbox v-model="u.admin" label="Admin" /></div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -179,6 +193,7 @@
     city: string | null
     address: string | null
     contract: 'Intern' | 'Flex' | 'ZZP' | undefined
+    language: 'NL' | 'EN'
     experience_bat: 'Junior' | 'Medior' | 'Senior' | undefined
     smp_huismus: boolean
     smp_vleermuis: boolean
@@ -223,6 +238,13 @@
     }
     return Boolean(raw)
   })
+  const featureLanguageSupport = computed<boolean>(() => {
+    const raw = runtimeConfig.public.featureLanguageSupport
+    if (typeof raw === 'string') {
+        return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
 
   const contractOptions = [
     { label: 'Intern', value: 'Intern' },
@@ -234,6 +256,10 @@
     { label: 'Medior', value: 'Medior' },
     { label: 'Senior', value: 'Senior' }
   ]
+  const languageOptions = [
+    { label: 'Nederlands', value: 'NL' },
+    { label: 'Engels', value: 'EN' }
+  ]
 
   const createForm = reactive<UserCreate>({
     email: '',
@@ -241,6 +267,7 @@
     admin: false,
     city: '',
     address: '',
+    language: 'NL',
     contract: undefined,
     experience_bat: undefined,
     smp_huismus: false,
@@ -328,6 +355,7 @@
         admin: false,
         city: '',
         address: '',
+        language: 'NL',
         contract: undefined,
         experience_bat: undefined,
         smp_huismus: false,
