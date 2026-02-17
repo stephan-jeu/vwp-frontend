@@ -1,6 +1,9 @@
 <template>
   <UCard
-    class="cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all dark:hover:ring-primary-400"
+    :class="[
+      'cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all dark:hover:ring-primary-400',
+      selected ? 'ring-2 ring-primary-500 dark:ring-primary-400 bg-primary-50 dark:bg-primary-900/20' : ''
+    ]"
     @click="emit('open')"
   >
     <div class="flex items-start justify-between mb-2">
@@ -14,6 +17,12 @@
           </span>
         </div>
       </div>
+      <UCheckbox
+        v-if="selectable"
+        :model-value="selected"
+        @click.stop
+        @update:model-value="emit('update:selected', $event)"
+      />
     </div>
 
     <div
@@ -122,9 +131,22 @@
     priority: boolean
   }
 
-  const props = defineProps<{ visit: VisitPreview }>()
+  const props = withDefaults(
+    defineProps<{
+      visit: VisitPreview
+      selectable?: boolean
+      selected?: boolean
+    }>(),
+    {
+      selectable: false,
+      selected: false
+    }
+  )
 
-  const emit = defineEmits<{ open: [] }>()
+  const emit = defineEmits<{
+    open: []
+    'update:selected': [value: boolean]
+  }>()
 
   const hasFlags = computed<boolean>(
     () =>

@@ -186,7 +186,7 @@
     <VisitStatusModal
       v-if="visit"
       v-model:open="statusModalOpen"
-      :visit="visit"
+      :visits="[visit]"
       :is-admin="isAdmin"
       :researcher-options="adminPlanningResearcherOptions"
       @saved="refresh"
@@ -389,11 +389,7 @@
 
   const canAdminEditStatus = computed(() => {
     if (!visit.value) return false
-    return (
-      ['open', 'planned', 'missed', 'rejected', 'executed_with_deviation', 'not_executed'].includes(
-        visit.value.status
-      ) && isAdmin.value
-    )
+    return isAdmin.value
   })
 
   const canEditStatus = computed(() => {

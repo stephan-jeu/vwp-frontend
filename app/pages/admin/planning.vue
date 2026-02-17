@@ -133,7 +133,10 @@
                       v-for="visit in completedVisits"
                       :key="visit.id"
                       :visit="visit"
+                      selectable
+                      :selected="selectedVisitIds.has(visit.id)"
                       @open="goToDetail(visit.id)"
+                      @update:selected="toggleSelection(visit.id, $event)"
                     />
                   </div>
                 </div>
@@ -149,7 +152,10 @@
                       v-for="visit in plannedVisits"
                       :key="visit.id"
                       :visit="visit"
+                      selectable
+                      :selected="selectedVisitIds.has(visit.id)"
                       @open="goToDetail(visit.id)"
+                      @update:selected="toggleSelection(visit.id, $event)"
                     />
                   </div>
                 </div>
@@ -231,7 +237,10 @@
                     <div v-for="visit in inboxVisits" :key="visit.id" class="space-y-2">
                       <VisitPreviewCard
                         :visit="visit"
+                        selectable
+                        :selected="selectedVisitIds.has(visit.id)"
                         @open="goToDetail(visit.id)"
+                        @update:selected="toggleSelection(visit.id, $event)"
                       />
                     </div>
                     <div
@@ -289,12 +298,49 @@
           </template>
         </UCard>
       </UModal>
+
+      <!-- Bulk Status Modal -->
+      <VisitStatusModal
+        :visits="selectedVisitsData"
+        :open="bulkStatusModalOpen"
+        :is-admin="true"
+        @update:open="bulkStatusModalOpen = $event"
+        @saved="onBulkSaved"
+      />
+
+      <!-- Floating Action Bar -->
+      <Teleport to="body">
+        <Transition
+          enter-active-class="transition duration-200 ease-out"
+          enter-from-class="translate-y-full opacity-0"
+          enter-to-class="translate-y-0 opacity-100"
+          leave-active-class="transition duration-150 ease-in"
+          leave-from-class="translate-y-0 opacity-100"
+          leave-to-class="translate-y-full opacity-0"
+        >
+          <div
+            v-if="selectedVisitIds.size > 0"
+            class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-4 py-2.5"
+          >
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
+              {{ selectedVisitIds.size }} bezoek(en) geselecteerd
+            </span>
+            <UButton size="sm" icon="i-lucide-shield-check" @click="openBulkStatusModal">
+              Status aanpassen
+            </UButton>
+            <UButton size="sm" variant="ghost" color="neutral" @click="selectedVisitIds.clear()">
+              Deselecteer
+            </UButton>
+          </div>
+        </Transition>
+      </Teleport>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
   import VisitPreviewCard from '../../components/VisitPreviewCard.vue'
+  import VisitStatusModal from '../../components/VisitStatusModal.vue'
   import { storeToRefs } from 'pinia'
   import { useTestModeStore } from '~~/stores/testMode'
 
@@ -1040,6 +1086,41 @@
   )
 
   // Removed onMounted here because we do it after loading weeks
+
+  // --- Bulk Selection ---
+  const selectedVisitIds = reactive(new Set<number>())
+  const bulkStatusModalOpen = ref(false)
+
+  function toggleSelection(id: number, selected: boolean) {
+    if (selected) {
+      selectedVisitIds.add(id)
+    } else {
+      selectedVisitIds.delete(id)
+    }
+  }
+
+  const selectedVisitsData = computed(() => {
+    return visits.value
+      .filter((v) => selectedVisitIds.has(v.id))
+      .map((v) => ({
+        id: v.id,
+        status: v.status,
+        from_date: v.from_date,
+        to_date: v.to_date,
+        planned_week: v.planned_week,
+        planned_date: v.planned_date,
+        researchers: v.researchers
+      }))
+  })
+
+  function openBulkStatusModal() {
+    bulkStatusModalOpen.value = true
+  }
+
+  async function onBulkSaved() {
+    selectedVisitIds.clear()
+    await loadVisits()
+  }
 
   function goToDetail(id: number): void {
     const q: Record<string, string | number> = { back: 'planning' }

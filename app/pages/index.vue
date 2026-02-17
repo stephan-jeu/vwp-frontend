@@ -44,7 +44,10 @@
                    v-for="visit in pendingVisitsPreview"
                    :key="visit.id"
                    :visit="visit"
+                   selectable
+                   :selected="selectedVisitIds.has(visit.id)"
                    @open="navigateTo(`/visits/${visit.id}`)"
+                   @update:selected="toggleSelection(visit.id, $event)"
                  />
 
                  <!-- Pagination -->
@@ -239,6 +242,35 @@
         </UCard>
       </div>
     </div>
+
+    <!-- Bulk status modal -->
+    <VisitStatusModal
+      v-model:open="bulkStatusModalOpen"
+      :visits="selectedVisitsData"
+      :is-admin="true"
+      @saved="onBulkSaved"
+    />
+
+    <!-- Floating action bar for bulk selection -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="translate-y-full opacity-0"
+        enter-to-class="translate-y-0 opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="translate-y-0 opacity-100"
+        leave-to-class="translate-y-full opacity-0"
+      >
+        <div
+          v-if="selectedVisitIds.size > 0"
+          class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-white dark:bg-gray-800 shadow-lg rounded-lg px-4 py-2 flex items-center gap-3 border border-gray-200 dark:border-gray-700"
+        >
+          <span class="text-sm font-medium">{{ selectedVisitIds.size }} bezoek(en) geselecteerd</span>
+          <UButton size="sm" @click="bulkStatusModalOpen = true">Status aanpassen</UButton>
+          <UButton size="sm" variant="ghost" color="neutral" @click="selectedVisitIds.clear()">Deselecteer</UButton>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -247,6 +279,7 @@
   import { useAuthStore } from '~~/stores/auth'
   import { useTestModeStore } from '~~/stores/testMode'
   import VisitPreviewCard from '../components/VisitPreviewCard.vue'
+  import VisitStatusModal from '../components/VisitStatusModal.vue'
 
   definePageMeta({ layout: 'default' })
 
@@ -681,6 +714,40 @@
   function onPendingNext(): void {
     if (pendingPage.value >= pendingMaxPage.value) return
     pendingPage.value += 1
+  }
+
+  // --- Bulk selection ---
+
+  const selectedVisitIds = reactive(new Set<number>())
+  const bulkStatusModalOpen = ref(false)
+
+  function toggleSelection(id: number, selected: boolean) {
+    if (selected) {
+      selectedVisitIds.add(id)
+    } else {
+      selectedVisitIds.delete(id)
+    }
+  }
+
+  const selectedVisitsData = computed(() => {
+    return pendingVisits.value
+      .filter((v) => selectedVisitIds.has(v.id))
+      .map((v) => ({
+        id: v.id,
+        status: v.status,
+        from_date: v.from_date,
+        to_date: v.to_date,
+        planned_week: v.planned_week,
+        planned_date: v.planned_date,
+        researchers: v.researchers
+      }))
+  })
+
+  async function onBulkSaved() {
+    selectedVisitIds.clear()
+    await refreshNuxtData('admin-dashboard-pending-visits')
+    await refreshNuxtData('admin-dashboard-visits')
+    await refreshNuxtData('admin-activity')
   }
 
   function statusLabel(code: VisitStatusCode): string {

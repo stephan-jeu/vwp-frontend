@@ -262,6 +262,14 @@
           :ui="{ tr: 'data-[expanded=true]:bg-elevated/50' }"
           class="flex-1"
         >
+          <template #select-cell="{ row }">
+            <UCheckbox
+              :model-value="bulkSelectedIds.has(row.original.id)"
+              @click.stop
+              @update:model-value="toggleBulkSelection(row.original.id, $event)"
+            />
+          </template>
+
           <template #status-cell="{ row }">
             <UBadge
               :label="statusLabel(row.original.status)"
@@ -667,7 +675,6 @@
                     Details
                   </UButton>
                   <UButton
-                    v-if="!['overdue', 'executed', 'approved'].includes(row.original.status)"
                     size="xs"
                     variant="soft"
                     icon="i-lucide-calendar-clock"
@@ -731,11 +738,49 @@
     <VisitStatusModal
       v-if="selectedVisitForStatus && isAdmin"
       v-model:open="statusModalOpen"
-      :visit="selectedVisitForStatus"
+      :visits="[selectedVisitForStatus]"
       :is-admin="isAdmin"
       :researcher-options="researcherOptions"
       @saved="loadVisits"
     />
+
+    <!-- Bulk Status Modal -->
+    <VisitStatusModal
+      v-if="isAdmin"
+      :visits="bulkSelectedVisitsData"
+      :open="bulkStatusModalOpen"
+      :is-admin="true"
+      :researcher-options="researcherOptions"
+      @update:open="bulkStatusModalOpen = $event"
+      @saved="onBulkSaved"
+    />
+
+    <!-- Floating Action Bar for Bulk Selection -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="translate-y-full opacity-0"
+        enter-to-class="translate-y-0 opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="translate-y-0 opacity-100"
+        leave-to-class="translate-y-full opacity-0"
+      >
+        <div
+          v-if="bulkSelectedIds.size > 0"
+          class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-4 py-2.5"
+        >
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
+            {{ bulkSelectedIds.size }} bezoek(en) geselecteerd
+          </span>
+          <UButton size="sm" icon="i-lucide-shield-check" @click="bulkStatusModalOpen = true">
+            Status aanpassen
+          </UButton>
+          <UButton size="sm" variant="ghost" color="neutral" @click="bulkSelectedIds.clear()">
+            Deselecteer
+          </UButton>
+        </div>
+      </Transition>
+    </Teleport>
 
     <UModal v-model:open="deleteModalOpen" title="Bezoek verwijderen">
       <template #content>
@@ -891,6 +936,37 @@
   const statusModalOpen = ref(false)
   const selectedVisitForStatus = ref<VisitListRow | null>(null)
 
+  // --- Bulk Selection ---
+  const bulkSelectedIds = reactive(new Set<number>())
+  const bulkStatusModalOpen = ref(false)
+
+  function toggleBulkSelection(id: number, selected: boolean) {
+    if (selected) {
+      bulkSelectedIds.add(id)
+    } else {
+      bulkSelectedIds.delete(id)
+    }
+  }
+
+  const bulkSelectedVisitsData = computed(() => {
+    return rows.value
+      .filter((v) => bulkSelectedIds.has(v.id))
+      .map((v) => ({
+        id: v.id,
+        status: v.status,
+        from_date: v.from_date,
+        to_date: v.to_date,
+        planned_week: v.planned_week,
+        planned_date: v.planned_date,
+        researchers: v.researchers
+      }))
+  })
+
+  async function onBulkSaved() {
+    bulkSelectedIds.clear()
+    await loadVisits()
+  }
+
   type VisitStatusOption = { label: string; value: VisitStatusCode }
 
   const selectedStatuses = ref<VisitStatusOption[]>([])
@@ -919,13 +995,18 @@
   const columns = computed<TableColumn<VisitListRow>[]>(() => {
     const cols: TableColumn<VisitListRow>[] = [
       { id: 'expand', header: '', enableSorting: false, cell: 'expand' },
+    ]
+    if (isAdmin.value) {
+      cols.push({ id: 'select', header: '', enableSorting: false })
+    }
+    cols.push(
       // { accessorKey: 'id', header: 'ID' },
       { accessorKey: 'project_code', header: 'Projectcode' },
       { accessorKey: 'project_location', header: 'Locatie' },
       { accessorKey: 'cluster_number', header: 'Cluster' },
       { accessorKey: 'visit_nr', header: 'Bezoek nr' },
       { id: 'status', header: 'Status' }
-    ]
+    )
 
     if (featureDailyPlanning.value) {
       cols.push({

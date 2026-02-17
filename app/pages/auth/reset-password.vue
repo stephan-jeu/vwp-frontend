@@ -13,8 +13,8 @@ const error = ref('')
 const success = ref('')
 
 const title = computed(() => type === 'activation' ? 'Account activeren' : 'Wachtwoord herstellen')
-const description = computed(() => type === 'activation' 
-  ? 'Stel een wachtwoord in om je account te activeren.' 
+const description = computed(() => type === 'activation'
+  ? 'Stel een wachtwoord in om je account te activeren.'
   : 'Voer een nieuw wachtwoord in.')
 
 async function handleSubmit() {
@@ -29,7 +29,7 @@ async function handleSubmit() {
 
   loading.value = true
   error.value = ''
-  
+
   const runtime = useRuntimeConfig()
   const backendApiBase = String(runtime.public.apiBase ?? '')
 
@@ -81,11 +81,11 @@ async function handleSubmit() {
 
       <form v-if="!success" class="space-y-4" @submit.prevent="handleSubmit">
         <UFormGroup label="Nieuw wachtwoord" name="password">
-          <UInput v-model="password" type="password" placeholder="••••••••" autofocus />
+          <UInput v-model="password" type="password" placeholder="Wachtwoord" autofocus class="w-full" />
         </UFormGroup>
-        
+
         <UFormGroup label="Bevestig wachtwoord" name="confirmPassword">
-          <UInput v-model="confirmPassword" type="password" placeholder="••••••••" />
+          <UInput v-model="confirmPassword" type="password" placeholder="Herhaal wachtwoord" class="w-full my-4"/>
         </UFormGroup>
 
         <UButton type="submit" block :loading="loading">Wachtwoord instellen</UButton>

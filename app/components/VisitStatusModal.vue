@@ -7,6 +7,10 @@
   >
     <template #body>
       <div class="space-y-4 text-sm">
+        <div v-if="isBulk" class="text-xs text-gray-500 font-medium">
+          {{ visits.length }} bezoek(en) geselecteerd
+        </div>
+
         <div>
           <label class="block text-xs mb-1">Nieuwe status</label>
           <USelectMenu
@@ -18,11 +22,12 @@
           />
         </div>
 
-        <!-- Planned Mode (Admin Only) -->
+        <!-- Planned Mode (Admin Only, Single Visit) -->
         <div v-if="localStatus === 'planned'" class="grid grid-cols-1 gap-3">
           <div>
-            <label class="block text-xs mb-1">Weeknummer</label>
-            <UInput v-model.number="plannedWeek" type="number" min="1" max="53" />
+            <label class="block text-xs mb-1">{{ featureDailyPlanning ? 'Geplande datum' : 'Weeknummer' }}</label>
+            <UInput v-if="featureDailyPlanning" v-model="plannedDate" type="date" />
+            <UInput v-else v-model.number="plannedWeek" type="number" min="1" max="53" />
           </div>
           <div>
             <label class="block text-xs mb-1">Onderzoekers</label>
@@ -63,17 +68,12 @@
 
         <!-- Not Executed Mode -->
         <div v-else-if="localStatus === 'not_executed'" class="space-y-2">
-          <!-- Some logic might require a date even for not_executed, but usually just reason. 
-               The original code sent 'date': todayIso() for not_executed. 
-               Let's keep it simple for now or expose date if needed. 
-               The original code hardcoded `todayIso()` for not_executed. 
-          -->
           <div>
              <label class="block text-xs mb-1">Reden</label>
              <UTextarea v-model="notExecutedReason" :rows="3" class="w-full" />
           </div>
         </div>
-        
+
         <!-- Cancelled Mode (Admin Only) -->
         <div v-else-if="localStatus === 'cancelled'" class="space-y-2">
            <label class="block text-xs mb-1">Reden annuleren</label>
@@ -86,11 +86,15 @@
            <UTextarea v-model="comment" :rows="3" class="w-full" />
         </div>
 
-        <p class="text-xs text-gray-500 mt-2">
-           <span v-if="visit.from_date && visit.to_date">
-             Geplande periode: {{ formatDate(visit.from_date) }} - {{ formatDate(visit.to_date) }}
+        <p v-if="!isBulk && singleVisit" class="text-xs text-gray-500 mt-2">
+           <span v-if="singleVisit.from_date && singleVisit.to_date">
+             Geplande periode: {{ formatDate(singleVisit.from_date) }} - {{ formatDate(singleVisit.to_date) }}
            </span>
         </p>
+
+        <div v-if="bulkProgress" class="text-xs text-gray-500 mt-2">
+          Bezig: {{ bulkProgress.done }}/{{ bulkProgress.total }}...
+        </div>
       </div>
     </template>
 
@@ -105,8 +109,6 @@
 import { useTestModeStore } from '~~/stores/testMode'
 import { storeToRefs } from 'pinia'
 
-// Re-defining basic types if not imported, 
-// though typically you might have them in a shared types file.
 type VisitStatusCode =
   | 'created'
   | 'open'
@@ -126,6 +128,7 @@ type VisitDetail = {
   from_date: string | null
   to_date: string | null
   planned_week: number | null
+  planned_date: string | null
   researchers: { id: number; full_name: string | null }[]
 }
 
@@ -133,11 +136,10 @@ type StatusOption = { label: string; value: VisitStatusCode }
 type ResearcherOption = { label: string; value: number | null }
 
 const props = defineProps<{
-  visit: VisitDetail
+  visits: VisitDetail[]
   open: boolean
   isAdmin?: boolean
-  // Optional, for admin planning features
-  researcherOptions?: ResearcherOption[] 
+  researcherOptions?: ResearcherOption[]
 }>()
 
 const emit = defineEmits<{
@@ -151,6 +153,11 @@ const toast = useToast()
 const testModeStore = useTestModeStore()
 const { simulatedDate } = storeToRefs(testModeStore)
 const runtimeConfig = useRuntimeConfig()
+
+// -- Computed helpers --
+
+const isBulk = computed(() => props.visits.length > 1)
+const singleVisit = computed(() => props.visits.length === 1 ? props.visits[0] : null)
 
 // -- Helpers --
 
@@ -184,32 +191,41 @@ function formatDate(d: string | null): string {
   return new Intl.DateTimeFormat('nl-NL', { day: '2-digit', month: 'short' }).format(dt)
 }
 
+const featureDailyPlanning = computed<boolean>(() => {
+  const raw = runtimeConfig.public.featureDailyPlanning
+  if (typeof raw === 'string') {
+    return raw === 'true' || raw === '1'
+  }
+  return Boolean(raw)
+})
+
 // -- State --
 
 const localStatus = ref<VisitStatusCode>('open')
-// Execution fields
 const executionDate = ref('')
 const deviationReason = ref('')
 const notExecutedReason = ref('')
-// Admin planning fields
 const plannedWeek = ref<number | null>(null)
+const plannedDate = ref<string>('')
 const selectedResearcherIds = ref<number[]>([])
 const comment = ref('')
 
 const submitting = ref(false)
 const dateError = ref<string | null>(null)
+const bulkProgress = ref<{ done: number; total: number } | null>(null)
 
 // -- Computed --
 
 const statusOptions = computed<StatusOption[]>(() => {
   const opts: StatusOption[] = []
-  
+
   if (props.isAdmin) {
     opts.push({ label: 'Open', value: 'open' })
-    opts.push({ label: 'Gepland', value: 'planned' })
+    if (!isBulk.value) {
+      opts.push({ label: 'Gepland', value: 'planned' })
+    }
   }
-  
-  // Researcher accessible statuses (also admin accessible)
+
   opts.push({ label: 'Uitgevoerd', value: 'executed' })
   opts.push({ label: 'Afwijking protocol', value: 'executed_with_deviation' })
   opts.push({ label: 'Niet uitgevoerd', value: 'not_executed' })
@@ -221,10 +237,9 @@ const statusOptions = computed<StatusOption[]>(() => {
   return opts
 })
 
-const selectedStatusOption = computed(() => 
-  statusOptions.value.find((o) => o.value === localStatus.value) ?? 
-  // Fallback to avoid empty select if current status isn't in options
-  { label: localStatus.value, value: localStatus.value } 
+const selectedStatusOption = computed(() =>
+  statusOptions.value.find((o) => o.value === localStatus.value) ??
+  { label: localStatus.value, value: localStatus.value }
 )
 
 const selectedResearcherOptions = computed<ResearcherOption[]>(() => {
@@ -244,43 +259,39 @@ watch(() => props.open, (isOpen) => {
 })
 
 watch(executionDate, (newVal) => {
-  validateDate(newVal)
+  if (!isBulk.value) {
+    validateDate(newVal)
+  }
 })
 
 // -- Methods --
 
 function resetState() {
-  // Determine initial status mode.
-  // If we are admin, we start with the visit's current status if it's one we support editing,
-  // otherwise default to 'open' or 'executed'.
-  // Reuse logic from original modals.
-  
-  const s = props.visit.status
-  
-  // If not admin and status is planned/open, default to 'executed' (start of flow)
-  if (!props.isAdmin && (s === 'planned' || s === 'open')) {
+  if (isBulk.value) {
+    localStatus.value = 'executed'
+    plannedWeek.value = null
+    plannedDate.value = ''
+    selectedResearcherIds.value = []
+  } else if (singleVisit.value) {
+    const s = singleVisit.value.status
+    if (!props.isAdmin && (s === 'planned' || s === 'open')) {
       localStatus.value = 'executed'
-  }
-  else if (['executed', 'executed_with_deviation', 'not_executed', 'planned', 'open', 'cancelled'].includes(s)) {
+    } else if (['executed', 'executed_with_deviation', 'not_executed', 'planned', 'open', 'cancelled'].includes(s)) {
       localStatus.value = s
-  } else {
-      // For statuses like 'created', 'created' isn't usually an edit target state, 
-      // but 'open' is.
-      localStatus.value = 'executed' // Default action for researchers usually
+    } else {
+      localStatus.value = 'executed'
+    }
+    plannedWeek.value = singleVisit.value.planned_week
+    plannedDate.value = singleVisit.value.planned_date ?? ''
+    selectedResearcherIds.value = singleVisit.value.researchers.map(r => r.id)
   }
 
-  // However, if admin opens it, we might want to default to 'open' if status is created/open?
-  // Let's stick to: if it's planned, show planned. If executed, show executed.
-                 
   executionDate.value = todayIso()
   deviationReason.value = ''
   notExecutedReason.value = ''
   comment.value = ''
   dateError.value = null
-  
-  // Admin fields
-  plannedWeek.value = props.visit.planned_week
-  selectedResearcherIds.value = props.visit.researchers.map(r => r.id)
+  bulkProgress.value = null
 }
 
 function onStatusOptionSelect(opt: StatusOption) {
@@ -296,24 +307,25 @@ function onResearchersChange(options: ResearcherOption[]) {
 
 function validateDate(dateStr: string): boolean {
   dateError.value = null
-  if (!dateStr) return true // handled by required check on submit if needed
-  
+  if (!dateStr) return true
+
   const d = new Date(dateStr)
-  // Basic sanity
   if (Number.isNaN(d.getTime())) return false
 
-  // Check bounds
-  if (props.visit.from_date) {
-    const from = new Date(props.visit.from_date)
+  const visit = singleVisit.value
+  if (!visit) return true
+
+  if (visit.from_date) {
+    const from = new Date(visit.from_date)
     if (d < from) {
-       dateError.value = `Dit bezoek moet worden uitgevoerd tussen ${formatDate(props.visit.from_date)} - ${formatDate(props.visit.to_date)}`
+       dateError.value = `Dit bezoek moet worden uitgevoerd tussen ${formatDate(visit.from_date)} - ${formatDate(visit.to_date)}`
        return false
     }
   }
-  if (props.visit.to_date) {
-    const to = new Date(props.visit.to_date)
+  if (visit.to_date) {
+    const to = new Date(visit.to_date)
     if (d > to) {
-      dateError.value = `Dit bezoek moet worden uitgevoerd tussen ${formatDate(props.visit.from_date)} - ${formatDate(props.visit.to_date)}`
+      dateError.value = `Dit bezoek moet worden uitgevoerd tussen ${formatDate(visit.from_date)} - ${formatDate(visit.to_date)}`
       return false
     }
   }
@@ -324,122 +336,157 @@ function onCancel() {
   emit('update:open', false)
 }
 
+async function submitForVisit(visitId: number): Promise<void> {
+  if (localStatus.value === 'executed') {
+    await $api(`/visits/${visitId}/execute`, {
+      method: 'POST',
+      body: {
+        execution_date: executionDate.value,
+        comment: comment.value || null
+      }
+    })
+  } else if (localStatus.value === 'executed_with_deviation') {
+    await $api(`/visits/${visitId}/execute-deviation`, {
+      method: 'POST',
+      body: {
+        execution_date: executionDate.value,
+        reason: deviationReason.value,
+        comment: comment.value || null
+      }
+    })
+  } else if (localStatus.value === 'not_executed') {
+    await $api(`/visits/${visitId}/not-executed`, {
+      method: 'POST',
+      body: {
+        date: todayIso(),
+        reason: notExecutedReason.value
+      }
+    })
+  } else if (localStatus.value === 'planned' && props.isAdmin) {
+    await $api(`/visits/${visitId}/admin-planning-status`, {
+      method: 'POST',
+      body: {
+        mode: 'planned',
+        planned_week: featureDailyPlanning.value ? null : plannedWeek.value,
+        planned_date: featureDailyPlanning.value ? (plannedDate.value || null) : null,
+        researcher_ids: selectedResearcherIds.value,
+        comment: comment.value || null
+      }
+    })
+  } else if (localStatus.value === 'open' && props.isAdmin) {
+    await $api(`/visits/${visitId}/admin-planning-status`, {
+      method: 'POST',
+      body: {
+        mode: 'open',
+        comment: comment.value || null
+      }
+    })
+  } else if (localStatus.value === 'cancelled' && props.isAdmin) {
+    await $api(`/visits/${visitId}/cancel`, {
+      method: 'POST',
+      body: {
+        reason: comment.value
+      }
+    })
+  }
+}
+
 async function onSubmit() {
   submitting.value = true
   try {
+    // Validate common fields
     if (localStatus.value === 'executed') {
-       if (!executionDate.value) {
-         toast.add({ title: 'Kies een datum van uitvoering', color: 'error' })
-         submitting.value = false
-         return
-       }
-       if (!validateDate(executionDate.value)) {
-         // Error already set
-         submitting.value = false
-         return
-       }
-       
-       await $api(`/visits/${props.visit.id}/execute`, {
-          method: 'POST',
-          body: {
-            execution_date: executionDate.value,
-            comment: comment.value || null
-          }
-       })
-       toast.add({ title: 'Bezoek uitgevoerd', color: 'success' })
-
+      if (!executionDate.value) {
+        toast.add({ title: 'Kies een datum van uitvoering', color: 'error' })
+        submitting.value = false
+        return
+      }
+      if (!isBulk.value && !validateDate(executionDate.value)) {
+        submitting.value = false
+        return
+      }
     } else if (localStatus.value === 'executed_with_deviation') {
-       if (!executionDate.value || !deviationReason.value.trim()) {
-         toast.add({
-            title: 'Datum en omschrijving van de afwijking zijn verplicht',
-            color: 'error'
-         })
-         submitting.value = false
-         return
-       }
-       if (!validateDate(executionDate.value)) {
-         submitting.value = false
-         return
-       }
-
-       await $api(`/visits/${props.visit.id}/execute-deviation`, {
-          method: 'POST',
-          body: {
-            execution_date: executionDate.value,
-            reason: deviationReason.value,
-            comment: comment.value || null
-          }
-       })
-       toast.add({ title: 'Bezoek uitgevoerd (met afwijking)', color: 'success' })
-
+      if (!executionDate.value || !deviationReason.value.trim()) {
+        toast.add({
+          title: 'Datum en omschrijving van de afwijking zijn verplicht',
+          color: 'error'
+        })
+        submitting.value = false
+        return
+      }
+      if (!isBulk.value && !validateDate(executionDate.value)) {
+        submitting.value = false
+        return
+      }
     } else if (localStatus.value === 'not_executed') {
-       if (!notExecutedReason.value.trim()) {
-         toast.add({ title: 'Reden is verplicht', color: 'error' })
-         submitting.value = false
-         return
-       }
-       // Original logic sent todayIso() as date.
-       await $api(`/visits/${props.visit.id}/not-executed`, {
-          method: 'POST',
-          body: {
-            date: todayIso(),
-            reason: notExecutedReason.value
-          }
-       })
-       toast.add({ title: 'Bezoek gemarkeerd als niet uitgevoerd', color: 'success' })
-
+      if (!notExecutedReason.value.trim()) {
+        toast.add({ title: 'Reden is verplicht', color: 'error' })
+        submitting.value = false
+        return
+      }
     } else if (localStatus.value === 'planned' && props.isAdmin) {
-        if (
-          plannedWeek.value == null ||
-          !Number.isInteger(plannedWeek.value) ||
-          selectedResearcherIds.value.length === 0
-        ) {
-          toast.add({
-            title: 'Weeknummer en minstens één onderzoeker zijn verplicht voor Gepland',
-            color: 'error'
-          })
-          submitting.value = false
-          return
-        }
-
-        await $api(`/visits/${props.visit.id}/admin-planning-status`, {
-          method: 'POST',
-          body: {
-            mode: 'planned',
-            planned_week: plannedWeek.value,
-            researcher_ids: selectedResearcherIds.value,
-            comment: comment.value || null
-          }
+      const hasPlanningField = featureDailyPlanning.value
+        ? !!plannedDate.value
+        : (plannedWeek.value != null && Number.isInteger(plannedWeek.value))
+      if (!hasPlanningField || selectedResearcherIds.value.length === 0) {
+        const fieldLabel = featureDailyPlanning.value ? 'Datum' : 'Weeknummer'
+        toast.add({
+          title: `${fieldLabel} en minstens één onderzoeker zijn verplicht voor Gepland`,
+          color: 'error'
         })
-        toast.add({ title: 'Planning bijgewerkt', color: 'success' })
-
-    } else if (localStatus.value === 'open' && props.isAdmin) {
-        await $api(`/visits/${props.visit.id}/admin-planning-status`, {
-          method: 'POST',
-          body: {
-            mode: 'open',
-            comment: comment.value || null
-          }
-        })
-        toast.add({ title: 'Status op Open gezet', color: 'success' })
-
+        submitting.value = false
+        return
+      }
     } else if (localStatus.value === 'cancelled' && props.isAdmin) {
-        if (!comment.value.trim()) {
-          toast.add({ title: 'Reden voor annuleren is verplicht', color: 'error' })
-          submitting.value = false
-          return
-        }
-        await $api(`/visits/${props.visit.id}/cancel`, {
-          method: 'POST',
-          body: {
-             reason: comment.value
-          }
-        })
-        toast.add({ title: 'Bezoek geannuleerd', color: 'success' })
+      if (!comment.value.trim()) {
+        toast.add({ title: 'Reden voor annuleren is verplicht', color: 'error' })
+        submitting.value = false
+        return
+      }
     }
 
-    emit('saved')
-    emit('update:open', false)
+    if (isBulk.value) {
+      let succeeded = 0
+      let failed = 0
+      bulkProgress.value = { done: 0, total: props.visits.length }
+
+      for (const visit of props.visits) {
+        try {
+          await submitForVisit(visit.id)
+          succeeded++
+        } catch (e) {
+          console.error(`Failed to update visit ${visit.id}:`, e)
+          failed++
+        }
+        bulkProgress.value = { done: succeeded + failed, total: props.visits.length }
+      }
+
+      if (failed === 0) {
+        toast.add({ title: `${succeeded} bezoek(en) bijgewerkt`, color: 'success' })
+      } else if (succeeded > 0) {
+        toast.add({ title: `${succeeded} van ${props.visits.length} bezoeken bijgewerkt, ${failed} mislukt`, color: 'warning' })
+      } else {
+        toast.add({ title: 'Kon geen enkel bezoek bijwerken', color: 'error' })
+      }
+
+      emit('saved')
+      emit('update:open', false)
+    } else {
+      await submitForVisit(props.visits[0].id)
+
+      const statusMessages: Partial<Record<VisitStatusCode, string>> = {
+        executed: 'Bezoek uitgevoerd',
+        executed_with_deviation: 'Bezoek uitgevoerd (met afwijking)',
+        not_executed: 'Bezoek gemarkeerd als niet uitgevoerd',
+        planned: 'Planning bijgewerkt',
+        open: 'Status op Open gezet',
+        cancelled: 'Bezoek geannuleerd'
+      }
+      toast.add({ title: statusMessages[localStatus.value] ?? 'Status bijgewerkt', color: 'success' })
+
+      emit('saved')
+      emit('update:open', false)
+    }
 
   } catch (e) {
     console.error(e)

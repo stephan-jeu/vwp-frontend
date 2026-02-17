@@ -23,7 +23,7 @@
         <div class="flex-1">
           <div v-if="item.action !== 'visit_status_cleared'">
             <span class="font-medium">
-              {{ item.actor?.full_name ?? 'Systeem' }}
+              {{ actorNames(item) }}
             </span>
             <span class="ml-1">{{ actionLabel(item.action) }}</span>
           </div>
@@ -94,6 +94,7 @@
     details: Record<string, unknown> | null
     batch_id: string | null
     actor: { id: number; full_name: string | null } | null
+    actors: { id: number; full_name: string | null }[]
   }
 
   type ActivityDetails = Record<string, unknown> | null
@@ -193,6 +194,15 @@
       entry.created_at
     if (typeof raw !== 'string' || !raw) return entry.created_at
     return raw
+  }
+
+  function actorNames(entry: ActivityLogEntry): string {
+    if (entry.actors && entry.actors.length > 0) {
+      return entry.actors
+        .map((a) => a.full_name ?? 'Onbekend')
+        .join(', ')
+    }
+    return entry.actor?.full_name ?? 'Systeem'
   }
 
   function actionLabel(action: string): string {
