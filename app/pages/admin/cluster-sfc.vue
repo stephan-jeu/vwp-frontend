@@ -538,6 +538,7 @@
     planning_locked?: boolean
     researcher_ids: number[]
     researchers: Array<{ id: number; full_name?: string | null }>
+    visit_code?: string | null
   }
 
   type ApiErrorShape = {

@@ -19,6 +19,7 @@ export default defineNuxtConfig({
       featureDailyPlanning: false, // Overridden by NUXT_PUBLIC_FEATURE_DAILY_PLANNING
       featureStrictAvailability: false, // Overridden by NUXT_PUBLIC_FEATURE_STRICT_AVAILABILITY
       featureLanguageSupport: false, // Overridden by NUXT_PUBLIC_FEATURE_LANGUAGE_SUPPORT
+      enableVisitCode: false, // Overridden by NUXT_PUBLIC_ENABLE_VISIT_CODE
     }
   },
 

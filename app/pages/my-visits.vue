@@ -244,6 +244,7 @@
     researchers: UserName[]
     custom_function_name: string | null
     custom_species_name: string | null
+    visit_code: string | null
   }
 
   type VisitListResponse = {

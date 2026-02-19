@@ -337,6 +337,7 @@
     researchers: UserName[]
     advertized: boolean
     quote: boolean
+    visit_code: string | null
   }
 
   type AuditErrorCode =

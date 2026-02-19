@@ -585,6 +585,7 @@
     dvp: boolean
     sleutel: boolean
     priority: boolean
+    visit_code: string | null
   }
 
   type VisitListResponse = {

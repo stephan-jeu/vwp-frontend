@@ -259,6 +259,7 @@
     advertized: boolean
     quote: boolean
     planned_date: string | null
+    visit_code: string | null
   }
 
   type BadgeColor = 'primary' | 'warning' | 'success' | 'error' | 'neutral' | 'secondary' | 'info'

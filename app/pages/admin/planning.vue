@@ -274,6 +274,140 @@
                 </div>
               </div>
             </template>
+
+            <template #researchers>
+              <!-- RESEARCHERS TAB CONTENT -->
+              <div class="mt-4 overflow-x-auto">
+                <template v-if="featureDailyPlanning">
+                  <!-- Daily Planning Grid: rows = researchers, columns = Mon-Fri -->
+                  <table class="min-w-full border-collapse text-sm">
+                    <thead>
+                      <tr class="border-b border-gray-200 dark:border-gray-700">
+                        <th
+                          class="text-left px-3 py-2 font-semibold text-gray-700 dark:text-gray-300 min-w-[140px] sticky left-0 bg-white dark:bg-gray-900 z-10"
+                        >
+                          Onderzoeker
+                        </th>
+                        <th
+                          v-for="day in weekDays"
+                          :key="day.iso"
+                          class="px-3 py-2 font-semibold text-gray-700 dark:text-gray-300 min-w-[160px] text-center border-l border-gray-100 dark:border-gray-800"
+                        >
+                          <div>{{ day.short }}</div>
+                          <div class="text-xs font-normal text-gray-400">{{ day.dateStr }}</div>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                      <tr
+                        v-for="row in researcherGrid"
+                        :key="row.id"
+                        class="hover:bg-gray-50 dark:hover:bg-gray-800/30"
+                      >
+                        <td
+                          class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap sticky left-0 bg-white dark:bg-gray-900 z-10"
+                        >
+                          {{ row.name }}
+                        </td>
+                        <td
+                          v-for="day in weekDays"
+                          :key="day.iso"
+                          class="px-3 py-2 align-top border-l border-gray-100 dark:border-gray-800"
+                        >
+                          <div
+                            v-for="visit in row.visitsByDay[day.iso] ?? []"
+                            :key="visit.id"
+                            class="mb-1 cursor-pointer text-xs rounded px-1.5 py-0.5 inline-flex items-center gap-1 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/40 whitespace-nowrap"
+                            @click="goToDetail(visit.id)"
+                          >
+                            <span class="font-medium">{{ visit.project_code }}</span>
+                            <span class="text-gray-500">C{{ visit.cluster_number }}</span>
+                            <span>{{
+                              enableVisitCode
+                                ? (visit.visit_code ?? '-')
+                                : visitSpeciesAbbr(visit)
+                            }}</span>
+                            <UIcon
+                              :name="visitStatusIcon(visit.status)"
+                              :class="visitStatusIconColor(visit.status)"
+                              class="w-3.5 h-3.5 flex-shrink-0"
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div
+                    v-if="researcherGrid.length === 0"
+                    class="text-sm text-gray-400 italic py-4"
+                  >
+                    Geen onderzoekers gevonden.
+                  </div>
+                </template>
+
+                <template v-else>
+                  <!-- Condensed List: rows = researchers, one cell with all visits -->
+                  <table class="min-w-full border-collapse text-sm">
+                    <thead>
+                      <tr class="border-b border-gray-200 dark:border-gray-700">
+                        <th
+                          class="text-left px-3 py-2 font-semibold text-gray-700 dark:text-gray-300 min-w-[140px]"
+                        >
+                          Onderzoeker
+                        </th>
+                        <th
+                          class="text-left px-3 py-2 font-semibold text-gray-700 dark:text-gray-300"
+                        >
+                          Bezoeken
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                      <tr
+                        v-for="row in researcherGrid"
+                        :key="row.id"
+                        class="hover:bg-gray-50 dark:hover:bg-gray-800/30"
+                      >
+                        <td
+                          class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap align-top"
+                        >
+                          {{ row.name }}
+                        </td>
+                        <td class="px-3 py-2">
+                          <div class="flex flex-wrap gap-1">
+                            <div
+                              v-for="visit in row.visits"
+                              :key="visit.id"
+                              class="cursor-pointer text-xs rounded px-1.5 py-0.5 inline-flex items-center gap-1 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/40 whitespace-nowrap"
+                              @click="goToDetail(visit.id)"
+                            >
+                              <span class="font-medium">{{ visit.project_code }}</span>
+                              <span class="text-gray-500">C{{ visit.cluster_number }}</span>
+                              <span>{{
+                                enableVisitCode
+                                  ? (visit.visit_code ?? '-')
+                                  : visitSpeciesAbbr(visit)
+                              }}</span>
+                              <UIcon
+                                :name="visitStatusIcon(visit.status)"
+                                :class="visitStatusIconColor(visit.status)"
+                                class="w-3.5 h-3.5 flex-shrink-0"
+                              />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div
+                    v-if="researcherGrid.length === 0"
+                    class="text-sm text-gray-400 italic py-4"
+                  >
+                    Geen onderzoekers gevonden.
+                  </div>
+                </template>
+              </div>
+            </template>
           </UTabs>
         </div>
       </UCard>
@@ -426,6 +560,7 @@
     provisional_locked: boolean
     custom_function_name: string | null
     custom_species_name: string | null
+    visit_code: string | null
   }
 
   type VisitListResponse = {
@@ -516,6 +651,19 @@
   const rawAvailability = ref<ApiUserAvailability[]>([])
   const availabilityCollapsed = ref(true)
   const reserveCollapsed = ref(true)
+
+  // Feature flags
+  const featureDailyPlanning = computed<boolean>(() => {
+    const raw = runtimeConfig.public.featureDailyPlanning
+    if (typeof raw === 'string') return raw === 'true' || raw === '1'
+    return Boolean(raw)
+  })
+
+  const enableVisitCode = computed<boolean>(() => {
+    const raw = (runtimeConfig.public as Record<string, unknown>).enableVisitCode
+    if (typeof raw === 'string') return raw === 'true' || raw === '1'
+    return Boolean(raw)
+  })
 
   type WeekTab = { label: string; value: string; week: number }
 
@@ -735,13 +883,15 @@
   // --- NEW PLAN BOARD LOGIC ---
 
   const tabs = computed(() => {
+    const result: { label: string; slot: string }[] = []
     if (isCurrentWeekTab.value) {
-      return [
-        { label: 'Status', slot: 'status' },
-        { label: 'Planbord', slot: 'plan' }
-      ]
+      result.push({ label: 'Status', slot: 'status' })
     }
-    return [{ label: 'Planbord', slot: 'plan' }]
+    result.push({ label: 'Planbord', slot: 'plan' })
+    if (plannedVisits.value.length > 0) {
+      result.push({ label: 'Onderzoekers', slot: 'researchers' })
+    }
+    return result
   })
 
   const showPlanModal = ref(false)
@@ -782,6 +932,86 @@
     const w = activeWeekNumber.value
     return visits.value.filter((v) => v.planned_week === w && v.researchers.length > 0)
   })
+
+  // --- Researcher Grid ---
+
+  function toLocalISODate(date: Date): string {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+
+  const weekDays = computed(() => {
+    if (!weekRange.value) return []
+    const dayNames = ['Ma', 'Di', 'Wo', 'Do', 'Vr']
+    const formatter = new Intl.DateTimeFormat('nl-NL', { day: '2-digit', month: 'short' })
+    return Array.from({ length: 5 }, (_, i) => {
+      const date = new Date(weekRange.value!.start)
+      date.setDate(date.getDate() + i)
+      return {
+        short: dayNames[i],
+        dateStr: formatter.format(date),
+        iso: toLocalISODate(date)
+      }
+    })
+  })
+
+  type ResearcherRow = {
+    id: number
+    name: string
+    visits: VisitListRow[]
+    visitsByDay: Record<string, VisitListRow[]>
+  }
+
+  const researcherGrid = computed<ResearcherRow[]>(() => {
+    const allVisits = [...plannedVisits.value, ...completedVisits.value]
+    const map = new Map<number, ResearcherRow>()
+
+    for (const visit of allVisits) {
+      for (const researcher of visit.researchers) {
+        if (!map.has(researcher.id)) {
+          map.set(researcher.id, {
+            id: researcher.id,
+            name: researcher.full_name ?? `Gebruiker #${researcher.id}`,
+            visits: [],
+            visitsByDay: {}
+          })
+        }
+        const row = map.get(researcher.id)!
+        row.visits.push(visit)
+
+        const dayKey = visit.planned_date ? visit.planned_date.slice(0, 10) : 'onbekend'
+        if (!row.visitsByDay[dayKey]) row.visitsByDay[dayKey] = []
+        row.visitsByDay[dayKey].push(visit)
+      }
+    }
+
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
+  })
+
+  function visitSpeciesAbbr(visit: VisitListRow): string {
+    if (visit.species.length > 0) {
+      return visit.species.map((s) => s.abbreviation || s.name).join(' ')
+    }
+    return visit.custom_species_name || '-'
+  }
+
+  function visitStatusIcon(status: VisitStatusCode): string {
+    if (['executed', 'executed_with_deviation', 'approved'].includes(status)) {
+      return 'i-heroicons-check-circle'
+    }
+    if (status === 'planned') return 'i-heroicons-calendar'
+    return 'i-heroicons-clock'
+  }
+
+  function visitStatusIconColor(status: VisitStatusCode): string {
+    if (['executed', 'executed_with_deviation', 'approved'].includes(status)) return 'text-green-500'
+    if (status === 'planned') return 'text-blue-500'
+    return 'text-gray-400'
+  }
+
+  // --- End Researcher Grid ---
 
   async function unplan(visit: VisitListRow) {
     if (!confirm('Weet je zeker dat je dit bezoek uit de planning wilt halen?')) return

@@ -266,7 +266,7 @@
             <UCheckbox
               :model-value="bulkSelectedIds.has(row.original.id)"
               @click.stop
-              @update:model-value="toggleBulkSelection(row.original.id, $event)"
+              @update:model-value="toggleBulkSelection(row.original.id, $event as boolean)"
             />
           </template>
 
@@ -878,6 +878,7 @@
     quote: boolean
     custom_function_name: string | null
     custom_species_name: string | null
+    visit_code: string | null
   }
 
   type Option = { label: string; value: number | null }

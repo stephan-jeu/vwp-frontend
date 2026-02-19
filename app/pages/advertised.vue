@@ -174,6 +174,7 @@
     quote: boolean
     advertized_by: UserName | null
     can_accept: boolean | null
+    visit_code: string | null
   }
 
   const { $api } = useNuxtApp()

@@ -2,51 +2,61 @@
   <UCard
     :class="[
       'cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all dark:hover:ring-primary-400',
-      selected ? 'ring-2 ring-primary-500 dark:ring-primary-400 bg-primary-50 dark:bg-primary-900/20' : ''
+      selected
+        ? 'ring-2 ring-primary-500 dark:ring-primary-400 bg-primary-50 dark:bg-primary-900/20'
+        : ''
     ]"
     @click="emit('open')"
   >
-    <div class="flex items-start justify-between mb-2">
-      <div>
-        <div class="font-bold text-gray-900 dark:text-white">
-          <span v-if="visit.project_location" class="mr-1">{{ visit.project_location }} -</span>
-          {{ visit.project_code }}
-          <span class="text-gray-500 font-normal ml-1">
-            Cluster {{ visit.cluster_number }} - {{ visit.visit_nr }}
-            <span v-if="visit.cluster_address">({{ visit.cluster_address }})</span>
-          </span>
-        </div>
+    <div class="flex items-start justify-between mb-1">
+      <div class="test-xs font-bold text-gray-900 dark:text-white leading-tight">
+        <span v-if="visit.project_location" class="mr-1">{{ visit.project_location }} -</span>
+        {{ visit.project_code }}
+        <span class="text-gray-500 font-normal ml-1 text-xs">
+          C{{ visit.cluster_number }} {{ visit.visit_nr ? `- ${visit.visit_nr}` : '' }}
+          <span v-if="visit.cluster_address">({{ visit.cluster_address }})</span>
+        </span>
       </div>
       <UCheckbox
         v-if="selectable"
         :model-value="selected"
+        class="ml-2"
         @click.stop
-        @update:model-value="emit('update:selected', $event)"
+        @update:model-value="emit('update:selected', $event as boolean)"
       />
     </div>
 
+    <!-- Main Content Area -->
     <div
-      class="mt-2 pl-3 border-l-2 border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400 space-y-1"
+      class="mt-1 pl-2 border-l-2 border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400 space-y-0.5"
     >
-      <div class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800 font-semibold">
-        <div v-if="featureDailyPlanning && visit.planned_date" class="mb-1 text-primary-600 dark:text-primary-400 font-bold">
-          {{ formatDate(visit.planned_date) }}
-          <span v-if="visit.part_of_day"> · {{ visit.part_of_day }}</span>
+      <!-- Date & Status Row -->
+      <div class="flex items-center justify-between">
+        <div class="font-medium text-gray-800 dark:text-gray-200">
+          <span
+            v-if="featureDailyPlanning && visit.planned_date"
+            class="text-primary-600 dark:text-primary-400 font-bold"
+          >
+            {{ formatDate(visit.planned_date) }}
+            <span v-if="visit.part_of_day"> · {{ visit.part_of_day }}</span>
+          </span>
+          <span v-else-if="visit.from_date || visit.to_date">
+            {{ formatDate(visit.from_date) }} - {{ formatDate(visit.to_date) }}
+            <span v-if="visit.part_of_day"> · {{ visit.part_of_day }}</span>
+          </span>
+          <span v-if="weekDisplay" class="ml-1 text-gray-400 font-normal">
+            ({{ weekDisplay }})
+          </span>
         </div>
-        <div v-else-if="visit.from_date || visit.to_date" class="mb-1">
-          {{ formatDate(visit.from_date) }} - {{ formatDate(visit.to_date) }}
-          <span v-if="visit.part_of_day"> · {{ visit.part_of_day }}</span>
-        </div>
-        <div class="pt-1 mb-2">
-          <span v-if="weekDisplay">{{ weekDisplay }}</span>
-        </div>
-        <UBadge size="md" variant="subtle" color="neutral">
+        <UBadge size="xs" variant="subtle" color="neutral" class="ml-2 whitespace-nowrap">
           {{ statusLabel(visit.status) }}
         </UBadge>
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 mt-2">
+
+      <!-- Functions / Species Combined -->
+      <div class="flex flex-wrap gap-x-3 text-xs leading-snug">
         <div>
-          <span class="font-semibold text-gray-700 dark:text-gray-300">Functies: </span>
+          <span class="font-semibold text-gray-700 dark:text-gray-300">F: </span>
           {{
             visit.functions.length
               ? visit.functions.map((f) => f.name).join(', ')
@@ -54,7 +64,7 @@
           }}
         </div>
         <div>
-          <span class="font-semibold text-gray-700 dark:text-gray-300">Soorten: </span>
+          <span class="font-semibold text-gray-700 dark:text-gray-300">S: </span>
           {{
             visit.species.length
               ? visit.species.map((s) => s.abbreviation || s.name).join(', ')
@@ -63,8 +73,9 @@
         </div>
       </div>
 
-      <div>
-        <span class="font-semibold text-gray-700 dark:text-gray-300">Onderzoekers: </span>
+      <!-- Researchers -->
+      <div class="truncate text-xs text-gray-500 dark:text-gray-400">
+        <UIcon name="i-heroicons-user" class="w-3 h-3 inline-block -mt-0.5 mr-1" />
         {{
           visit.researchers.length
             ? visit.researchers.map((r) => r.full_name || `Gebruiker #${r.id}`).join(', ')
@@ -72,13 +83,14 @@
         }}
       </div>
 
-      <div v-if="hasFlags" class="mt-1 flex flex-wrap gap-1 mt-2">
-        <UBadge v-if="visit.wbc" class="bg-gray-400 mr-1">WBC</UBadge>
-        <UBadge v-if="visit.fiets" class="bg-gray-400 mr-1">Fiets</UBadge>
-        <UBadge v-if="visit.hub" class="bg-gray-400 mr-1">HUB</UBadge>
-        <UBadge v-if="visit.dvp" class="bg-gray-400 mr-1">DVP</UBadge>
-        <UBadge v-if="visit.sleutel" class="bg-gray-400 mr-1">Sleutel</UBadge>
-        <UBadge v-if="visit.priority" class="bg-gray-400 mr-1">Prioriteit</UBadge>
+      <!-- Flags -->
+      <div v-if="hasFlags" class="flex flex-wrap gap-1 pt-1">
+        <UBadge v-if="visit.wbc" size="xs" color="neutral" variant="soft">WBC</UBadge>
+        <UBadge v-if="visit.fiets" size="xs" color="neutral" variant="soft">Fiets</UBadge>
+        <UBadge v-if="visit.hub" size="xs" color="neutral" variant="soft">HUB</UBadge>
+        <UBadge v-if="visit.dvp" size="xs" color="neutral" variant="soft">DVP</UBadge>
+        <UBadge v-if="visit.sleutel" size="xs" color="neutral" variant="soft">Sleutel</UBadge>
+        <UBadge v-if="visit.priority" size="xs" color="warning" variant="soft">Prioriteit</UBadge>
       </div>
     </div>
   </UCard>
@@ -129,6 +141,7 @@
     dvp: boolean
     sleutel: boolean
     priority: boolean
+    visit_code: string | null
   }
 
   const props = withDefaults(
