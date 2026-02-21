@@ -18,9 +18,7 @@
         />
 
         <UInput
-          v-model.number="filterClusterNumber"
-          type="number"
-          min="1"
+          v-model="filterClusterNumber"
           placeholder="Cluster"
           class="w-20"
         />
@@ -40,6 +38,7 @@
           :items="speciesOptions"
           multiple
           searchable
+          :filter-fields="['label', 'abbreviation']"
           placeholder="Soorten"
           class="w-64"
           @update:model-value="(sel) => (filterSpeciesIds = sel.map((o) => o.value as number))"
@@ -47,14 +46,14 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <UButton
-          v-if="isAdmin && !showCreate"
-          color="primary"
-          icon="i-heroicons-plus"
-          @click="onStartCreate"
-        >
-          Toevoegen
-        </UButton>
+        <UDropdownMenu :items="actionItems" :content="{ side: 'bottom', align: 'end' }">
+          <UButton
+            color="neutral"
+            variant="outline"
+            label="Acties"
+            trailing-icon="i-heroicons-chevron-down-20-solid"
+          />
+        </UDropdownMenu>
       </div>
     </div>
 
@@ -120,6 +119,7 @@
             :model-value="createSpecies"
             :items="speciesOptions"
             multiple
+            :filter-fields="['label', 'abbreviation']"
             class="w-3xs"
             @update:model-value="(sel) => (createSpeciesIds = sel.map((o) => o.value as number))"
           />
@@ -385,6 +385,10 @@
                     <span class="font-medium">Adres:</span>
                     {{ row.original.cluster_address }}
                   </div>
+                  <div v-if="row.original.project_customer">
+                    <span class="font-medium">Klant:</span>
+                    {{ row.original.project_customer }}
+                  </div>
                   <div v-if="plannedWeekLabel(row.original)">
                     <span class="font-medium">Week:</span>
                     {{ plannedWeekLabel(row.original) }}
@@ -438,6 +442,7 @@
                   Project {{ row.original.project_code }} · Cluster
                   {{ row.original.cluster_number }} ·
                   {{ row.original.cluster_address }}
+                  <span v-if="row.original.project_customer"> · Klant: {{ row.original.project_customer }}</span>
                 </div>
 
                 <div v-if="row.original.project_google_drive_folder" class="my-4">
@@ -484,6 +489,7 @@
                       :model-value="mapIdsToOptions(row.original.species_ids, speciesOptions)"
                       :items="speciesOptions"
                       multiple
+                      :filter-fields="['label', 'abbreviation']"
                       class="w-3xs"
                       @update:model-value="
                         (sel) => (row.original.species_ids = sel.map((o) => o.value as number))
@@ -839,9 +845,10 @@
     id: number
     project_code: string
     project_location: string
+    project_customer: string | null
     project_google_drive_folder: string | null
     cluster_id: number
-    cluster_number: number
+    cluster_number: string
     cluster_address: string
     status: VisitStatusCode
     function_ids: number[]
@@ -881,7 +888,7 @@
     visit_code: string | null
   }
 
-  type Option = { label: string; value: number | null }
+  type Option = { label: string; value: number | null; abbreviation?: string | null }
   type StringOption = { label: string; value: string | null }
 
   type ProjectOption = Option
@@ -930,7 +937,7 @@
 
   const search = ref('')
 
-  const filterClusterNumber = ref<number | null | ''>(null)
+  const filterClusterNumber = ref('')
   const filterFunctionIds = ref<number[]>([])
   const filterSpeciesIds = ref<number[]>([])
 
@@ -1107,8 +1114,8 @@
       if (selectedStatuses.value.length > 0)
         query.statuses = selectedStatuses.value.map((s) => s.value)
 
-      if (filterClusterNumber.value !== null && filterClusterNumber.value !== '') {
-        query.cluster_number = filterClusterNumber.value
+      if (filterClusterNumber.value.trim()) {
+        query.cluster_number = filterClusterNumber.value.trim()
       }
       if (filterFunctionIds.value.length > 0) {
         query.function_ids = filterFunctionIds.value
@@ -1140,11 +1147,72 @@
     void loadVisits()
   }
 
+
   function onNextPage(): void {
     if (page.value >= maxPage.value) return
     page.value += 1
     void loadVisits()
   }
+
+  async function onExportCsv() {
+    const query: Record<string, unknown> = {}
+    const term = search.value.trim()
+    if (term) query.search = term
+    
+    if (selectedStatuses.value.length > 0) {
+      query.statuses = selectedStatuses.value.map(s => s.value)
+    }
+
+    if (filterClusterNumber.value.trim()) {
+      query.cluster_number = filterClusterNumber.value.trim()
+    }
+    
+    if (filterFunctionIds.value.length > 0) {
+      query.function_ids = filterFunctionIds.value
+    }
+    
+    if (filterSpeciesIds.value.length > 0) {
+      query.species_ids = filterSpeciesIds.value
+    }
+
+    if (testModeEnabled.value && simulatedDate.value) {
+      query.simulated_today = simulatedDate.value
+    }
+
+    try {
+      const blob = await $api<Blob>('/visits/export', {
+        query,
+        responseType: 'blob'
+      } as any)
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'bezoeken.csv')
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (e) {
+      toast.add({ title: 'Export mislukt', color: 'error' })
+    }
+  }
+
+  const actionItems = computed(() => {
+    const items = []
+    if (isAdmin.value && !showCreate.value) {
+      items.push([{
+        label: 'Toevoegen',
+        icon: 'i-heroicons-plus',
+        onSelect: onStartCreate
+      }])
+    }
+    items.push([{
+      label: 'Export CSV',
+      icon: 'i-lucide-download',
+      onSelect: onExportCsv
+    }])
+    return items
+  })
 
   let searchTimer: ReturnType<typeof setTimeout> | null = null
   watch(search, () => {
@@ -1175,10 +1243,6 @@
   watch(
     () => filterClusterNumber.value,
     () => {
-      if (filterClusterNumber.value === '') {
-        filterClusterNumber.value = null
-        return
-      }
       page.value = 1
       void loadVisits()
     }
@@ -1296,8 +1360,9 @@
       family_name: s.family_name ?? null
     }))
     speciesOptions.value = speciesMeta.value.map((s) => ({
-      label: s.abbreviation ?? s.name,
-      value: s.id
+      label: s.name || s.abbreviation || '',
+      value: s.id,
+      abbreviation: s.abbreviation
     }))
     const mappedUsers = users
       .map((u) => ({ label: u.full_name ?? `Gebruiker #${u.id}`, value: u.id }))
@@ -1322,7 +1387,7 @@
     selectedCluster.value = undefined
     clusterOptions.value = []
     if (!opt) return
-    const clusters = await $api<Array<{ id: number; cluster_number: number; address: string }>>(
+    const clusters = await $api<Array<{ id: number; cluster_number: string; address: string }>>(
       '/clusters',
       { query: { project_id: opt.value } }
     )

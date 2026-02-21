@@ -79,7 +79,7 @@
     kind: TrashKind
     label: string
     project_code?: string | null
-    cluster_number?: number | null
+    cluster_number?: string | null
     visit_nr?: number | null
     deleted_at: string
   }

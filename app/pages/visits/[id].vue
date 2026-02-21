@@ -28,10 +28,23 @@
               </div>
               <div class="text-xs text-gray-700 dark:text-gray-300">Project</div>
               <div class="text-sm font-semibold text-gray-800">
-                {{ visit.project_code }} · {{ visit.project_location }}
+                {{ visit.project_code }} 
               </div>
-              <div class="mt-1 text-sm text-gray-700 dark:text-gray-300">
-                Cluster {{ visit.cluster_number }} · {{ visit.cluster_address }}
+              <div v-if="visit.project_customer" class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                Klant: {{ visit.project_customer }}
+              </div>
+              <div class="mt-1 text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                <span>Cluster {{ visit.cluster_number }} · {{ visit.cluster_address }}</span>
+                <a
+                  v-if="googleMapsUrl"
+                  :href="googleMapsUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center text-primary-600 hover:text-primary-800 shrink-0"
+                  title="Open in Google Maps"
+                >
+                  <UIcon name="i-lucide-map-pin" class="w-6 h-6" />
+                </a>
               </div>
               <div class="mt-1 text-xs text-gray-700 dark:text-gray-300">
                 Bezoek nr {{ visit.visit_nr ?? '-' }}
@@ -57,7 +70,7 @@
             </div>
           </div>
 
-          <div v-if="isVisitResearcher" class="mt-3 flex items-center gap-2">
+          <div v-if="isVisitResearcher && featureAdvertise" class="mt-3 flex items-center gap-2">
             <USwitch
               v-model="advertizedLocal"
               :disabled="advertizedUpdating || !canEditAdvertised"
@@ -122,7 +135,7 @@
             <span class="ml-1">
               {{
                 visit.species.length
-                  ? visit.species.map((s) => s.abbreviation || s.name).join(', ')
+                  ? visit.species.map((s) => s.name || s.abbreviation).join(', ')
                   : visit.custom_species_name || '-'
               }}
             </span>
@@ -222,9 +235,10 @@
     id: number
     project_code: string
     project_location: string
+    project_customer: string | null
     project_google_drive_folder: string | null
     cluster_id: number
-    cluster_number: number
+    cluster_number: string
     cluster_address: string
     status: VisitStatusCode
     function_ids: number[]
@@ -306,6 +320,15 @@
     return Boolean(raw)
   })
 
+  const featureAdvertise = computed<boolean>(() => {
+    const raw = runtimeConfig.public.featureAdvertise
+    if (typeof raw === 'string') {
+      return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
+
+
   const effectiveToday = computed<Date>(() => {
     if (testModeEnabled.value && simulatedDate.value) {
       const dt = new Date(simulatedDate.value)
@@ -381,7 +404,7 @@
     return visit.value.researchers.some((r) => r.id === userId)
   })
 
-  const canEditAdvertised = computed(() => isVisitResearcher.value)
+  const canEditAdvertised = computed(() => isVisitResearcher.value && featureAdvertise.value)
 
   const canResearcherEditStatus = computed(() => {
     if (!visit.value) return false
@@ -548,6 +571,23 @@
     }
   }
 
+
+  const googleMapsUrl = computed<string | null>(() => {
+    if (!visit.value) return null
+    const address = visit.value.cluster_address?.trim()
+    if (!address) return null
+
+    // Detect decimal coordinate format: "52.1234, 4.5678" or "-33.8, 151.2"
+    const coordMatch = address.match(/^(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)$/)
+    if (coordMatch) {
+      return `https://www.google.com/maps?q=${coordMatch[1]},${coordMatch[2]}`
+    }
+
+    // Text address: append project location (city) to reduce ambiguity
+    const location = visit.value.project_location?.trim()
+    const query = location ? `${address}, ${location}` : address
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+  })
 
   function goBack(): void {
     const back = route.query.back as string | undefined

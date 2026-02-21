@@ -397,7 +397,7 @@
     const when = formatActivityDate(rawExecution ?? entry.created_at)
 
     const projectCode = (details.project_code as string | undefined) ?? null
-    const clusterNumber = (details.cluster_number as number | undefined) ?? null
+    const clusterNumber = (details.cluster_number as string | number | undefined) ?? null
     const visitNr = (details.visit_nr as number | undefined) ?? null
     const visitLabelBase =
       projectCode && clusterNumber != null ? `${projectCode}-${clusterNumber}` : 'het bezoek'
@@ -424,7 +424,7 @@
     }
 
     if (action === 'cluster_deleted') {
-      const deletedClusterNumber = (details.cluster_number as number | undefined) ?? null
+      const deletedClusterNumber = (details.cluster_number as string | number | undefined) ?? null
       const projectCode = (details.project_code as string | undefined) ?? 'onbekend project'
       const clusterLabel =
         deletedClusterNumber != null ? `cluster ${deletedClusterNumber}` : 'een cluster'
@@ -454,7 +454,7 @@
     }
 
     if (action === 'cluster_updated') {
-      const clusterNumber = (details.cluster_number as number | undefined) ?? null
+      const clusterNumber = (details.cluster_number as string | number | undefined) ?? null
       const projectCode = (details.project_code as string | undefined) ?? 'onbekend'
       const clusterLabel = clusterNumber != null ? `${clusterNumber}` : 'onbekend'
       return `${actor} heeft cluster ${clusterLabel} bijgewerkt voor project ${projectCode} op ${when}`
@@ -564,7 +564,7 @@
     id: number
     project_code: string
     project_location: string
-    cluster_number: number
+    cluster_number: string
     cluster_address: string
     status: VisitStatusCode
     planned_week: number | null

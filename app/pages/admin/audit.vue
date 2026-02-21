@@ -306,7 +306,7 @@
     project_location: string
     project_google_drive_folder: string | null
     cluster_id: number
-    cluster_number: number
+    cluster_number: string
     cluster_address: string
     status: VisitStatusCode
     function_ids: number[]
@@ -443,7 +443,7 @@
   }
 
   function pcbLabel(row: VisitAuditRow): string {
-    const parts = [row.project_code, String(row.cluster_number)]
+    const parts = [row.project_code, row.cluster_number]
     if (row.visit_nr != null) parts.push(String(row.visit_nr))
     return parts.join('-')
   }

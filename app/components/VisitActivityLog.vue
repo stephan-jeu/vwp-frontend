@@ -233,7 +233,7 @@
   function visitLabelFromDetails(details: ActivityDetails): string | null {
     if (!details) return null
     const projectCode = details['project_code'] as string | undefined
-    const clusterNumber = details['cluster_number'] as number | undefined
+    const clusterNumber = details['cluster_number'] as string | number | undefined
     const visitNr = details['visit_nr'] as number | undefined
     if (!projectCode) return null
     const base = clusterNumber != null ? `${projectCode}-${clusterNumber}` : projectCode

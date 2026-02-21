@@ -210,7 +210,7 @@
     id: number
     project_code: string
     project_location: string
-    cluster_number: number
+    cluster_number: string
     cluster_address: string
     status: VisitStatusCode
     planned_week: number | null

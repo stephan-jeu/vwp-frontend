@@ -199,6 +199,17 @@
 
   const menuItems = computed<NavigationMenuItem[][]>(() => {
     const items: NavigationMenuItem[] = baseItems.map((i) => ({ ...i }))
+    
+    const featureAdvertiseRaw = runtimeConfig.public.featureAdvertise
+    const featureAdvertise = 
+      typeof featureAdvertiseRaw === 'string'
+        ? featureAdvertiseRaw === 'true' || featureAdvertiseRaw === '1'
+        : Boolean(featureAdvertiseRaw)
+
+    if (!featureAdvertise) {
+      const idx = items.findIndex((i) => i.to === '/advertised')
+      if (idx !== -1) items.splice(idx, 1)
+    }
 
     const count = advertisedCount.value
     if (count > 0) {

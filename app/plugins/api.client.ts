@@ -14,7 +14,7 @@ export default defineNuxtPlugin(() => {
     }
   })
 
-  async function api<T>(request: string, options?: FetchOptions<'json'>): Promise<T> {
+  async function api<T>(request: string, options?: FetchOptions<any>): Promise<T> {
     try {
       return await base<T>(request, options)
     } catch (error: unknown) {

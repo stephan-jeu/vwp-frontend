@@ -20,6 +20,12 @@ export default defineNuxtConfig({
       featureStrictAvailability: false, // Overridden by NUXT_PUBLIC_FEATURE_STRICT_AVAILABILITY
       featureLanguageSupport: false, // Overridden by NUXT_PUBLIC_FEATURE_LANGUAGE_SUPPORT
       enableVisitCode: false, // Overridden by NUXT_PUBLIC_ENABLE_VISIT_CODE
+      featureAdvertise: true, // Overridden by NUXT_PUBLIC_FEATURE_ADVERTISE
+
+      // Branding
+      brandName: 'Habitus', // Overridden by NUXT_PUBLIC_BRAND_NAME
+      brandLogoUrl: '', // Overridden by NUXT_PUBLIC_BRAND_LOGO_URL
+      brandColorPrimary: '', // Overridden by NUXT_PUBLIC_BRAND_COLOR_PRIMARY
     }
   },
 

@@ -38,6 +38,17 @@
               >
                 {{ deleteLabel }}
               </UButton>
+
+              <UButton
+                v-if="plannedVisits.length > 0"
+                icon="i-heroicons-envelope"
+                color="primary"
+                variant="soft"
+                :loading="sendingEmails"
+                @click="sendPlanningEmails"
+              >
+                Notificeer onderzoekers
+              </UButton>
             </div>
           </div>
 
@@ -524,7 +535,7 @@
     project_location: string
     project_google_drive_folder: string | null
     cluster_id: number
-    cluster_number: number
+    cluster_number: string
     cluster_address: string
     status: VisitStatusCode
     function_ids: number[]
@@ -628,6 +639,7 @@
 
   const loading = ref(false)
   const clearing = ref(false)
+  const sendingEmails = ref(false)
   const currentWeekNumber = computed<number>(() => currentIsoWeek(effectiveToday.value))
   const toast = useToast()
 
@@ -1296,7 +1308,47 @@
     }
   }
 
+  async function sendPlanningEmails() {
+    if (
+      !confirm(
+        'Weet je zeker dat je de planning wilt mailen naar alle onderzoekers voor deze week?'
+      )
+    )
+      return
+
+    sendingEmails.value = true
+    try {
+      const year = effectiveToday.value.getFullYear()
+      const targetYear = weekRange.value ? weekRange.value.start.getFullYear() : year
+
+      const result = await $api<{ message: string; stats: any }>(
+        `/planning/${targetYear}/${activeWeekNumber.value}/notify`,
+        {
+          method: 'POST'
+        }
+      )
+      toast.add({
+        title: 'Emails verstuurd',
+        description: result.message,
+        color: 'success'
+      })
+    } catch (err: unknown) {
+      toast.add({
+        title: 'Fout bij versturen emails',
+        description: errorDescription(err),
+        color: 'error'
+      })
+    } finally {
+      sendingEmails.value = false
+    }
+  }
+
   async function clearResearchers(): Promise<void> {
+    if (
+      !confirm('Weet je zeker dat je alle toegewezen onderzoekers voor deze week wilt verwijderen?')
+    )
+      return
+
     clearing.value = true
     try {
       const w = activeWeekNumber.value

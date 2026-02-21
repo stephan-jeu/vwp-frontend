@@ -4,6 +4,7 @@ export interface Project {
   id: number
   code: string
   location: string
+  customer: string | null
   google_drive_folder: string | null
   quote: boolean
 }
@@ -11,6 +12,7 @@ export interface Project {
 export interface ProjectCreate {
   code: string
   location: string
+  customer?: string | null
   google_drive_folder?: string | null
   quote?: boolean
 }

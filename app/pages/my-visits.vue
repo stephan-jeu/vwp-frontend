@@ -87,7 +87,7 @@
                       <span>
                         {{
                             visit.species.length
-                            ? visit.species.map((s) => s.abbreviation || s.name).join(', ')
+                            ? visit.species.map((s) => s.name || s.abbreviation).join(', ')
                             : visit.custom_species_name || '-'
                         }}
                       </span>
@@ -213,7 +213,7 @@
     project_code: string
     project_location: string
     cluster_id: number
-    cluster_number: number
+    cluster_number: string
     cluster_address: string
     status: VisitStatusCode
     function_ids: number[]

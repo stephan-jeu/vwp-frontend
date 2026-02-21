@@ -146,7 +146,7 @@
     project_code: string
     project_location: string
     cluster_id: number
-    cluster_number: number
+    cluster_number: string
     cluster_address: string
     status: VisitStatusCode
     functions: CompactFunction[]
@@ -192,6 +192,20 @@
     }
     return Boolean(raw)
   })
+
+  const featureAdvertise = computed<boolean>(() => {
+    const raw = runtimeConfig.public.featureAdvertise
+    if (typeof raw === 'string') {
+      return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
+
+  watch(featureAdvertise, (enabled) => {
+    if (!enabled) {
+      navigateTo('/')
+    }
+  }, { immediate: true })
 
   const ICONS = [
     'hand-metal',

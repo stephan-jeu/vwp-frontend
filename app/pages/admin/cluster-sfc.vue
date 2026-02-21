@@ -4,18 +4,36 @@
 
     <UCard class="mb-6">
       <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <USelectMenu
-          :model-value="selectedProject"
-          :items="projectOptions"
-          searchable
-          searchable-placeholder="Zoek projectcode"
-          placeholder="Project"
-          @update:model-value="(opt) => (selectedProject = opt?.value === null ? undefined : opt)"
-        />
+        <div class="flex items-center gap-1">
+          <USelectMenu
+            :model-value="selectedProject"
+            :items="projectOptions"
+            searchable
+            searchable-placeholder="Zoek projectcode"
+            placeholder="Project"
+            class="flex-1 min-w-0"
+            @update:model-value="(opt) => (selectedProject = opt?.value === null ? undefined : opt)"
+          />
+          <UButton
+            icon="i-lucide-plus"
+            color="neutral"
+            variant="soft"
+            size="sm"
+            @click="openProjectModal('create')"
+          />
+          <UButton
+            v-if="selectedProject"
+            icon="i-lucide-pencil"
+            color="neutral"
+            variant="soft"
+            size="sm"
+            @click="openProjectModal('edit')"
+          />
+        </div>
         <UInput v-model="address" placeholder="Adres" />
-        <UInput v-model.number="clusterNumber" type="number" placeholder="Cluster nummer" />
-        <!-- empty grid cells reserved for layout symmetry -->
-        <div />
+        <UInput v-model="clusterLocation" placeholder="Locatie (standaard projectlocatie)" />
+        <UInput v-model="clusterNumber" placeholder="Cluster code" />
+        <!-- empty grid cell reserved for layout symmetry -->
         <div />
       </div>
       <USeparator class="mt-4" />
@@ -41,6 +59,7 @@
               :items="speciesOptions"
               multiple
               searchable
+              :filter-fields="['label', 'abbreviation']"
               placeholder="Soorten"
               @update:model-value="(sel) => (row.species = sel as Option[])"
             />
@@ -103,6 +122,43 @@
     </UCard>
 
     <UCard>
+      <UModal
+        v-model:open="showProjectModal"
+        :title="projectModalMode === 'create' ? 'Project toevoegen' : 'Project bewerken'"
+      >
+        <template #content>
+          <UCard>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <UFormField label="Projectcode" required>
+                <UInput v-model="projectForm.code" placeholder="Bijv. P-001" />
+              </UFormField>
+              <UFormField label="Locatie" required>
+                <UInput v-model="projectForm.location" placeholder="Bijv. Utrecht" />
+              </UFormField>
+              <UFormField label="Klant">
+                <UInput v-model="projectForm.customer" placeholder="Optioneel" />
+              </UFormField>
+              <UFormField label="Google Drive folder">
+                <UInput v-model="projectForm.google_drive_folder" placeholder="Optioneel" />
+              </UFormField>
+              <UFormField label="Offerte">
+                <UCheckbox v-model="projectForm.quote" />
+              </UFormField>
+            </div>
+            <template #footer>
+              <div class="flex justify-end gap-2">
+                <UButton color="neutral" variant="ghost" @click="showProjectModal = false"
+                  >Annuleren</UButton
+                >
+                <UButton color="primary" :loading="projectModalSaving" @click="saveProject">
+                  {{ projectModalMode === 'create' ? 'Toevoegen' : 'Opslaan' }}
+                </UButton>
+              </div>
+            </template>
+          </UCard>
+        </template>
+      </UModal>
+
       <UModal v-model:open="showDeleteClusterConfirm" title="Cluster verwijderen">
         <template #content>
           <UCard>
@@ -181,10 +237,9 @@
                 class="text-sm text-gray-700 dark:text-gray-400"
                 @click="toggleCluster(cluster.id)"
               >
-                Cluster {{ cluster.cluster_number }}, {{ cluster.address }} ({{
-                  cluster.visits.length
-                }}
-                bezoeken)
+                Cluster {{ cluster.cluster_number }}, {{ cluster.address }}
+                <span v-if="cluster.location" class="text-gray-500">· {{ cluster.location }}</span>
+                ({{ cluster.visits.length }} bezoeken)
               </span>
             </div>
             <div class="flex items-center gap-1">
@@ -202,8 +257,7 @@
                     >
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <UInput
-                        v-model.number="duplicateClusterNumber"
-                        type="number"
+                        v-model="duplicateClusterNumber"
                         label="Nieuw cluster nummer"
                       />
                       <UInput v-model="duplicateAddress" label="Adres" />
@@ -232,6 +286,11 @@
           <div v-if="expanded.has(cluster.id)" class="px-3 pb-3">
             <div class="flex items-center gap-2 py-2">
               <UInput v-model="tempAddresses[cluster.id]" placeholder="Adres" class="flex-1" />
+              <UInput
+                v-model="tempLocations[cluster.id]"
+                :placeholder="currentProject?.location ?? 'Locatie'"
+                class="flex-1"
+              />
               <UButton
                 :loading="savingClusterId === cluster.id"
                 color="primary"
@@ -296,6 +355,7 @@
                       :model-value="mapIdsToOptions(visit.species_ids, speciesOptions)"
                       :items="speciesOptions"
                       multiple
+                      :filter-fields="['label', 'abbreviation']"
                       class="w-3xs"
                       @update:model-value="
                         (sel) => (visit.species_ids = sel.map((o) => o.value as number))
@@ -435,7 +495,7 @@
 <script setup lang="ts">
   import { validateIsoWeekWithinDateWindow } from '../../utils/visitWeekWindow'
 
-  type Option = { label: string; value: number | null }
+  type Option = { label: string; value: number | null; abbreviation?: string | null }
   type StringOption = { label: string; value: string | null }
 
   const { $api } = useNuxtApp()
@@ -451,7 +511,8 @@
 
   const selectedProject = ref<Option | undefined>(undefined)
   const address = ref('')
-  const clusterNumber = ref<number | null>(null)
+  const clusterLocation = ref('')
+  const clusterNumber = ref('')
   type ComboRow = { functions: Option[]; species: Option[] }
   const comboRows = ref<ComboRow[]>([])
 
@@ -471,7 +532,8 @@
   const pendingCreatePayload = ref<null | {
     project_id: number
     address: string
-    cluster_number: number
+    location?: string | null
+    cluster_number: string
     combos: { function_ids: number[]; species_ids: number[] }[]
     default_required_researchers?: number | null
     default_expertise_level?: string | null
@@ -489,8 +551,17 @@
     onCancelMergeConfirm()
   })
 
+  type ProjectData = {
+    id: number
+    code: string
+    location: string
+    customer?: string | null
+    google_drive_folder?: string | null
+    quote?: boolean
+  }
+
   const projectOptions = ref<Option[]>([])
-  const projectsList = ref<Array<{ id: number; code: string; location?: string | null }>>([])
+  const projectsList = ref<ProjectData[]>([])
   const functionOptions = ref<Option[]>([])
   const speciesOptions = ref<Option[]>([])
   const researcherOptions = ref<Option[]>([])
@@ -593,13 +664,15 @@
     id: number
     project_id: number
     address: string
-    cluster_number: number
+    location: string | null
+    cluster_number: string
     visits: CompactVisit[]
   }
 
   const clusters = ref<Cluster[]>([])
   const expanded = ref<Set<number>>(new Set())
   const tempAddresses = reactive<Record<number, string>>({})
+  const tempLocations = reactive<Record<number, string>>({})
   const savingClusterId = ref<number | null>(null)
   const currentProject = computed(() => {
     const sel = selectedProject.value
@@ -628,7 +701,7 @@
   // no table columns needed
 
   const canCreate = computed(() => {
-    if (selectedProject.value?.value == null || !address.value || clusterNumber.value === null)
+    if (selectedProject.value?.value == null || !address.value || !clusterNumber.value.trim())
       return false
     if (comboRows.value.length === 0) return false
     return comboRows.value.every((r) => r.functions.length > 0 && r.species.length > 0)
@@ -636,24 +709,109 @@
 
   async function loadOptions(): Promise<void> {
     const [projects, functions, species, users] = await Promise.all([
-      $api<{ id: number; code: string; location?: string | null }[]>('/projects'),
+      $api<ProjectData[]>('/projects'),
       $api<{ id: number; name: string }[]>('/admin/functions'),
       $api<{ id: number; name: string; abbreviation?: string | null }[]>('/admin/species'),
       $api<{ id: number; full_name: string | null }[]>('/admin/users')
     ])
     projectsList.value = projects
-    projectOptions.value = projects.map((p) => ({ label: p.code, value: p.id }))
+    projectOptions.value = [{ label: '—', value: null }, ...projects.map((p) => ({ label: p.code, value: p.id }))]
     functionOptions.value = functions.map((f) => ({ label: f.name, value: f.id }))
-    speciesOptions.value = species.map((s) => ({ label: s.abbreviation ?? s.name, value: s.id }))
+    speciesOptions.value = species.map((s) => ({ label: s.name || s.abbreviation || '', value: s.id, abbreviation: s.abbreviation }))
     const mappedUsers = users
       .map((u) => ({ label: u.full_name ?? `Gebruiker #${u.id}`, value: u.id }))
       .sort((a, b) => a.label.localeCompare(b.label))
     researcherOptions.value = [{ label: '\u00A0', value: null }, ...mappedUsers]
   }
 
+  // Project add/edit modal
+  const showProjectModal = ref(false)
+  const projectModalMode = ref<'create' | 'edit'>('create')
+  const projectModalSaving = ref(false)
+  const projectForm = reactive({
+    code: '',
+    location: '',
+    customer: null as string | null,
+    google_drive_folder: null as string | null,
+    quote: false
+  })
+
+  function openProjectModal(mode: 'create' | 'edit'): void {
+    projectModalMode.value = mode
+    if (mode === 'edit' && selectedProject.value) {
+      const proj = projectsList.value.find((p) => p.id === selectedProject.value!.value)
+      if (proj) {
+        Object.assign(projectForm, {
+          code: proj.code,
+          location: proj.location ?? '',
+          customer: proj.customer ?? null,
+          google_drive_folder: proj.google_drive_folder ?? null,
+          quote: proj.quote ?? false
+        })
+      }
+    } else {
+      Object.assign(projectForm, {
+        code: '',
+        location: '',
+        customer: null,
+        google_drive_folder: null,
+        quote: false
+      })
+    }
+    showProjectModal.value = true
+  }
+
+  async function reloadProjects(): Promise<void> {
+    const projects = await $api<ProjectData[]>('/projects')
+    projectsList.value = projects
+    projectOptions.value = [{ label: '—', value: null }, ...projects.map((p) => ({ label: p.code, value: p.id }))]
+  }
+
+  async function saveProject(): Promise<void> {
+    if (!projectForm.code.trim() || !projectForm.location.trim()) return
+    projectModalSaving.value = true
+    try {
+      const payload = {
+        code: projectForm.code.trim(),
+        location: projectForm.location.trim(),
+        customer: projectForm.customer?.trim() || null,
+        google_drive_folder: projectForm.google_drive_folder?.trim() || null,
+        quote: projectForm.quote
+      }
+      if (projectModalMode.value === 'edit' && selectedProject.value) {
+        const projectId = selectedProject.value.value as number
+        await $api(`/projects/${projectId}`, { method: 'PUT', body: payload })
+        toast.add({ title: 'Project bijgewerkt', color: 'success' })
+        showProjectModal.value = false
+        await reloadProjects()
+        // Refresh selected option in case code changed
+        const updatedOption = projectOptions.value.find((o) => o.value === projectId)
+        if (updatedOption) selectedProject.value = updatedOption
+      } else {
+        const created = await $api<{ id: number }>('/projects', { method: 'POST', body: payload })
+        toast.add({ title: 'Project aangemaakt', color: 'success' })
+        showProjectModal.value = false
+        await reloadProjects()
+        // Auto-select the newly created project
+        if (created?.id) {
+          const newOption = projectOptions.value.find((o) => o.value === created.id)
+          if (newOption) selectedProject.value = newOption
+        }
+      }
+    } catch (error: unknown) {
+      const description = errorDescription(error)
+      toast.add({ title: 'Fout bij opslaan project', description, color: 'error' })
+    } finally {
+      projectModalSaving.value = false
+    }
+  }
+
   watch(selectedProject, async (opt) => {
     if (opt === undefined) return
     address.value = ''
+    // Auto-populate location from project location as default
+    const proj = projectsList.value.find((p) => p.id === opt.value)
+    clusterLocation.value = proj?.location ?? ''
     await loadClusters()
   })
 
@@ -668,9 +826,10 @@
         query: { project_id: selectedProject.value.value }
       })
       clusters.value = data
-      // initialize temp addresses for inline editing
+      // initialize temp addresses/locations for inline editing
       for (const c of data) {
         tempAddresses[c.id] = c.address
+        tempLocations[c.id] = c.location ?? ''
       }
     } finally {
       loading.value = false
@@ -692,6 +851,7 @@
       pendingCreatePayload.value = {
         project_id: selectedProject.value!.value as number,
         address: address.value,
+        location: clusterLocation.value.trim() || null,
         cluster_number: clusterNumber.value!,
         combos: comboRows.value.map((r) => ({
           function_ids: r.functions.map((o) => o.value as number),
@@ -716,6 +876,7 @@
         body: {
           project_id: selectedProject.value!.value as number,
           address: address.value,
+          location: clusterLocation.value.trim() || null,
           cluster_number: clusterNumber.value!,
           combos: comboRows.value.map((r) => ({
             function_ids: r.functions.map((o) => o.value as number),
@@ -732,7 +893,7 @@
         }
       })
       toast.add({ title: 'Cluster aangemaakt', color: 'success' })
-      clusterNumber.value = null
+      clusterNumber.value = ''
       await loadClusters()
       if (res?.id) {
         await expandAndScrollToCluster(res.id)
@@ -783,10 +944,14 @@
   async function onSaveClusterAddress(cluster: Cluster): Promise<void> {
     const newAddress = tempAddresses[cluster.id]?.trim() ?? ''
     if (!newAddress) return
+    const newLocation = tempLocations[cluster.id]?.trim() || null
     savingClusterId.value = cluster.id
     try {
-      await $api(`/clusters/${cluster.id}`, { method: 'PATCH', body: { address: newAddress } })
-      toast.add({ title: 'Adres bijgewerkt', color: 'success' })
+      await $api(`/clusters/${cluster.id}`, {
+        method: 'PATCH',
+        body: { address: newAddress, location: newLocation }
+      })
+      toast.add({ title: 'Cluster bijgewerkt', color: 'success' })
       await loadClusters()
       expanded.value.add(cluster.id)
     } finally {
@@ -877,13 +1042,13 @@
 
   // Duplicate modal
   const duplicating = ref(false)
-  const duplicateSource = ref<{ id: number; cluster_number: number } | null>(null)
-  const duplicateClusterNumber = ref<number | null>(null)
+  const duplicateSource = ref<{ id: number; cluster_number: string } | null>(null)
+  const duplicateClusterNumber = ref('')
   const duplicateAddress = ref('')
 
   function openDuplicate(cluster: Cluster): void {
     duplicateSource.value = { id: cluster.id, cluster_number: cluster.cluster_number }
-    duplicateClusterNumber.value = cluster.cluster_number
+    duplicateClusterNumber.value = cluster.cluster_number ?? ''
     duplicateAddress.value = cluster.address
   }
 
@@ -916,7 +1081,7 @@
   }
 
   async function confirmDuplicate(): Promise<void> {
-    if (!duplicateSource.value || duplicateClusterNumber.value === null) return
+    if (!duplicateSource.value || !duplicateClusterNumber.value) return
     duplicating.value = true
     try {
       await $api(`/clusters/${duplicateSource.value.id}/duplicate`, {

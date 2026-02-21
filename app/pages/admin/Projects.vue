@@ -15,6 +15,13 @@
               data-testid="input-location"
             />
           </UFormField>
+          <UFormField label="Klant" name="customer">
+            <UInput
+              v-model="form.customer"
+              placeholder="Optioneel"
+              data-testid="input-customer"
+            />
+          </UFormField>
           <UFormField label="Google Drive folder" name="google_drive_folder">
             <UInput
               v-model="form.google_drive_folder"
@@ -144,6 +151,7 @@
   const schema = z.object({
     code: z.string().min(1, 'Verplicht'),
     location: z.string().min(1, 'Verplicht'),
+    customer: z.string().nullable().optional(),
     google_drive_folder: z.string().nullable().optional(),
     quote: z.boolean().optional().default(false)
   })
@@ -152,6 +160,7 @@
     id?: number
     code: string
     location: string
+    customer: string | null
     google_drive_folder: string | null
     quote: boolean
   }
@@ -159,6 +168,7 @@
   const form = reactive<FormState>({
     code: '',
     location: '',
+    customer: null,
     google_drive_folder: null,
     quote: false
   })
@@ -167,6 +177,7 @@
   const columns: TableColumn<Project>[] = [
     { accessorKey: 'code', header: 'Projectcode' },
     { accessorKey: 'location', header: 'Locatie' },
+    { accessorKey: 'customer', header: 'Klant' },
     { id: 'quote', header: 'Offerte' },
     { id: 'google', header: 'Google Drive' },
     { id: 'actions', header: '' }
@@ -179,6 +190,7 @@
       id: undefined,
       code: '',
       location: '',
+      customer: null,
       google_drive_folder: null,
       quote: false
     })
@@ -201,6 +213,7 @@
       const payload: ProjectCreate = {
         code: form.code,
         location: form.location,
+        customer: form.customer ?? null,
         google_drive_folder: form.google_drive_folder ?? null,
         quote: form.quote ?? false
       }

@@ -4,6 +4,12 @@
 
 <template>
   <div v-if="config.public.demoMode" class="text-xl font-bold">VWP</div>
+  <img
+    v-else-if="config.public.brandLogoUrl"
+    :src="String(config.public.brandLogoUrl)"
+    :alt="String(config.public.brandName)"
+    class="object-contain"
+  />
   <svg
     v-else
     id="Layer_1"
