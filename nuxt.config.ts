@@ -1,6 +1,12 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  modules: ['@nuxt/eslint', '@nuxt/ui', '@pinia/nuxt'],
+  modules: ['@nuxt/eslint', '@nuxt/ui', '@pinia/nuxt', '@sentry/nuxt/module'],
+
+  sentry: {
+    sourceMapsUploadOptions: {
+      enabled: false // Disable direct sourcemap upload here; let coolify/pipelines handle if needed
+    }
+  },
 
   devtools: {
     enabled: true

@@ -472,6 +472,7 @@ async function onSubmit() {
       emit('saved')
       emit('update:open', false)
     } else {
+      if (!props.visits[0]) return
       await submitForVisit(props.visits[0].id)
 
       const statusMessages: Partial<Record<VisitStatusCode, string>> = {

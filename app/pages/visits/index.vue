@@ -1183,6 +1183,7 @@
       const blob = await $api<Blob>('/visits/export', {
         query,
         responseType: 'blob'
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any)
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -1192,7 +1193,7 @@
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
-    } catch (e) {
+    } catch {
       toast.add({ title: 'Export mislukt', color: 'error' })
     }
   }
@@ -1214,7 +1215,7 @@
     return items
   })
 
-  let searchTimer: ReturnType<typeof setTimeout> | null = null
+  let searchTimer: number | null = null
   watch(search, () => {
     if (searchTimer) window.clearTimeout(searchTimer)
     searchTimer = window.setTimeout(() => {

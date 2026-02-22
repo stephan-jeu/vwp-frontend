@@ -14,6 +14,7 @@ export default defineNuxtPlugin(() => {
     }
   })
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function api<T>(request: string, options?: FetchOptions<any>): Promise<T> {
     try {
       return await base<T>(request, options)

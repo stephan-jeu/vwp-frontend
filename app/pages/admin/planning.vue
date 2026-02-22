@@ -1321,7 +1321,7 @@
       const year = effectiveToday.value.getFullYear()
       const targetYear = weekRange.value ? weekRange.value.start.getFullYear() : year
 
-      const result = await $api<{ message: string; stats: any }>(
+      const result = await $api<{ message: string; stats: unknown }>(
         `/planning/${targetYear}/${activeWeekNumber.value}/notify`,
         {
           method: 'POST'

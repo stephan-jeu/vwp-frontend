@@ -11,10 +11,12 @@ export default defineNuxtPlugin(() => {
             const root = document.documentElement
             Object.entries(palette).forEach(([step, hex]) => {
                 root.style.setProperty(`--color-brand-${step}`, hex)
+                root.style.setProperty(`--ui-color-primary-${step}`, hex)
             })
 
-            // Update the 950 step specifically? 
-            // The generator handles it, but let's ensure it overrides existings.
+            // Also set --ui-primary directly (shade 500 for light, 400 for dark)
+            // matching Nuxt UI's convention from its colors plugin
+            root.style.setProperty('--ui-primary', palette[500] ?? null)
         } catch (e) {
             console.warn('Failed to generate brand palette:', e)
         }

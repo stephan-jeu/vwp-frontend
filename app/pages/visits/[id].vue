@@ -328,15 +328,6 @@
     return Boolean(raw)
   })
 
-
-  const effectiveToday = computed<Date>(() => {
-    if (testModeEnabled.value && simulatedDate.value) {
-      const dt = new Date(simulatedDate.value)
-      if (!Number.isNaN(dt.getTime())) return dt
-    }
-    return new Date()
-  })
-
   const visitId = computed(() => Number(route.params.id))
 
   const { data, pending, error, refresh } = useAsyncData(
@@ -460,19 +451,13 @@
     return new Intl.DateTimeFormat('nl-NL', { day: '2-digit', month: 'short' }).format(dt)
   }
 
-  function isThisWeek(dateStr: string | null): boolean {
-    if (!dateStr) return false
-    const dt = new Date(dateStr)
-    if (Number.isNaN(dt.getTime())) return false
-
-    const base = effectiveToday.value
-    const monday = new Date(base)
-    const day = base.getDay() || 7 // Monday=1..Sunday=7
-    monday.setDate(base.getDate() - (day - 1))
-    const sunday = new Date(monday)
-    sunday.setDate(monday.getDate() + 6)
-
-    return dt >= monday && dt <= sunday
+  function getIsoWeekNumber(date: Date): number {
+    const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+    const dayNum = tmp.getUTCDay() || 7
+    tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum)
+    const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1))
+    const diff = tmp.getTime() - yearStart.getTime()
+    return Math.ceil((diff / 86400000 + 1) / 7)
   }
 
   function getDayName(date: Date): string {
@@ -480,24 +465,25 @@
   }
 
   function weekBadge(v: VisitDetailRow): string | null {
-    const base = effectiveToday.value
-    const today = new Date(base.getFullYear(), base.getMonth(), base.getDate())
+    if (featureDailyPlanning.value) return null
+    if (!v.planned_week) return null
 
-    if (v.from_date && isThisWeek(v.from_date)) {
+    if (v.from_date) {
       const from = new Date(v.from_date)
-      const fromDateOnly = new Date(from.getFullYear(), from.getMonth(), from.getDate())
-      if (fromDateOnly > today) {
+      if (!Number.isNaN(from.getTime()) && getIsoWeekNumber(from) === v.planned_week) {
         const prev = new Date(from)
         prev.setDate(from.getDate() - 1)
         return `Na ${getDayName(prev)}`
       }
     }
 
-    if (v.to_date && isThisWeek(v.to_date)) {
+    if (v.to_date) {
       const to = new Date(v.to_date)
-      const next = new Date(to)
-      next.setDate(to.getDate() + 1)
-      return `Voor ${getDayName(next)}`
+      if (!Number.isNaN(to.getTime()) && getIsoWeekNumber(to) === v.planned_week) {
+        const next = new Date(to)
+        next.setDate(to.getDate() + 1)
+        return `Voor ${getDayName(next)}`
+      }
     }
 
     return null

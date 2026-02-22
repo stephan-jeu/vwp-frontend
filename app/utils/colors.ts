@@ -94,7 +94,7 @@ function hslToHex(h: number, s: number, l: number): string {
 }
 
 export function generatePalette(baseHex: string): Palette {
-    const { h, s, l } = hexToHsl(baseHex)
+    const { h, s } = hexToHsl(baseHex)
 
     // Map lightness to tailwind steps.
     // We assume the input color represents the 500 or 600 step roughly.
