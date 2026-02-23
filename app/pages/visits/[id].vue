@@ -26,11 +26,8 @@
                   Terug
                 </UButton>
               </div>
-              <div class="text-xs text-gray-700 dark:text-gray-300">Project</div>
-              <div class="text-sm font-semibold text-gray-800">
-                {{ visit.project_code }} 
-              </div>
-              <div v-if="visit.project_customer" class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              <div class="text-xs text-gray-700 dark:text-gray-300">Project {{ visit.project_code }}</div>
+              <div v-if="visit.project_customer" class="mt-1 text-sm text-gray-700 dark:text-gray-300">
                 Klant: {{ visit.project_customer }}
               </div>
               <div class="mt-1 text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1.5">

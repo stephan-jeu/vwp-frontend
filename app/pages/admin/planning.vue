@@ -271,15 +271,13 @@
 
                   <div class="space-y-3">
                     <div v-for="visit in scheduleVisits" :key="visit.id" class="space-y-2">
-                      <VisitPreviewCard :visit="visit" @open="goToDetail(visit.id)" />
-                      <div class="flex justify-end gap-2">
-                        <UButton
-                          size="xs"
-                          color="neutral"
-                          icon="i-heroicons-arrow-left"
-                          @click="unplan(visit)"
-                        />
-                      </div>
+                      <VisitPreviewCard
+                        :visit="visit"
+                        selectable
+                        :selected="selectedVisitIds.has(visit.id)"
+                        @open="goToDetail(visit.id)"
+                        @update:selected="toggleSelection(visit.id, $event)"
+                      />
                     </div>
                   </div>
                 </div>
@@ -332,7 +330,7 @@
                             @click="goToDetail(visit.id)"
                           >
                             <span class="font-medium">{{ visit.project_code }}</span>
-                            <span class="text-gray-500">C{{ visit.cluster_number }}</span>
+                            <span class="text-gray-500">{{ visit.cluster_number }}</span>
                             <span>{{
                               enableVisitCode
                                 ? (visit.visit_code ?? '-')
@@ -393,7 +391,7 @@
                               @click="goToDetail(visit.id)"
                             >
                               <span class="font-medium">{{ visit.project_code }}</span>
-                              <span class="text-gray-500">C{{ visit.cluster_number }}</span>
+                              <span class="text-gray-500">{{ visit.cluster_number }}</span>
                               <span>{{
                                 enableVisitCode
                                   ? (visit.visit_code ?? '-')
@@ -1004,7 +1002,8 @@
 
   function visitSpeciesAbbr(visit: VisitListRow): string {
     if (visit.species.length > 0) {
-      return visit.species.map((s) => s.abbreviation || s.name).join(' ')
+      const abbreviations = visit.species.map((s) => s.abbreviation || s.name)
+      return Array.from(new Set(abbreviations)).join(' ')
     }
     return visit.custom_species_name || '-'
   }
@@ -1024,27 +1023,6 @@
   }
 
   // --- End Researcher Grid ---
-
-  async function unplan(visit: VisitListRow) {
-    if (!confirm('Weet je zeker dat je dit bezoek uit de planning wilt halen?')) return
-
-    try {
-      loading.value = true
-      await $api(`/visits/${visit.id}`, {
-        method: 'PUT', // or specific endpoint
-        body: {
-          planned_week: null,
-          researcher_ids: []
-        }
-      })
-      toast.add({ title: 'Bezoek teruggezet naar voorlopig', color: 'success' })
-      await loadVisits()
-    } catch {
-      toast.add({ title: 'Fout bij wijzigen', color: 'error' })
-    } finally {
-      loading.value = false
-    }
-  }
 
   // --- END NEW LOGIC ---
 

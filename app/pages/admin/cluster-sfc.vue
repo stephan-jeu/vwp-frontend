@@ -31,7 +31,7 @@
           />
         </div>
         <UInput v-model="address" placeholder="Adres" />
-        <UInput v-model="clusterLocation" placeholder="Locatie (standaard projectlocatie)" />
+        <UInput v-model="clusterLocation" placeholder="Locatie" />
         <UInput v-model="clusterNumber" placeholder="Cluster code" />
         <!-- empty grid cell reserved for layout symmetry -->
         <div />
@@ -643,6 +643,7 @@
       if (res?.id) {
         await expandAndScrollToCluster(res.id)
       }
+      await validateAddressWarning(res.address, res.location)
     } catch (error: unknown) {
       const description = errorDescription(error)
       toast.add({
@@ -807,8 +808,15 @@
   }
 
   watch(selectedProject, async (opt) => {
-    if (opt === undefined) return
+    if (opt === undefined) {
+      address.value = ''
+      clusterLocation.value = ''
+      clusterNumber.value = ''
+      await loadClusters()
+      return
+    }
     address.value = ''
+    clusterNumber.value = ''
     // Auto-populate location from project location as default
     const proj = projectsList.value.find((p) => p.id === opt.value)
     clusterLocation.value = proj?.location ?? ''
@@ -898,6 +906,7 @@
       if (res?.id) {
         await expandAndScrollToCluster(res.id)
       }
+      validateAddressWarning(res.address, res.location)
     } catch (error: unknown) {
       const description = errorDescription(error)
       toast.add({
@@ -954,6 +963,7 @@
       toast.add({ title: 'Cluster bijgewerkt', color: 'success' })
       await loadClusters()
       expanded.value.add(cluster.id)
+      await validateAddressWarning(newAddress, newLocation)
     } finally {
       savingClusterId.value = null
     }
@@ -1090,6 +1100,7 @@
       })
       toast.add({ title: 'Cluster gedupliceerd', color: 'success' })
       await loadClusters()
+      await validateAddressWarning(duplicateAddress.value, null)
     } finally {
       duplicating.value = false
     }
@@ -1106,6 +1117,33 @@
       await loadClusters()
     } finally {
       deletingVisit.value = false
+    }
+  }
+
+  async function validateAddressWarning(address: string | null | undefined, location: string | null | undefined) {
+    const combined = [address, location].filter(s => s && s.trim()).join(', ')
+    if (!combined) return
+    try {
+      const res = await $api<{ valid: boolean | null }>('/admin/utils/validate-address', {
+        query: { address: combined }
+      })
+      if (res.valid === false) {
+        toast.add({
+          title: 'Adres niet herkend',
+          description: `Google Maps kon het adres '${combined}' niet vinden.`,
+          color: 'warning',
+          icon: 'i-heroicons-exclamation-triangle'
+        })
+      } else if (res.valid === null) {
+        toast.add({
+          title: 'Adres validatie mislukt',
+          description: `Er trad een fout op bij het controleren van '${combined}' (bijv. Google Maps API fout).`,
+          color: 'warning',
+          icon: 'i-heroicons-exclamation-triangle'
+        })
+      }
+    } catch (e) {
+      console.error('Failed to validate address', e)
     }
   }
 

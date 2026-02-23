@@ -159,6 +159,19 @@ const runtimeConfig = useRuntimeConfig()
 const isBulk = computed(() => props.visits.length > 1)
 const singleVisit = computed(() => props.visits.length === 1 ? props.visits[0] : null)
 
+const anyVisitExpired = computed(() => {
+  const today = effectiveToday.value
+  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  
+  return props.visits.some(v => {
+    if (!v.to_date) return false
+    const d = new Date(v.to_date)
+    if (Number.isNaN(d.getTime())) return false
+    const endDate = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+    return endDate < todayDate
+  })
+})
+
 // -- Helpers --
 
 const testModeEnabled = computed<boolean>(() => {
@@ -219,7 +232,7 @@ const bulkProgress = ref<{ done: number; total: number } | null>(null)
 const statusOptions = computed<StatusOption[]>(() => {
   const opts: StatusOption[] = []
 
-  if (props.isAdmin) {
+  if (props.isAdmin && !anyVisitExpired.value) {
     opts.push({ label: 'Open', value: 'open' })
     if (!isBulk.value) {
       opts.push({ label: 'Gepland', value: 'planned' })
@@ -237,10 +250,12 @@ const statusOptions = computed<StatusOption[]>(() => {
   return opts
 })
 
-const selectedStatusOption = computed(() =>
-  statusOptions.value.find((o) => o.value === localStatus.value) ??
-  { label: localStatus.value, value: localStatus.value }
-)
+const selectedStatusOption = computed(() => {
+  const found = statusOptions.value.find((o) => o.value === localStatus.value)
+  if (found) return found
+  const labels: Record<string, string> = { open: 'Open', planned: 'Gepland' }
+  return { label: labels[localStatus.value] || localStatus.value, value: localStatus.value }
+})
 
 const selectedResearcherOptions = computed<ResearcherOption[]>(() => {
   if (!props.researcherOptions) return []

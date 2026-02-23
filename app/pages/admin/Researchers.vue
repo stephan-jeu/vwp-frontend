@@ -379,6 +379,7 @@
       })
       showCreate.value = false
       toast.add({ title: 'Onderzoeker opgeslagen', color: 'success' })
+      await validateAddressWarning(created.address, created.city)
     } catch (err: unknown) {
       const e = err as { response?: { _data?: { detail?: string }; status?: number } }
       const detail = e.response?._data?.detail
@@ -408,6 +409,7 @@
       const next = new Set(expanded.value)
       next.delete(u.id)
       expanded.value = next
+      await validateAddressWarning(updated.address, updated.city)
     } catch (err: unknown) {
       const e = err as { response?: { _data?: { detail?: string }; status?: number } }
       const detail = e.response?._data?.detail
@@ -435,6 +437,33 @@
       toast.add({ title: 'Onderzoeker verwijderd', color: 'success' })
     } finally {
       deleting.value = false
+    }
+  }
+
+  async function validateAddressWarning(address: string | null | undefined, city: string | null | undefined) {
+    const fullAddress = [address, city].filter(Boolean).join(', ')
+    if (!fullAddress.trim()) return
+    try {
+      const res = await $api<{ valid: boolean | null }>('/admin/utils/validate-address', {
+        query: { address: fullAddress.trim() }
+      })
+      if (res.valid === false) {
+        toast.add({
+          title: 'Adres niet herkend',
+          description: `Google Maps kon het adres '${fullAddress}' niet vinden.`,
+          color: 'warning',
+          icon: 'i-heroicons-exclamation-triangle'
+        })
+      } else if (res.valid === null) {
+        toast.add({
+          title: 'Adres validatie mislukt',
+          description: `Er trad een fout op bij het controleren van '${fullAddress}' (bijv. Google Maps API fout).`,
+          color: 'warning',
+          icon: 'i-heroicons-exclamation-triangle'
+        })
+      }
+    } catch (e) {
+      console.error('Failed to validate address', e)
     }
   }
 
