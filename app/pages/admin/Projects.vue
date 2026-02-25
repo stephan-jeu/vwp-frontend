@@ -62,6 +62,20 @@
         :global-filter="globalFilter"
         data-testid="projects-table"
       >
+        <template #select-header>
+          <UCheckbox
+            :model-value="allSelected"
+            :indeterminate="someSelected && !allSelected"
+            @update:model-value="toggleAllRows"
+          />
+        </template>
+        <template #select-cell="{ row }">
+          <UCheckbox
+            :model-value="bulkSelectedIds.has(row.original.id)"
+            @click.stop
+            @update:model-value="toggleBulkSelection(row.original.id, $event as boolean)"
+          />
+        </template>
         <template #quote-cell="{ row }">
           <span class="inline-flex items-center">
             <UIcon
@@ -129,6 +143,63 @@
         </UCard>
       </template>
     </UModal>
+
+    <UModal
+      v-model:open="showBulkArchive"
+      title="Projecten archiveren"
+      description="Verplaatst project(en) met alle onderliggende clusters en bezoeken naar het archief"
+      data-testid="archive-modal"
+    >
+      <template #content>
+        <UCard>
+          <div class="flex items-center gap-2">
+            <UIcon name="i-lucide-archive" class="text-primary-500" />
+            <h3 class="text-lg font-medium">Projecten archiveren</h3>
+          </div>
+          <p class="mt-2">
+            Weet je zeker dat je <strong>{{ bulkSelectedIds.size }}</strong> project(en) wilt archiveren? Dit kan niet ongedaan gemaakt worden en verbergt alle onderliggende clusters en bezoeken.
+          </p>
+          <div class="mt-6 flex justify-end gap-2">
+            <UButton variant="ghost" @click="showBulkArchive = false"
+              >Annuleren</UButton
+            >
+            <UButton
+              color="primary"
+              :loading="archiving"
+              @click="doBulkArchive"
+              >Archiveren</UButton
+            >
+          </div>
+        </UCard>
+      </template>
+    </UModal>
+
+    <!-- Floating Action Bar for Bulk Selection -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="translate-y-full opacity-0"
+        enter-to-class="translate-y-0 opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="translate-y-0 opacity-100"
+        leave-to-class="translate-y-full opacity-0"
+      >
+        <div
+          v-if="bulkSelectedIds.size > 0"
+          class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-4 py-2.5"
+        >
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
+            {{ bulkSelectedIds.size }} project(en) geselecteerd
+          </span>
+          <UButton size="sm" icon="i-lucide-archive" @click="showBulkArchive = true">
+            Projecten archiveren
+          </UButton>
+          <UButton size="sm" variant="ghost" color="neutral" @click="bulkSelectedIds.clear()">
+            Deselecteer
+          </UButton>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -146,6 +217,9 @@
   const deleting = ref(false)
   const showDelete = ref(false)
   const toDelete = ref<Project | null>(null)
+  const bulkSelectedIds = ref<Set<number>>(new Set())
+  const showBulkArchive = ref(false)
+  const archiving = ref(false)
   const toast = useToast()
 
   const schema = z.object({
@@ -175,6 +249,7 @@
   const isEditing = computed(() => !!form.id)
 
   const columns: TableColumn<Project>[] = [
+    { id: 'select', header: '', enableSorting: false },
     { accessorKey: 'code', header: 'Projectcode' },
     { accessorKey: 'location', header: 'Locatie' },
     { accessorKey: 'customer', header: 'Klant' },
@@ -183,7 +258,37 @@
     { id: 'actions', header: '' }
   ]
 
-  const rows = computed(() => store.projects)
+  const rows = computed(() => {
+    if (!globalFilter.value) return store.projects
+    const term = globalFilter.value.toLowerCase()
+    return store.projects.filter(
+      (p) =>
+        p.code.toLowerCase().includes(term) ||
+        p.location.toLowerCase().includes(term) ||
+        p.customer?.toLowerCase().includes(term)
+    )
+  })
+
+  const allSelected = computed(() => {
+    return rows.value.length > 0 && rows.value.every((row) => bulkSelectedIds.value.has(row.id))
+  })
+
+  const someSelected = computed(() => {
+    return rows.value.some((row) => bulkSelectedIds.value.has(row.id))
+  })
+
+  function toggleAllRows(val: boolean | 'indeterminate') {
+    if (val === true) {
+      rows.value.forEach((row) => bulkSelectedIds.value.add(row.id))
+    } else {
+      bulkSelectedIds.value.clear()
+    }
+  }
+
+  function toggleBulkSelection(id: number, val: boolean) {
+    if (val) bulkSelectedIds.value.add(id)
+    else bulkSelectedIds.value.delete(id)
+  }
 
   function resetForm() {
     Object.assign(form, {
@@ -249,11 +354,29 @@
     try {
       await store.remove(toDelete.value.id)
       if (form.id === toDelete.value.id) resetForm()
+      bulkSelectedIds.value.delete(toDelete.value.id)
       toast.add({ title: `Project ${toDelete.value.code} verwijderd.`, color: 'success' })
     } finally {
       deleting.value = false
       showDelete.value = false
       toDelete.value = null
+    }
+  }
+
+  async function doBulkArchive() {
+    if (bulkSelectedIds.value.size === 0) return
+    archiving.value = true
+    try {
+      const idsToArchive = Array.from(bulkSelectedIds.value)
+      await store.bulkArchive(idsToArchive)
+      toast.add({
+        title: `${idsToArchive.length} project(en) gearchiveerd.`,
+        color: 'success'
+      })
+      bulkSelectedIds.value.clear()
+      showBulkArchive.value = false
+    } finally {
+      archiving.value = false
     }
   }
 

@@ -69,6 +69,17 @@ export const useProjectsStore = defineStore('projects', {
       await $api<unknown>(`/projects/${id}`, { method: 'DELETE' })
       this.projects = this.projects.filter((p) => p.id !== id)
       if (this.selected?.id === id) this.selected = null
+    },
+    async bulkArchive(ids: number[]) {
+      const { $api } = useNuxtApp()
+      await $api<{ archived_projects: number }>('/projects/bulk-archive', {
+        method: 'POST',
+        body: { project_ids: ids }
+      })
+      this.projects = this.projects.filter((p) => !ids.includes(p.id))
+      if (this.selected && ids.includes(this.selected.id)) {
+        this.selected = null
+      }
     }
   }
 })

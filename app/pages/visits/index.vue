@@ -1,6 +1,11 @@
 <template>
   <div>
-    <UPageHeader title="Alle bezoeken" />
+    <UPageHeader :title="isArchiveMode ? 'Archief (Read-only)' : 'Alle bezoeken'" />
+
+    <div v-if="isArchiveMode" class="mt-4 p-4 bg-amber-50 text-amber-800 rounded mb-4 text-sm flex items-center gap-2">
+      <UIcon name="i-lucide-info" class="size-5" />
+      Dit is het archief. Onderstaande bezoeken zijn gearchiveerde projecten. Je kunt deze bezoeken niet meer bewerken.
+    </div>
 
     <div class="mt-4 flex items-center justify-between gap-4">
       <div class="flex items-center gap-2 flex-1">
@@ -45,7 +50,7 @@
         />
       </div>
 
-      <div class="flex items-center gap-2">
+      <div v-if="!isArchiveMode" class="flex items-center gap-2">
         <UDropdownMenu :items="actionItems" :content="{ side: 'bottom', align: 'end' }">
           <UButton
             color="neutral"
@@ -55,9 +60,18 @@
           />
         </UDropdownMenu>
       </div>
+      <div v-else>
+        <UButton
+          color="neutral"
+          variant="outline"
+          label="Export CSV"
+          icon="i-lucide-download"
+          @click="onExportCsv"
+        />
+      </div>
     </div>
 
-    <UCard v-if="isAdmin && showCreate" class="mt-4">
+    <UCard v-if="isAdmin && showCreate && !isArchiveMode" class="mt-4">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
           <label class="block text-xs mb-1">Project</label>
@@ -262,7 +276,7 @@
           :ui="{ tr: 'data-[expanded=true]:bg-elevated/50' }"
           class="flex-1"
         >
-          <template #select-cell="{ row }">
+          <template v-if="!isArchiveMode" #select-cell="{ row }">
             <UCheckbox
               :model-value="bulkSelectedIds.has(row.original.id)"
               @click.stop
@@ -333,7 +347,7 @@
 
           <template #expanded="{ row }">
             <div>
-              <div v-if="!isAdmin" class="px-3 pb-3 text-sm space-y-2">
+              <div v-if="!isAdmin || isArchiveMode" class="px-3 pb-3 text-sm space-y-2">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <span class="font-medium">Duur:</span>
@@ -671,7 +685,7 @@
                     <UTextarea v-model="row.original.remarks_field" class="w-xl" />
                   </div>
                 </div>
-                <div class="my-4 flex gap-2">
+                <div v-if="!isArchiveMode" class="my-4 flex gap-2">
                   <UButton
                     size="xs"
                     variant="soft"
@@ -762,7 +776,7 @@
     />
 
     <!-- Floating Action Bar for Bulk Selection -->
-    <Teleport to="body">
+    <Teleport v-if="!isArchiveMode" to="body">
       <Transition
         enter-active-class="transition duration-200 ease-out"
         enter-from-class="translate-y-full opacity-0"
@@ -817,7 +831,11 @@
   import { storeToRefs } from 'pinia'
   import { useAuthStore } from '~~/stores/auth'
   import { useTestModeStore } from '~~/stores/testMode'
+  import { useRoute } from 'vue-router'
   import { validateIsoWeekWithinDateWindow } from '../../utils/visitWeekWindow'
+
+  const route = useRoute()
+  const isArchiveMode = computed(() => route.query.archive === '1')
 
   type VisitStatusCode =
     | 'created'
@@ -1004,7 +1022,7 @@
     const cols: TableColumn<VisitListRow>[] = [
       { id: 'expand', header: '', enableSorting: false, cell: 'expand' },
     ]
-    if (isAdmin.value) {
+    if (isAdmin.value && !isArchiveMode.value) {
       cols.push({ id: 'select', header: '', enableSorting: false })
     }
     cols.push(
@@ -1124,6 +1142,11 @@
         query.species_ids = filterSpeciesIds.value
       }
 
+      if (isArchiveMode.value) {
+        query.include_archived = true
+        query.only_archived = true
+      }
+
       if (testModeEnabled.value && simulatedDate.value) {
         query.simulated_today = simulatedDate.value
       }
@@ -1173,6 +1196,11 @@
     
     if (filterSpeciesIds.value.length > 0) {
       query.species_ids = filterSpeciesIds.value
+    }
+
+    if (isArchiveMode.value) {
+      query.include_archived = true
+      query.only_archived = true
     }
 
     if (testModeEnabled.value && simulatedDate.value) {
@@ -1889,9 +1917,11 @@
 
     // Default: show all visits except approved/cancelled.
     // Users can clear this filter to see truly all visits.
-    selectedStatuses.value = statusOptions.filter(
-      (s) => s.value !== 'approved' && s.value !== 'cancelled' && s.value !== 'overdue'
-    )
+    selectedStatuses.value = isArchiveMode.value 
+      ? statusOptions
+      : statusOptions.filter(
+          (s) => s.value !== 'approved' && s.value !== 'cancelled' && s.value !== 'overdue'
+        )
 
     if (isAdmin.value) {
       await loadStaticOptions()
