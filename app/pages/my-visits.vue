@@ -135,12 +135,22 @@
 
       <template #availability>
         <UCard>
-          <div v-if="featureStrictAvailability" class="space-y-4">
-            <h3 class="font-semibold text-lg">Mijn beschikbaarheidspatronen</h3>
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-              Beheer hier je beschikbaarheidsperioden.
-            </p>
-            <AvailabilityPatternManager v-if="identity?.id" :user-id="identity.id" />
+          <div v-if="featureStrictAvailability" class="space-y-6">
+            <div>
+              <h3 class="font-semibold text-lg">Mijn beschikbaarheidspatronen</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Beheer hier je structurele beschikbaarheidsperioden.
+              </p>
+              <AvailabilityPatternManager v-if="identity?.id" :user-id="identity.id" />
+            </div>
+            
+            <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <h3 class="font-semibold text-lg">Verlof / Uitzonderingen</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Geef hier aan wanneer je (deels) afwezig bent.
+              </p>
+              <UserUnavailabilityManager v-if="identity?.id" :user-id="identity.id" />
+            </div>
           </div>
           <div v-else>
             <div v-if="avPending" class="text-sm text-gray-700 dark:text-gray-300">

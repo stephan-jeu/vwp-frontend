@@ -174,6 +174,8 @@
             <div v-if="featureStrictAvailability" class="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <div class="font-semibold mb-2">Beschikbaarheidsperiodes</div>
                 <AvailabilityPatternManager :user-id="u.id" />
+                <div class="font-semibold mt-6 mb-2">Verlof / Uitzonderingen</div>
+                <UserUnavailabilityManager :user-id="u.id" />
             </div>
           </div>
         </div>

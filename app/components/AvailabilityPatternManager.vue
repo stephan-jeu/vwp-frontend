@@ -18,7 +18,7 @@
               {{ formatDate(p.start_date) }} - {{ formatDate(p.end_date) }}
             </div>
             <div class="text-xs text-gray-500 mt-1">
-              Max: {{ p.max_visits_per_week ?? 'Geen limiet' }} |
+              Max ochtenden: {{ p.max_mornings_per_week }}, Max avonden: {{ p.max_evenings_per_week }} |
               {{ describeSchedule(p.schedule) }}
             </div>
           </div>
@@ -63,9 +63,15 @@
              </div>
           </div>
 
-          <div class="flex flex-col gap-1">
-             <label class="text-xs font-medium">Max bezoeken per week (optioneel)</label>
-             <UInput v-model.number="form.max_visits_per_week" type="number" placeholder="Geen limiet"></UInput>
+          <div class="grid grid-cols-2 gap-2">
+             <div class="flex flex-col gap-1">
+                <label class="text-xs font-medium">Max ochtenden per week</label>
+                <UInput v-model.number="form.max_mornings_per_week" type="number" min="0"></UInput>
+             </div>
+             <div class="flex flex-col gap-1">
+                <label class="text-xs font-medium">Max avonden per week</label>
+                <UInput v-model.number="form.max_evenings_per_week" type="number" min="0"></UInput>
+             </div>
           </div>
 
           <div class="space-y-2">
@@ -123,14 +129,16 @@ type Pattern = {
   id: number
   start_date: string
   end_date: string
-  max_visits_per_week: number | null
+  max_mornings_per_week: number
+  max_evenings_per_week: number
   schedule: ScheduleMap
 }
 
 type PatternCreate = {
   start_date: string
   end_date: string
-  max_visits_per_week: number | null
+  max_mornings_per_week: number
+  max_evenings_per_week: number
   schedule: ScheduleMap
 }
 
@@ -145,7 +153,8 @@ const editingId = ref<number | null>(null)
 const form = reactive<PatternCreate>({
   start_date: '',
   end_date: '',
-  max_visits_per_week: null,
+  max_mornings_per_week: 2,
+  max_evenings_per_week: 5,
   schedule: {}
 })
 
@@ -213,7 +222,8 @@ function openForm() {
     // Logic: Pre-fill with previous pattern if exists
     form.start_date = ''
     form.end_date = ''
-    form.max_visits_per_week = null
+    form.max_mornings_per_week = 2
+    form.max_evenings_per_week = 5
     form.schedule = {}
     
     if (patterns.value.length > 0) {
@@ -229,7 +239,8 @@ function openForm() {
             form.start_date = nextStart.toISOString().slice(0, 10)
             
             // Copy schedule and max visits
-            form.max_visits_per_week = last.max_visits_per_week
+            form.max_mornings_per_week = last.max_mornings_per_week
+            form.max_evenings_per_week = last.max_evenings_per_week
             // deep copy schedule
             form.schedule = JSON.parse(JSON.stringify(last.schedule))
         }
@@ -242,7 +253,8 @@ function editPattern(p: Pattern) {
   editingId.value = p.id
   form.start_date = p.start_date
   form.end_date = p.end_date
-  form.max_visits_per_week = p.max_visits_per_week
+  form.max_mornings_per_week = p.max_mornings_per_week
+  form.max_evenings_per_week = p.max_evenings_per_week
   form.schedule = JSON.parse(JSON.stringify(p.schedule))
   showForm.value = true
 }
