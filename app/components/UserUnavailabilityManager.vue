@@ -21,7 +21,7 @@
               Afwezig: {{ describeParts(u) }}
             </div>
           </div>
-          <div class="flex gap-1">
+          <div v-if="!readonly" class="flex gap-1">
             <UButton
               icon="i-heroicons-pencil-square"
               color="neutral"
@@ -42,7 +42,7 @@
       </ul>
 
       <!-- Add New -->
-      <div class="pt-2 border-t mt-4">
+      <div v-if="!readonly" class="pt-2 border-t mt-4">
         <div v-if="!showForm" class="flex justify-end">
           <UButton size="xs" icon="i-heroicons-plus" @click="openForm">Nieuw verlof / uitzondering</UButton>
         </div>
@@ -84,9 +84,10 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   userId: number
-}>()
+  readonly?: boolean
+}>(), { readonly: false })
 
 const { $api } = useNuxtApp()
 const toast = useToast()

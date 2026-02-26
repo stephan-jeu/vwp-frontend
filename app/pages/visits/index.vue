@@ -240,6 +240,7 @@
         <div class="col-span-1 md:col-span-2 grid grid-cols-2 md:grid-cols-5 gap-3">
           <UCheckbox v-model="createWbc" label="WBC" />
           <UCheckbox v-model="createFiets" label="Fiets" />
+          <UCheckbox v-model="createVog" label="VOG" />
           <UCheckbox v-model="createHub" label="HUB" />
           <UCheckbox v-model="createDvp" label="DVP" />
           <UCheckbox v-model="createSleutel" label="Sleutel" />
@@ -296,6 +297,12 @@
           <template #week-cell="{ row }">
             <span class="text-xs text-gray-700 dark:text-gray-300">
               {{ row.original.planned_week ?? row.original.provisional_week ?? '-' }}
+            </span>
+          </template>
+
+          <template #visit_code-cell="{ row }">
+            <span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+              {{ row.original.visit_code || '-' }}
             </span>
           </template>
 
@@ -669,6 +676,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
                       <UCheckbox v-model="row.original.wbc" label="WBC" />
                       <UCheckbox v-model="row.original.fiets" label="Fiets" />
+                      <UCheckbox v-model="row.original.vog" label="VOG" />
                       <UCheckbox v-model="row.original.hub" label="HUB" />
                       <UCheckbox v-model="row.original.dvp" label="DVP" />
                       <UCheckbox v-model="row.original.sleutel" label="Sleutel" />
@@ -888,6 +896,7 @@
     expertise_level: string | null
     wbc: boolean
     fiets: boolean
+    vog: boolean
     hub: boolean
     dvp: boolean
     sleutel: boolean
@@ -943,6 +952,12 @@
     if (typeof raw === 'string') {
       return raw === 'true' || raw === '1'
     }
+    return Boolean(raw)
+  })
+
+  const enableVisitCode = computed<boolean>(() => {
+    const raw = (runtimeConfig.public as Record<string, unknown>).enableVisitCode
+    if (typeof raw === 'string') return raw === 'true' || raw === '1'
     return Boolean(raw)
   })
 
@@ -1029,10 +1044,14 @@
       // { accessorKey: 'id', header: 'ID' },
       { accessorKey: 'project_code', header: 'Projectcode' },
       { accessorKey: 'project_location', header: 'Locatie' },
-      { accessorKey: 'cluster_number', header: 'Cluster' },
-      { accessorKey: 'visit_nr', header: 'Bezoek nr' },
-      { id: 'status', header: 'Status' }
+      { accessorKey: 'cluster_number', header: 'Cluster' }
     )
+
+    if (!enableVisitCode.value) {
+      cols.push({ accessorKey: 'visit_nr', header: 'Bezoek nr' })
+    }
+
+    cols.push({ id: 'status', header: 'Status' })
 
     if (featureDailyPlanning.value) {
       cols.push({
@@ -1053,9 +1072,16 @@
       cols.push({ id: 'week', header: 'Week' })
     }
 
+    if (enableVisitCode.value) {
+      cols.push({ id: 'visit_code', header: 'Bezoekcode' })
+    } else {
+      cols.push(
+        { id: 'functions', header: 'Functies' },
+        { id: 'species', header: 'Soorten' }
+      )
+    }
+
     cols.push(
-      { id: 'functions', header: 'Functies' },
-      { id: 'species', header: 'Soorten' },
       { id: 'period', header: 'Periode' },
       { accessorKey: 'part_of_day', header: 'Dagdeel' },
       { id: 'researchers', header: 'Onderzoekers' }
@@ -1452,6 +1478,7 @@
   const createExpertiseLevel = ref<string | null>(null)
   const createWbc = ref(false)
   const createFiets = ref(false)
+  const createVog = ref(false)
   const createHub = ref(false)
   const createDvp = ref(false)
   const createSleutel = ref(false)
@@ -1497,6 +1524,7 @@
     createExpertiseLevel.value = null
     createWbc.value = false
     createFiets.value = false
+    createVog.value = false
     createHub.value = false
     createDvp.value = false
     createSleutel.value = false
@@ -1622,6 +1650,7 @@
         expertise_level: createExpertiseLevel.value,
         wbc: createWbc.value,
         fiets: createFiets.value,
+        vog: createVog.value,
         hub: createHub.value,
         dvp: createDvp.value,
         sleutel: createSleutel.value,
@@ -1752,6 +1781,7 @@
         expertise_level: row.expertise_level,
         wbc: row.wbc,
         fiets: row.fiets,
+        vog: row.vog,
         hub: row.hub,
         dvp: row.dvp,
         sleutel: row.sleutel,
@@ -1850,6 +1880,7 @@
         expertise_level: row.expertise_level,
         wbc: row.wbc,
         fiets: row.fiets,
+        vog: row.vog,
         hub: row.hub,
         dvp: row.dvp,
         sleutel: row.sleutel,

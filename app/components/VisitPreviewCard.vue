@@ -53,8 +53,11 @@
         </UBadge>
       </div>
 
-      <!-- Functions / Species Combined -->
-      <div class="flex flex-wrap gap-x-3 text-xs leading-snug">
+      <!-- Visit Code OR Functions / Species Combined -->
+      <div v-if="enableVisitCode" class="text-xs font-medium text-gray-800 dark:text-gray-200">
+        {{ visit.visit_code || '-' }}
+      </div>
+      <div v-else class="flex flex-wrap gap-x-3 text-xs leading-snug">
         <div>
           <span class="font-semibold text-gray-700 dark:text-gray-300">F: </span>
           {{
@@ -87,6 +90,7 @@
       <div v-if="hasFlags" class="flex flex-wrap gap-1 pt-1">
         <UBadge v-if="visit.wbc" size="xs" color="neutral" variant="soft">WBC</UBadge>
         <UBadge v-if="visit.fiets" size="xs" color="neutral" variant="soft">Fiets</UBadge>
+        <UBadge v-if="visit.vog" size="xs" color="neutral" variant="soft">VOG</UBadge>
         <UBadge v-if="visit.hub" size="xs" color="neutral" variant="soft">HUB</UBadge>
         <UBadge v-if="visit.dvp" size="xs" color="neutral" variant="soft">DVP</UBadge>
         <UBadge v-if="visit.sleutel" size="xs" color="neutral" variant="soft">Sleutel</UBadge>
@@ -137,6 +141,7 @@
     custom_species_name: string | null
     wbc: boolean
     fiets: boolean
+    vog: boolean
     hub: boolean
     dvp: boolean
     sleutel: boolean
@@ -165,6 +170,7 @@
     () =>
       props.visit.wbc ||
       props.visit.fiets ||
+      props.visit.vog ||
       props.visit.hub ||
       props.visit.dvp ||
       props.visit.sleutel ||
@@ -195,6 +201,12 @@
     if (typeof raw === 'string') {
       return raw === 'true' || raw === '1'
     }
+    return Boolean(raw)
+  })
+
+  const enableVisitCode = computed<boolean>(() => {
+    const raw = (runtimeConfig.public as Record<string, unknown>).enableVisitCode
+    if (typeof raw === 'string') return raw === 'true' || raw === '1'
     return Boolean(raw)
   })
 

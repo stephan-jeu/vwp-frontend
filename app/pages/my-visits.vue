@@ -108,6 +108,7 @@
                       v-if="
                         visit.wbc ||
                         visit.fiets ||
+                        visit.vog ||
                         visit.hub ||
                         visit.dvp ||
                         visit.sleutel ||
@@ -120,6 +121,7 @@
                     <div class="mt-2 flex flex-wrap gap-1">
                       <UBadge v-if="visit.wbc" class="bg-amber-600 mr-1">WBC</UBadge>
                       <UBadge v-if="visit.fiets" class="bg-amber-600 mr-1">Fiets</UBadge>
+                      <UBadge v-if="visit.vog" class="bg-amber-600 mr-1">VOG</UBadge>
                       <UBadge v-if="visit.hub" class="bg-amber-600 mr-1">HUB</UBadge>
                       <UBadge v-if="visit.dvp" class="bg-amber-600 mr-1">DVP</UBadge>
                       <UBadge v-if="visit.sleutel" class="bg-amber-600 mr-1">Sleutel</UBadge>
@@ -141,7 +143,7 @@
               <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Beheer hier je structurele beschikbaarheidsperioden.
               </p>
-              <AvailabilityPatternManager v-if="identity?.id" :user-id="identity.id" />
+              <AvailabilityPatternManager v-if="identity?.id" :user-id="identity.id" :readonly="!identity.admin" />
             </div>
             
             <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -149,7 +151,7 @@
               <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Geef hier aan wanneer je (deels) afwezig bent.
               </p>
-              <UserUnavailabilityManager v-if="identity?.id" :user-id="identity.id" />
+              <UserUnavailabilityManager v-if="identity?.id" :user-id="identity.id" :readonly="!identity.admin" />
             </div>
           </div>
           <div v-else>
@@ -242,6 +244,7 @@
     expertise_level: string | null
     wbc: boolean
     fiets: boolean
+    vog: boolean
     hub: boolean
     dvp: boolean
     sleutel: boolean
@@ -562,7 +565,7 @@
       if (weekData.daytime_days > 0) parts.push({ label: 'Dag', value: weekData.daytime_days })
       if (weekData.nighttime_days > 0)
         parts.push({ label: 'Avond', value: weekData.nighttime_days })
-      if (weekData.flex_days > 0) parts.push({ label: 'Flex', value: weekData.flex_days })
+      if (weekData.flex_days > 0 && !featureStrictAvailability.value) parts.push({ label: 'Flex', value: weekData.flex_days })
 
       list.push({ week: weekData.week, parts })
     }

@@ -103,6 +103,7 @@
         <div class="flex gap-8 items-center flex-wrap my-4">
           <UCheckbox v-model="defaultWbc" label="WBC" />
           <UCheckbox v-model="defaultFiets" label="Fiets" />
+          <UCheckbox v-model="defaultVog" label="VOG" />
           <UCheckbox v-model="defaultHub" label="HUB" />
           <UCheckbox v-model="defaultDvp" label="DVP" />
           <UCheckbox v-model="defaultSleutel" label="Sleutel" />
@@ -285,6 +286,7 @@
 
           <div v-if="expanded.has(cluster.id)" class="px-3 pb-3">
             <div class="flex items-center gap-2 py-2">
+              <UInput v-model="tempClusterNumbers[cluster.id]" placeholder="Cluster code" class="w-32" />
               <UInput v-model="tempAddresses[cluster.id]" placeholder="Adres" class="flex-1" />
               <UInput
                 v-model="tempLocations[cluster.id]"
@@ -468,6 +470,7 @@
                   <div class="col-span-1 md:col-span-2 grid grid-cols-2 md:grid-cols-5 gap-3">
                     <UCheckbox v-model="visit.wbc" label="WBC" />
                     <UCheckbox v-model="visit.fiets" label="Fiets" />
+                    <UCheckbox v-model="visit.vog" label="VOG" />
                     <UCheckbox v-model="visit.hub" label="HUB" />
                     <UCheckbox v-model="visit.dvp" label="DVP" />
                     <UCheckbox v-model="visit.sleutel" label="Sleutel" />
@@ -521,6 +524,7 @@
   const defaultExpertiseLevel = ref<string | null>(null)
   const defaultWbc = ref(false)
   const defaultFiets = ref(false)
+  const defaultVog = ref(false)
   const defaultHub = ref(false)
   const defaultDvp = ref(false)
   const defaultSleutel = ref(false)
@@ -539,6 +543,7 @@
     default_expertise_level?: string | null
     default_wbc?: boolean
     default_fiets?: boolean
+    default_vog?: boolean
     default_hub?: boolean
     default_dvp?: boolean
     default_sleutel?: boolean
@@ -595,6 +600,7 @@
     expertise_level?: string | null
     wbc?: boolean
     fiets?: boolean
+    vog?: boolean
     hub?: boolean
     dvp?: boolean
     sleutel?: boolean
@@ -674,6 +680,7 @@
   const expanded = ref<Set<number>>(new Set())
   const tempAddresses = reactive<Record<number, string>>({})
   const tempLocations = reactive<Record<number, string>>({})
+  const tempClusterNumbers = reactive<Record<number, string>>({})
   const savingClusterId = ref<number | null>(null)
   const currentProject = computed(() => {
     const sel = selectedProject.value
@@ -838,6 +845,7 @@
       for (const c of data) {
         tempAddresses[c.id] = c.address
         tempLocations[c.id] = c.location ?? ''
+        tempClusterNumbers[c.id] = c.cluster_number
       }
     } finally {
       loading.value = false
@@ -869,6 +877,7 @@
         default_expertise_level: defaultExpertiseLevel.value,
         default_wbc: defaultWbc.value,
         default_fiets: defaultFiets.value,
+        default_vog: defaultVog.value,
         default_hub: defaultHub.value,
         default_dvp: defaultDvp.value,
         default_sleutel: defaultSleutel.value,
@@ -894,6 +903,7 @@
           default_expertise_level: defaultExpertiseLevel.value,
           default_wbc: defaultWbc.value,
           default_fiets: defaultFiets.value,
+          default_vog: defaultVog.value,
           default_hub: defaultHub.value,
           default_dvp: defaultDvp.value,
           default_sleutel: defaultSleutel.value,
@@ -958,7 +968,7 @@
     try {
       await $api(`/clusters/${cluster.id}`, {
         method: 'PATCH',
-        body: { address: newAddress, location: newLocation }
+        body: { address: newAddress, location: newLocation, cluster_number: tempClusterNumbers[cluster.id]?.trim() || cluster.cluster_number }
       })
       toast.add({ title: 'Cluster bijgewerkt', color: 'success' })
       await loadClusters()
@@ -1028,6 +1038,7 @@
       expertise_level: visit.expertise_level ?? null,
       wbc: visit.wbc,
       fiets: visit.fiets,
+      vog: visit.vog,
       hub: visit.hub,
       dvp: visit.dvp,
       sleutel: visit.sleutel,

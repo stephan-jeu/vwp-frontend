@@ -91,6 +91,7 @@
           <div class="flex flex-wrap gap-1 mt-1">
             <UBadge v-if="visit.wbc" class="bg-amber-600 mr-1">WBC</UBadge>
             <UBadge v-if="visit.fiets" class="bg-amber-600 mr-1">Fiets</UBadge>
+            <UBadge v-if="visit.vog" class="bg-amber-600 mr-1">VOG</UBadge>
             <UBadge v-if="visit.hub" class="bg-amber-600 mr-1">HUB</UBadge>
             <UBadge v-if="visit.dvp" class="bg-amber-600 mr-1">DVP</UBadge>
             <UBadge v-if="visit.sleutel" class="bg-amber-600 mr-1">Sleutel</UBadge>
@@ -162,6 +163,7 @@
     expertise_level: string | null
     wbc: boolean
     fiets: boolean
+    vog: boolean
     hub: boolean
     dvp: boolean
     sleutel: boolean

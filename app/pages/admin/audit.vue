@@ -325,6 +325,7 @@
     expertise_level: string | null
     wbc: boolean
     fiets: boolean
+    vog: boolean
     hub: boolean
     dvp: boolean
     sleutel: boolean

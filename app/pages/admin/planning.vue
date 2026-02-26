@@ -82,7 +82,7 @@
                     capacityData.totals.dag
                   }}</span></span
                 >
-                <span
+                <span v-if="!featureStrictAvailability"
                   >Flex
                   <span :class="{ 'text-red-600 font-bold': capacityData.totals.flex < 0 }">{{
                     capacityData.totals.flex
@@ -119,7 +119,7 @@
                   <div :class="{ 'text-red-600 font-bold': r.remaining.dag < 0 }">
                     Dag: {{ r.remaining.dag }}
                   </div>
-                  <div :class="{ 'text-red-600 font-bold': r.remaining.flex < 0 }">
+                  <div v-if="!featureStrictAvailability" :class="{ 'text-red-600 font-bold': r.remaining.flex < 0 }">
                     Flex: {{ r.remaining.flex }}
                   </div>
                 </div>
@@ -553,6 +553,7 @@
     expertise_level: string | null
     wbc: boolean
     fiets: boolean
+    vog: boolean
     hub: boolean
     dvp: boolean
     sleutel: boolean
@@ -665,6 +666,12 @@
   // Feature flags
   const featureDailyPlanning = computed<boolean>(() => {
     const raw = runtimeConfig.public.featureDailyPlanning
+    if (typeof raw === 'string') return raw === 'true' || raw === '1'
+    return Boolean(raw)
+  })
+
+  const featureStrictAvailability = computed<boolean>(() => {
+    const raw = runtimeConfig.public.featureStrictAvailability
     if (typeof raw === 'string') return raw === 'true' || raw === '1'
     return Boolean(raw)
   })
@@ -954,17 +961,34 @@
 
   const weekDays = computed(() => {
     if (!weekRange.value) return []
-    const dayNames = ['Ma', 'Di', 'Wo', 'Do', 'Vr']
+    const dayNames = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
     const formatter = new Intl.DateTimeFormat('nl-NL', { day: '2-digit', month: 'short' })
-    return Array.from({ length: 5 }, (_, i) => {
+    
+    const allVisits = [...plannedVisits.value, ...completedVisits.value]
+    
+    const dates = Array.from({ length: 7 }, (_, i) => {
       const date = new Date(weekRange.value!.start)
       date.setDate(date.getDate() + i)
       return {
-        short: dayNames[i],
+        short: dayNames[i] as string,
         dateStr: formatter.format(date),
         iso: toLocalISODate(date)
       }
     })
+    
+    const sat = dates[5]
+    const sun = dates[6]
+    
+    if (!sat || !sun) return dates.slice(0, 5)
+    
+    const hasSat = allVisits.some((v) => v.planned_date && v.planned_date.startsWith(sat.iso))
+    const hasSun = allVisits.some((v) => v.planned_date && v.planned_date.startsWith(sun.iso))
+    
+    const result = dates.slice(0, 5)
+    if (hasSat) result.push(sat)
+    if (hasSun) result.push(sun)
+    
+    return result
   })
 
   type ResearcherRow = {

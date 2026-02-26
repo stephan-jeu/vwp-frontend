@@ -61,6 +61,13 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 
+const runtimeConfig = useRuntimeConfig()
+const featureStrictAvailability = computed<boolean>(() => {
+  const raw = runtimeConfig.public.featureStrictAvailability
+  if (typeof raw === 'string') return raw === 'true' || raw === '1'
+  return Boolean(raw)
+})
+
 definePageMeta({ middleware: 'admin' });
 
 // --- Data Model ---
@@ -128,24 +135,32 @@ async function fetchAvailability() {
   }
   const nextUsers: UserRow[] = [];
   for (const u of payload?.users ?? []) {
-    const childRows: [AvailabilityChild, AvailabilityChild, AvailabilityChild, AvailabilityChild] = [
-      { id: `${u.id}-night`, type: 'evening', data: {} as CellMap, assigned: {} as CellMap },
-      { id: `${u.id}-morn`, type: 'morning', data: {} as CellMap, assigned: {} as CellMap },
-      { id: `${u.id}-day`, type: 'daytime', data: {} as CellMap, assigned: {} as CellMap },
-      { id: `${u.id}-flex`, type: 'flex', data: {} as CellMap, assigned: {} as CellMap }
-    ];
+    const nightRow: AvailabilityChild = { id: `${u.id}-night`, type: 'evening', data: {} as CellMap, assigned: {} as CellMap };
+    const mornRow: AvailabilityChild = { id: `${u.id}-morn`, type: 'morning', data: {} as CellMap, assigned: {} as CellMap };
+    const dayRow: AvailabilityChild = { id: `${u.id}-day`, type: 'daytime', data: {} as CellMap, assigned: {} as CellMap };
+
+    const childRows: AvailabilityChild[] = [nightRow, mornRow, dayRow];
+    
+    let flexRow: AvailabilityChild | undefined;
+    if (!featureStrictAvailability.value) {
+      flexRow = { id: `${u.id}-flex`, type: 'flex', data: {} as CellMap, assigned: {} as CellMap };
+      childRows.push(flexRow);
+    }
+
     for (const wk of u.availability ?? []) {
       const key = `week${wk.week}` as WeekKey;
-      childRows[0].data[key] = wk.nighttime_days ?? 0;
-      childRows[1].data[key] = wk.morning_days ?? 0;
-      childRows[2].data[key] = wk.daytime_days ?? 0;
-      childRows[3].data[key] = wk.flex_days ?? 0;
+      nightRow.data[key] = wk.nighttime_days ?? 0;
+      mornRow.data[key] = wk.morning_days ?? 0;
+      dayRow.data[key] = wk.daytime_days ?? 0;
 
-      childRows[0].assigned[key] = wk.assigned_evening ?? 0;
-      childRows[1].assigned[key] = wk.assigned_morning ?? 0;
-      childRows[2].assigned[key] = wk.assigned_daytime ?? 0;
-      // Flex has no assigned total
-      childRows[3].assigned[key] = 0;
+      nightRow.assigned[key] = wk.assigned_evening ?? 0;
+      mornRow.assigned[key] = wk.assigned_morning ?? 0;
+      dayRow.assigned[key] = wk.assigned_daytime ?? 0;
+      
+      if (flexRow) {
+        flexRow.data[key] = wk.flex_days ?? 0;
+        flexRow.assigned[key] = 0;
+      }
     }
     nextUsers.push({ id: String(u.id), name: u.name, children: childRows });
   }

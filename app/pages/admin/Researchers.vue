@@ -39,6 +39,7 @@
         <UCheckbox v-model="createForm.fiets" label="Fiets" />
         <UCheckbox v-model="createForm.hub" label="HUB" />
         <UCheckbox v-model="createForm.wbc" label="WBC" />
+        <UCheckbox v-model="createForm.vog" label="VOG" />
         <UCheckbox v-model="createForm.smp_gierzwaluw" label="SMP gierzwaluw" />
         <UCheckbox v-model="createForm.smp_huismus" label="SMP huismus" />
         <UCheckbox v-model="createForm.smp_vleermuis" label="SMP vleermuis" />
@@ -116,6 +117,7 @@
               <UCheckbox v-model="u.fiets" label="Fiets" />
               <UCheckbox v-model="u.hub" label="HUB" />
               <UCheckbox v-model="u.wbc" label="WBC" />
+              <UCheckbox v-model="u.vog" label="VOG" />
               <UCheckbox v-model="u.smp_gierzwaluw" label="SMP gierzwaluw" />
               <UCheckbox v-model="u.smp_huismus" label="SMP huismus" />
               <UCheckbox v-model="u.smp_vleermuis" label="SMP vleermuis" />
@@ -204,6 +206,7 @@
     langoor: boolean
     roofvogel: boolean
     wbc: boolean
+    vog: boolean
     fiets: boolean
     hub: boolean
     dvp: boolean
@@ -279,6 +282,7 @@
     langoor: false,
     roofvogel: false,
     wbc: false,
+    vog: false,
     fiets: false,
     hub: false,
     dvp: false,
@@ -304,6 +308,7 @@
     const tags: string[] = []
     if (u.experience_bat) tags.push(u.experience_bat)
     if (u.wbc) tags.push('WBC')
+    if (u.vog) tags.push('VOG')
     if (u.smp_huismus) tags.push('SMP huismus')
     if (u.smp_vleermuis) tags.push('SMP vleermuis')
     if (u.smp_gierzwaluw) tags.push('SMP gierzwaluw')
@@ -367,6 +372,7 @@
         langoor: false,
         roofvogel: false,
         wbc: false,
+        vog: false,
         fiets: false,
         hub: false,
         dvp: false,
