@@ -162,7 +162,7 @@
               rel="noopener noreferrer"
               class="underline"
             >
-              Project Google drive
+              Project folder
             </a>
           </div>
 

@@ -138,7 +138,7 @@
                       rel="noopener noreferrer"
                       class="text-sm text-primary-600 underline"
                     >
-                      Project Google drive
+                      Project folder
                     </a>
                   </div>
                 </div>

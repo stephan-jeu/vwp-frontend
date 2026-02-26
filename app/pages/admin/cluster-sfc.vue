@@ -139,7 +139,7 @@
               <UFormField label="Klant">
                 <UInput v-model="projectForm.customer" placeholder="Optioneel" />
               </UFormField>
-              <UFormField label="Google Drive folder">
+              <UFormField label="Project folder">
                 <UInput v-model="projectForm.google_drive_folder" placeholder="Optioneel" />
               </UFormField>
               <UFormField label="Offerte">
