@@ -469,8 +469,8 @@
       const from = new Date(v.from_date)
       if (!Number.isNaN(from.getTime()) && getIsoWeekNumber(from) === v.planned_week) {
         const prev = new Date(from)
-        prev.setDate(from.getDate() - 1)
-        return `Na ${getDayName(prev)}`
+        prev.setDate(from.getDate())
+        return `Vanaf ${getDayName(prev)}`
       }
     }
 
@@ -478,8 +478,8 @@
       const to = new Date(v.to_date)
       if (!Number.isNaN(to.getTime()) && getIsoWeekNumber(to) === v.planned_week) {
         const next = new Date(to)
-        next.setDate(to.getDate() + 1)
-        return `Voor ${getDayName(next)}`
+        next.setDate(to.getDate())
+        return `Tot ${getDayName(next)}`
       }
     }
 

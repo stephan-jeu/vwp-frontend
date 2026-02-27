@@ -337,7 +337,9 @@
           <template #researchers-cell="{ row }">
             <span class="text-xs text-gray-700 dark:text-gray-300">
               {{
-                row.original.researchers.map((r) => r.full_name || `Gebruiker #${r.id}`).join(', ')
+                row.original.researchers.length > 0
+                  ? row.original.researchers.map((r) => r.full_name || `Gebruiker #${r.id}`).join(', ')
+                  : (row.original.required_researchers ?? '-')
               }}
             </span>
           </template>
