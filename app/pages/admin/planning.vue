@@ -1270,9 +1270,15 @@
     loading.value = true
     try {
       const w = activeWeekNumber.value
+      const query: Record<string, unknown> = {}
+      if (testModeEnabled.value && simulatedDate.value) {
+        query.simulated_today = simulatedDate.value
+      }
+
       // Retrieve response to get count
       const result = await $api<{ selected_visit_ids: number[] }>(`/planning/generate`, {
         method: 'POST',
+        query,
         body: { week: w }
       })
 
