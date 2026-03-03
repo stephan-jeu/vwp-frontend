@@ -61,13 +61,53 @@
         <div v-else-if="notPlannableVisits.length === 0" class="text-sm text-gray-500">
           Geen bezoeken gevonden.
         </div>
-        <div v-else class="space-y-4">
-          <VisitPreviewCard
-            v-for="visit in notPlannableVisits"
-            :key="visit.id"
-            :visit="visit"
-            @open="openVisit(visit.id)"
-          />
+        <div v-else class="space-y-6">
+          <!-- Summary table grouped by end date -->
+          <div>
+            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 mt-4">
+              Overzicht per bezoek einddatum
+              <span class="ml-1 font-normal text-red-600 dark:text-red-400">({{ notPlannableVisits.length }} bezoeken niet inplanbaar)</span>
+            </p>
+            <div class="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="bg-gray-50 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400">
+                    <th class="text-left px-3 py-2 font-medium">Bezoek einddatum</th>
+                    <th class="text-left px-3 py-2 font-medium">Type</th>
+                    <th class="text-left px-3 py-2 font-medium">Familie</th>
+                    <th class="text-left px-3 py-2 font-medium">Dagdeel</th>
+                    <th class="text-right px-3 py-2 font-medium">Aantal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="row in notPlannableSummary"
+                    :key="`${row.dateKey}|${row.functionLabel}|${row.speciesLabel}|${row.partLabel}`"
+                    class="border-t border-gray-100 dark:border-gray-700"
+                  >
+                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ row.dateLabel }}</td>
+                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ row.functionLabel }}</td>
+                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ row.speciesLabel }}</td>
+                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ row.partLabel }}</td>
+                    <td class="px-3 py-2 text-right font-semibold text-red-600 dark:text-red-400">{{ row.count }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Individual visit cards -->
+          <div>
+            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Individuele bezoeken</p>
+            <div class="space-y-4">
+              <VisitPreviewCard
+                v-for="visit in notPlannableVisits"
+                :key="visit.id"
+                :visit="visit"
+                @open="openVisit(visit.id)"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -202,7 +242,7 @@
 
   type CompactFunction = { id: number; name: string }
 
-  type CompactSpecies = { id: number; name: string; abbreviation?: string | null }
+  type CompactSpecies = { id: number; name: string; abbreviation?: string | null; family_name?: string | null }
 
   type UserName = { id: number; full_name: string | null }
 
@@ -445,6 +485,51 @@
     if (Number.isNaN(t)) return Number.POSITIVE_INFINITY
     return t
   }
+
+  type NotPlannableSummaryRow = {
+    dateKey: string
+    dateLabel: string
+    functionLabel: string
+    speciesLabel: string
+    partLabel: string
+    count: number
+  }
+
+  function formatDateShort(isoDate: string): string {
+    const date = new Date(isoDate + 'T00:00:00Z')
+    return new Intl.DateTimeFormat('nl-NL', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(date)
+  }
+
+  const notPlannableSummary = computed<NotPlannableSummaryRow[]>(() => {
+    const visits = notPlannableVisits.value
+    if (!visits.length) return []
+
+    const map = new Map<string, NotPlannableSummaryRow>()
+    for (const visit of visits) {
+      if (!visit.to_date) continue
+      const dateKey = visit.to_date
+      const dateLabel = formatDateShort(visit.to_date)
+      const functionLabel = visit.functions.length
+        ? visit.functions.map(f => f.name).join(' / ')
+        : 'Onbekend'
+      const familyNames = [...new Set(visit.species.map(s => s.family_name).filter(Boolean))]
+      const speciesLabel = familyNames.length
+        ? familyNames.join(' / ')
+        : '–'
+      const partLabel = visit.part_of_day ?? '–'
+      const key = `${dateKey}|${functionLabel}|${speciesLabel}|${partLabel}`
+      if (!map.has(key)) {
+        map.set(key, { dateKey, dateLabel, functionLabel, speciesLabel, partLabel, count: 0 })
+      }
+      map.get(key)!.count++
+    }
+
+    return Array.from(map.values()).sort((a, b) => {
+      if (a.dateKey !== b.dateKey) return a.dateKey.localeCompare(b.dateKey)
+      if (a.functionLabel !== b.functionLabel) return a.functionLabel.localeCompare(b.functionLabel)
+      return a.partLabel.localeCompare(b.partLabel)
+    })
+  })
 
   async function loadNotPlannableVisits(): Promise<void> {
     notPlannableVisitsLoading.value = true
