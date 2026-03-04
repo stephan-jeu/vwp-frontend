@@ -9,55 +9,73 @@
     </div>
 
     <UCard v-if="showCreate" class="mb-6">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <UInput v-model="createForm.email" placeholder="email@example.com" />
-        <UInput v-model="createForm.full_name" placeholder="Naam" />
-        <USelect
-          v-model="createForm.contract"
-          :items="contractOptions"
-          label="Contract"
-          placeholder="Kies contract..."
-        />
-        <USelect
-          v-model="createForm.experience_bat"
-          :items="experienceOptions"
-          placeholder="Kies vleermuis ervaring..."
-        />
-        <UInput v-model="createForm.city" placeholder="Plaats" />
-        <UInput v-model="createForm.address" placeholder="Straatnaam" />
-        <USelect
-          v-if="featureLanguageSupport"
-          v-model="createForm.language"
-          :items="languageOptions"
-          label="Taal"
-          placeholder="Kies taal..."
-        />
+      <div v-if="!createdUser">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <UInput v-model="createForm.email" placeholder="email@example.com" />
+          <UInput v-model="createForm.full_name" placeholder="Naam" />
+          <USelect
+            v-model="createForm.contract"
+            :items="contractOptions"
+            label="Contract"
+            placeholder="Kies contract..."
+          />
+          <USelect
+            v-model="createForm.experience_bat"
+            :items="experienceOptions"
+            placeholder="Kies vleermuis ervaring..."
+          />
+          <UInput v-model="createForm.city" placeholder="Plaats" />
+          <UInput v-model="createForm.address" placeholder="Straatnaam" />
+          <USelect
+            v-if="featureLanguageSupport"
+            v-model="createForm.language"
+            :items="languageOptions"
+            label="Taal"
+            placeholder="Kies taal..."
+          />
+        </div>
+        <div class="mt-4"><UCheckbox v-model="createForm.admin" label="Admin" /></div>
+        <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <UCheckbox v-model="createForm.dvp" label="DVP" />
+          <UCheckbox v-model="createForm.fiets" label="Fiets" />
+          <UCheckbox v-model="createForm.hub" label="HUB" />
+          <UCheckbox v-model="createForm.wbc" label="WBC" />
+          <UCheckbox v-model="createForm.vog" label="VOG" />
+          <UCheckbox v-model="createForm.smp_gierzwaluw" label="SMP gierzwaluw" />
+          <UCheckbox v-model="createForm.smp_huismus" label="SMP huismus" />
+          <UCheckbox v-model="createForm.smp_vleermuis" label="SMP vleermuis" />
+          <UCheckbox v-model="createForm.vrfg" label="VR/FG" />
+          <UCheckbox v-model="createForm.vleermuis" label="Vleermuis" />
+          <UCheckbox v-model="createForm.roofvogel" label="Roofvogel" />
+          <UCheckbox v-model="createForm.zwaluw" label="Zwaluw" />
+          <UCheckbox v-model="createForm.zangvogel" label="Huismus/Spreeuw" />
+          <UCheckbox v-model="createForm.langoor" label="Langoor" />
+          <UCheckbox v-model="createForm.pad" label="Rugstreeppad" />
+          <UCheckbox v-model="createForm.vlinder" label="Grote vos/Iepenpage" />
+          <UCheckbox v-model="createForm.teunisbloempijlstaart" label="Teunisbloempijlstaart" />
+          <UCheckbox v-model="createForm.biggenkruid" label="Biggenkruid" />
+          <UCheckbox v-model="createForm.schijfhoren" label="Schijfhoren" />
+        </div>
+        <div class="mt-4 flex justify-end gap-2">
+          <UButton color="neutral" variant="soft" @click="onCancelCreate">Annuleren</UButton>
+          <UButton :loading="creating" icon="i-heroicons-check" @click="onCreate">Toevoegen</UButton>
+        </div>
       </div>
-      <div class="mt-4"><UCheckbox v-model="createForm.admin" label="Admin" /></div>
-      <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-        <UCheckbox v-model="createForm.dvp" label="DVP" />
-        <UCheckbox v-model="createForm.fiets" label="Fiets" />
-        <UCheckbox v-model="createForm.hub" label="HUB" />
-        <UCheckbox v-model="createForm.wbc" label="WBC" />
-        <UCheckbox v-model="createForm.vog" label="VOG" />
-        <UCheckbox v-model="createForm.smp_gierzwaluw" label="SMP gierzwaluw" />
-        <UCheckbox v-model="createForm.smp_huismus" label="SMP huismus" />
-        <UCheckbox v-model="createForm.smp_vleermuis" label="SMP vleermuis" />
-        <UCheckbox v-model="createForm.vrfg" label="VR/FG" />
-        <UCheckbox v-model="createForm.vleermuis" label="Vleermuis" />
-        <UCheckbox v-model="createForm.roofvogel" label="Roofvogel" />
-        <UCheckbox v-model="createForm.zwaluw" label="Zwaluw" />
-        <UCheckbox v-model="createForm.zangvogel" label="Huismus/Spreeuw" />
-        <UCheckbox v-model="createForm.langoor" label="Langoor" />
-        <UCheckbox v-model="createForm.pad" label="Rugstreeppad" />
-        <UCheckbox v-model="createForm.vlinder" label="Grote vos/Iepenpage" />
-        <UCheckbox v-model="createForm.teunisbloempijlstaart" label="Teunisbloempijlstaart" />
-        <UCheckbox v-model="createForm.biggenkruid" label="Biggenkruid" />
-        <UCheckbox v-model="createForm.schijfhoren" label="Schijfhoren" />
-      </div>
-      <div class="mt-4 flex justify-end gap-2">
-        <UButton color="neutral" variant="soft" @click="onCancelCreate">Annuleren</UButton>
-        <UButton :loading="creating" icon="i-heroicons-check" @click="onCreate">Toevoegen</UButton>
+      <div v-else>
+        <div class="font-semibold text-base mb-4">{{ createdUser.full_name || createdUser.email }} is aangemaakt</div>
+        <div v-if="featureStrictAvailability" class="space-y-6">
+          <div>
+            <div class="font-semibold mb-2">Beschikbaarheidsperiodes</div>
+            <AvailabilityPatternManager :user-id="createdUser.id" />
+          </div>
+          <div>
+            <div class="font-semibold mb-2">Verlof / Uitzonderingen</div>
+            <UserUnavailabilityManager :user-id="createdUser.id" />
+          </div>
+        </div>
+        <div class="mt-4 flex justify-end">
+          <UButton icon="i-heroicons-check" @click="onCancelCreate">Klaar</UButton>
+        </div>
       </div>
     </UCard>
 
@@ -233,6 +251,7 @@
   const deleting = ref(false)
   const toDelete = ref<User | null>(null)
   const showCreate = ref(false)
+  const createdUser = ref<User | null>(null)
   const toast = useToast()
   
   const runtimeConfig = useRuntimeConfig()
@@ -385,7 +404,11 @@
         biggenkruid: false,
         schijfhoren: false
       })
-      showCreate.value = false
+      if (featureStrictAvailability.value) {
+        createdUser.value = { ...created, contract: created.contract ?? undefined, experience_bat: created.experience_bat ?? undefined }
+      } else {
+        showCreate.value = false
+      }
       toast.add({ title: 'Onderzoeker opgeslagen', color: 'success' })
       await validateAddressWarning(created.address, created.city)
     } catch (err: unknown) {
@@ -403,6 +426,7 @@
 
   function onCancelCreate(): void {
     showCreate.value = false
+    createdUser.value = null
   }
 
   async function onSave(u: User): Promise<void> {

@@ -191,6 +191,7 @@
       { label: 'Planning', to: '/admin/planning', icon: 'i-lucide-list-check' },
       { label: 'Onderzoekers', to: '/admin/researchers', icon: 'i-lucide-users' },
       { label: 'Beschikbaarheid', to: '/admin/availability', icon: 'i-lucide-calendar-days' },
+      { label: 'Vrije dagen', to: '/admin/free-days', icon: 'i-lucide-calendar-off' },
       { label: 'Controle', to: '/admin/audit', icon: 'i-lucide-list-checks' },
       { label: 'Capaciteitsplanning', to: '/admin/capacity', icon: 'i-lucide-square-chart-gantt' },
       { label: 'Archief', to: '/visits?archive=1', icon: 'i-lucide-archive' },
