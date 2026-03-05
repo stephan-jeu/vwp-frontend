@@ -253,6 +253,9 @@
                         @open="goToDetail(visit.id)"
                         @update:selected="toggleSelection(visit.id, $event)"
                       />
+                      <p v-if="planningReasons[String(visit.id)]" class="text-xs text-amber-700 dark:text-amber-400 px-1">
+                        {{ planningReasons[String(visit.id)] }}
+                      </p>
                     </div>
                     <div
                       v-if="inboxVisits.length === 0"
@@ -657,6 +660,7 @@
 
   // const week = ref<number>(currentWeekNumber.value) // REMOVED
   const visits = ref<VisitListRow[]>([])
+  const planningReasons = ref<Record<string, string>>({})
 
   // Availability data
   const rawAvailability = ref<ApiUserAvailability[]>([])
@@ -1261,9 +1265,20 @@
     }
   }
 
-  // Refetch availability when switching tabs (weeks)
-  watch(activeWeekNumber, () => {
+  async function loadPlanningReasons(week: number): Promise<void> {
+    try {
+      planningReasons.value = await $api<Record<string, string>>('/planning/planning-reasons', {
+        query: { week }
+      })
+    } catch {
+      // Non-critical: silently ignore, reasons just won't show
+    }
+  }
+
+  // Refetch availability and planning reasons when switching tabs (weeks)
+  watch(activeWeekNumber, (w) => {
     void loadAvailability()
+    void loadPlanningReasons(w)
   })
 
   async function runPlanning(): Promise<void> {
@@ -1301,8 +1316,11 @@
         selectedWeekTab.value = foundTab
       }
 
-      // 4. Load visits for the newly selected week
-      await loadVisits()
+      // 4. Load visits and planning reasons for the newly selected week
+      await Promise.all([
+        loadVisits(),
+        loadPlanningReasons(w),
+      ])
     } catch (error: unknown) {
       const w = activeWeekNumber.value
       const description = errorDescription(error)
