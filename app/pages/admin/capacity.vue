@@ -100,12 +100,15 @@
           <div>
             <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Individuele bezoeken</p>
             <div class="space-y-4">
-              <VisitPreviewCard
-                v-for="visit in notPlannableVisits"
-                :key="visit.id"
-                :visit="visit"
-                @open="openVisit(visit.id)"
-              />
+              <div v-for="visit in notPlannableVisits" :key="visit.id">
+                <VisitPreviewCard
+                  :visit="visit"
+                  @open="openVisit(visit.id)"
+                />
+                <p v-if="planningReasons[String(visit.id)]" class="mt-1 text-xs text-amber-700 dark:text-amber-400 px-1">
+                  {{ planningReasons[String(visit.id)] }}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -459,6 +462,7 @@
 
   const notPlannableVisitsLoading = ref(false)
   const notPlannableVisits = ref<VisitCardRow[]>([])
+  const planningReasons = ref<Record<string, string>>({})
 
 
 
@@ -534,9 +538,14 @@
   async function loadNotPlannableVisits(): Promise<void> {
     notPlannableVisitsLoading.value = true
     try {
-      const result = await $api<VisitListResponse>('/visits', {
-        query: { page: 1, page_size: 200, unplanned_only: true }
-      })
+      const [result, reasons] = await Promise.all([
+        $api<VisitListResponse>('/visits', {
+          query: { page: 1, page_size: 200, unplanned_only: true }
+        }),
+        $api<Record<string, string>>('/admin/capacity/planning-reasons').catch(() => ({})),
+      ])
+
+      planningReasons.value = reasons
 
       const filtered = (result.items ?? [])
         .filter((v) => {
