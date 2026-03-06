@@ -637,7 +637,7 @@
     'rejected'
   ]
 
-  const plannedStatusValues: VisitStatusCode[] = ['planned', 'not_executed']
+  const plannedStatusValues: VisitStatusCode[] = ['planned', 'not_executed', 'missed']
 
   const loading = ref(false)
   const clearing = ref(false)

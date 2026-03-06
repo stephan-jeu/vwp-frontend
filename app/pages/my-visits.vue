@@ -39,6 +39,12 @@
                   @click="goToDetail(visit.id)"
                 >
                   <div class="flex flex-col gap-1">
+                    <div
+                      v-if="featureDailyPlanning && visit.planned_date"
+                      class="text-base font-semibold text-gray-900 dark:text-white capitalize"
+                    >
+                      {{ formatPlannedDate(visit.planned_date) }}
+                    </div>
                     <div class="flex items-center justify-between gap-2">
                       <div>
                         <div class="text-sm text-gray-700 dark:text-gray-300">
@@ -251,6 +257,7 @@
     remarks_planning: string | null
     remarks_field: string | null
     priority: boolean
+    planned_date: string | null
     part_of_day: string | null
     start_time_text: string | null
     planning_locked: boolean
@@ -503,6 +510,12 @@
   const visitsForActiveWeek = computed<VisitListRow[]>(() => {
     // We trust backend filtering now, but still filter by researcher ownership
     return filteredVisits.value.slice().sort((a, b) => {
+      if (featureDailyPlanning.value) {
+        const dateA = a.planned_date ?? ''
+        const dateB = b.planned_date ?? ''
+        if (dateA !== dateB) return dateA < dateB ? -1 : 1
+      }
+
       const rankA = statusSortOrder[a.status] ?? 99
       const rankB = statusSortOrder[b.status] ?? 99
       if (rankA !== rankB) return rankA - rankB
@@ -575,6 +588,12 @@
   function formatAvWeekLabel(week: number): string {
     const range = weekRangeLabel(week)
     return range ? `Week ${week} (${range})` : `Week ${week}`
+  }
+
+  function formatPlannedDate(d: string): string {
+    const dt = new Date(d)
+    if (Number.isNaN(dt.getTime())) return d
+    return new Intl.DateTimeFormat('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' }).format(dt)
   }
 
   // ...
