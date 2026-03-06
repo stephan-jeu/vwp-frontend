@@ -27,6 +27,7 @@ export default defineNuxtConfig({
       featureLanguageSupport: false, // Overridden by NUXT_PUBLIC_FEATURE_LANGUAGE_SUPPORT
       enableVisitCode: false, // Overridden by NUXT_PUBLIC_ENABLE_VISIT_CODE
       featureAdvertise: true, // Overridden by NUXT_PUBLIC_FEATURE_ADVERTISE
+      customFunctionNames: '', // Overridden by NUXT_PUBLIC_CUSTOM_FUNCTION_NAMES (comma-separated)
 
       // Branding
       brandName: 'Habitus', // Overridden by NUXT_PUBLIC_BRAND_NAME

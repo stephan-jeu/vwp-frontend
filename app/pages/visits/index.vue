@@ -115,10 +115,10 @@
           <UInputMenu
             v-else
             :model-value="createFunctions"
-            :items="functionOptions"
+            :items="combinedFunctionOptions"
             multiple
             class="w-2xs"
-            @update:model-value="(sel) => (createFunctionIds = sel.map((o) => o.value as number))"
+            @update:model-value="onCreateFunctionSelect"
           />
         </div>
         <div>
@@ -485,19 +485,17 @@
                       <label class="block text-xs">Functies</label>
                     </div>
                     <UInput
-                      v-if="row.original.custom_function_name !== null"
+                      v-if="row.original.custom_function_name !== null && !isConfiguredCustomName(row.original.custom_function_name)"
                       v-model="row.original.custom_function_name"
                       placeholder="Maatwerk functie"
                     />
                     <UInputMenu
                       v-else
-                      :model-value="mapIdsToOptions(row.original.function_ids, functionOptions)"
-                      :items="functionOptions"
+                      :model-value="getEditFunctionOptions(row.original)"
+                      :items="combinedFunctionOptions"
                       multiple
                       class="w-2xs"
-                      @update:model-value="
-                        (sel) => (row.original.function_ids = sel.map((o) => o.value as number))
-                      "
+                      @update:model-value="(sel) => onEditFunctionSelect(row.original, sel)"
                     />
                   </div>
                   <div>
@@ -520,7 +518,7 @@
                     />
                      <div class="mt-1">
                          <UCheckbox
-                            :model-value="!!(row.original.custom_function_name || row.original.custom_species_name)"
+                            :model-value="!!((row.original.custom_function_name && !isConfiguredCustomName(row.original.custom_function_name)) || row.original.custom_species_name)"
                             label="Andere soort"
                             class="text-xs"
                             @change="(val) => {
@@ -963,6 +961,17 @@
     return Boolean(raw)
   })
 
+  const configuredCustomFunctionNames = computed<string[]>(() => {
+    const raw = (runtimeConfig.public as Record<string, unknown>).customFunctionNames
+    if (typeof raw !== 'string' || !raw.trim()) return []
+    return raw.split(',').map(s => s.trim()).filter(Boolean)
+  })
+
+  function isConfiguredCustomName(name: string | null | undefined): boolean {
+    if (!name) return false
+    return configuredCustomFunctionNames.value.includes(name)
+  }
+
   const rows = ref<VisitListRow[]>([])
   const loading = ref(false)
   const page = ref(1)
@@ -1327,6 +1336,19 @@
   const projectDetails = ref<Array<{ id: number; code: string; location: string }>>([])
   const clusterOptions = ref<ClusterOption[]>([])
   const functionOptions = ref<Option[]>([])
+
+  const customFunctionOptions = computed<Option[]>(() =>
+    configuredCustomFunctionNames.value.map((name, index) => ({
+      label: name,
+      value: -(index + 1)
+    }))
+  )
+
+  const combinedFunctionOptions = computed<Option[]>(() => [
+    ...functionOptions.value,
+    ...customFunctionOptions.value
+  ])
+
   const speciesOptions = ref<Option[]>([])
   const speciesMeta = ref<CompactSpecies[]>([])
   const researcherOptions = ref<Option[]>([])
@@ -1490,11 +1512,48 @@
   const createCustomVisit = ref(false)
   const createCustomFunctionName = ref('')
   const createCustomSpeciesName = ref('')
+  const createConfiguredCustomFunctionName = ref<string | null>(null)
   const createProvisionalLocked = ref(false)
 
-  const createFunctions = computed(() =>
-    mapIdsToOptions(createFunctionIds.value, functionOptions.value)
-  )
+  const createFunctions = computed(() => {
+    if (createConfiguredCustomFunctionName.value) {
+      const opt = customFunctionOptions.value.find(o => o.label === createConfiguredCustomFunctionName.value)
+      return opt ? [opt] : []
+    }
+    return mapIdsToOptions(createFunctionIds.value, functionOptions.value)
+  })
+
+  function onCreateFunctionSelect(sel: Option[]): void {
+    const customSel = sel.find(o => o.value !== null && (o.value as number) < 0)
+    if (customSel) {
+      createConfiguredCustomFunctionName.value = customSel.label
+      createFunctionIds.value = []
+    } else {
+      createConfiguredCustomFunctionName.value = null
+      createFunctionIds.value = sel.map(o => o.value as number)
+    }
+  }
+
+  function getEditFunctionOptions(row: VisitListRow): Option[] {
+    if (row.custom_function_name && isConfiguredCustomName(row.custom_function_name)) {
+      const opt = customFunctionOptions.value.find(o => o.label === row.custom_function_name)
+      return opt ? [opt] : []
+    }
+    return mapIdsToOptions(row.function_ids, functionOptions.value)
+  }
+
+  function onEditFunctionSelect(row: VisitListRow, sel: Option[]): void {
+    const customSel = sel.find(o => o.value !== null && (o.value as number) < 0)
+    if (customSel) {
+      row.custom_function_name = customSel.label
+      row.function_ids = []
+    } else {
+      if (isConfiguredCustomName(row.custom_function_name)) {
+        row.custom_function_name = null
+      }
+      row.function_ids = sel.map(o => o.value as number)
+    }
+  }
   const createSpecies = computed(() =>
     mapIdsToOptions(createSpeciesIds.value, speciesOptions.value)
   )
@@ -1536,6 +1595,7 @@
     createCustomVisit.value = false
     createCustomFunctionName.value = ''
     createCustomSpeciesName.value = ''
+    createConfiguredCustomFunctionName.value = null
     createProvisionalLocked.value = false
   }
 
@@ -1661,9 +1721,9 @@
         priority: createPriority.value,
         part_of_day: createPartOfDay.value,
         start_time_text: createStartTimeText.value || null,
-        function_ids: createCustomVisit.value ? [] : [...createFunctionIds.value],
+        function_ids: (createCustomVisit.value || createConfiguredCustomFunctionName.value) ? [] : [...createFunctionIds.value],
         species_ids: createCustomVisit.value ? [] : [...createSpeciesIds.value],
-        custom_function_name: createCustomVisit.value ? createCustomFunctionName.value : null,
+        custom_function_name: createCustomVisit.value ? createCustomFunctionName.value : (createConfiguredCustomFunctionName.value ?? null),
         custom_species_name: createCustomVisit.value ? createCustomSpeciesName.value : null,
         researcher_ids: createResearcherIds.value.length > 0 ? [...createResearcherIds.value] : null
       }
