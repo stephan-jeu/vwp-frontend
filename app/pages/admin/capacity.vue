@@ -151,6 +151,18 @@
               </span>
             </template>
 
+            <!-- Dynamic Week Column Headers -->
+            <template
+              v-for="week in activeWeekKeys"
+              :key="`hdr-${week}`"
+              #[`${week}-header`]
+            >
+              <div class="text-center leading-tight">
+                <div>{{ getWeekColumnLabel(week) }}</div>
+                <div v-if="weekToMondayLabel(week)" class="text-[10px] text-gray-400 font-normal">{{ weekToMondayLabel(week) }}</div>
+              </div>
+            </template>
+
             <!-- Dynamic Week Columns -->
             <template
               v-for="week in activeWeekKeys"
@@ -640,32 +652,47 @@
     }
   })
 
+  function getWeekColumnLabel(wk: string): string {
+    if (viewMode.value === 'deadline') {
+      if (wk === 'No Deadline') return 'Geen deadline'
+      const [y, m, d] = wk.split('-')
+      if (y && m && d && d.length === 2 && m.length === 2) return `${d}-${m}`
+      return wk
+    } else {
+      const [, weekNum] = wk.split('-W')
+      if (weekNum) return `W${weekNum}`
+      return wk
+    }
+  }
+
+  function isoWeekMonday(year: number, week: number): Date {
+    // Jan 4 is always in ISO week 1
+    const jan4 = new Date(year, 0, 4)
+    const dow = jan4.getDay() || 7 // Sun=0 → 7
+    const week1Monday = new Date(jan4)
+    week1Monday.setDate(jan4.getDate() - (dow - 1))
+    const result = new Date(week1Monday)
+    result.setDate(week1Monday.getDate() + (week - 1) * 7)
+    return result
+  }
+
+  function weekToMondayLabel(wk: string): string {
+    const [yearStr, weekStr] = wk.split('-W')
+    if (!yearStr || !weekStr) return ''
+    const year = parseInt(yearStr)
+    const week = parseInt(weekStr)
+    if (isNaN(year) || isNaN(week)) return ''
+    const monday = isoWeekMonday(year, week)
+    return `${monday.getDate()}-${monday.getMonth() + 1}`
+  }
+
   const columns = computed<TableColumn[]>(() => {
     const base: TableColumn[] = [
       { accessorKey: 'family', header: '', sortable: true },
       { accessorKey: 'part', header: '' }
     ]
     const weekCols = activeWeekKeys.value.map((wk) => {
-      let label = wk
-
-      if (viewMode.value === 'deadline') {
-           if (wk === 'No Deadline') label = 'Geen deadline'
-           else {
-               const [y, m, d] = wk.split('-')
-               if (y && m && d && d.length === 2 && m.length === 2) {
-                   label = `${d}-${m}`
-               }
-           }
-      } else {
-           // Week View: YYYY-WXX -> WXX
-           const parts = wk.split('-W')
-           if (parts.length === 2) {
-               label = `W${parts[1]}`
-           }
-      }
-
-      // Use accessorKey for data binding
-      return { accessorKey: wk, header: label } satisfies TableColumn
+      return { accessorKey: wk, header: getWeekColumnLabel(wk) } satisfies TableColumn
     })
     return [...base, ...weekCols]
   })
