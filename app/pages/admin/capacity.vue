@@ -15,7 +15,24 @@
             >
                 {{ hasData ? 'Herberekenen' : 'Bereken' }}
             </UButton>
-            <UCheckbox v-model="simulateWithQuotes" label="Simuleer met offerte projecten" />
+            <div class="flex items-center gap-1">
+              <UInputMenu
+                v-model="selectedQuoteProjects"
+                :items="quoteProjectOptions"
+                multiple
+                searchable
+                placeholder="Offerte projecten simuleren..."
+                class="w-72"
+              />
+              <UButton
+                icon="i-heroicons-arrow-right-circle"
+                variant="ghost"
+                color="neutral"
+                :disabled="selectedQuoteProjects.length === 0"
+                title="Simuleer met geselecteerde offerte projecten"
+                @click="applyQuoteSimulation"
+              />
+            </div>
             <span v-if="lastCalculatedLabel" class="text-xs text-gray-500">
                 {{ lastCalculatedLabel }}
             </span>
@@ -71,18 +88,27 @@
               <table class="w-full text-sm">
                 <thead>
                   <tr class="bg-gray-50 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400">
+                    <th class="text-left px-3 py-2 font-medium">Einddatum</th>
+                    <th class="text-left px-3 py-2 font-medium">Familie</th>
+                    <th class="text-left px-3 py-2 font-medium">Dagdeel</th>
+                    <th class="text-left px-3 py-2 font-medium">Project</th>
+                    <th class="text-left px-3 py-2 font-medium">Adres</th>
                     <th class="text-left px-3 py-2 font-medium">Reden</th>
-                    <th class="text-right px-3 py-2 font-medium">Aantal</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr
-                    v-for="row in simulatedUnschedulableByReason"
-                    :key="row.code"
-                    class="border-t border-gray-100 dark:border-gray-700"
+                    v-for="item in simulatedUnschedulable"
+                    :key="item.visit_id"
+                    class="border-t border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+                    @click="openVisit(item.visit_id)"
                   >
-                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ row.label }}</td>
-                    <td class="px-3 py-2 text-right font-semibold text-red-600 dark:text-red-400">{{ row.count }}</td>
+                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ item.to_date ? formatDateShort(item.to_date) : '—' }}</td>
+                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ item.family ?? '—' }}</td>
+                    <td class="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs">{{ item.part_of_day ?? '—' }}</td>
+                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300 font-mono text-xs">{{ item.project_code ?? '—' }}</td>
+                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.cluster_address ?? '—' }}</td>
+                    <td class="px-3 py-2 text-amber-700 dark:text-amber-400 text-xs">{{ item.reason_nl }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -152,22 +178,52 @@
         </template>
       </div>
 
+      <div v-else-if="viewMode === 'deadline'">
+        <div v-if="!response" class="text-sm text-gray-500">
+          Nog geen resultaten. Klik op Bereken om de capaciteit in te zien.
+        </div>
+        <div v-else-if="deadlineSummary.length === 0" class="text-sm text-gray-500">
+          Geen bezoeken gevonden.
+        </div>
+        <div v-else class="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-gray-50 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400">
+                <th class="text-left px-3 py-2 font-medium">Familie</th>
+                <th class="text-left px-3 py-2 font-medium">Dagdeel</th>
+                <th class="text-left px-3 py-2 font-medium whitespace-nowrap">Einddatum</th>
+                <th class="text-right px-3 py-2 font-medium">Gepland</th>
+                <th class="text-right px-3 py-2 font-medium">Voorlopig</th>
+                <th class="text-right px-3 py-2 font-medium whitespace-nowrap">Niet ingepland</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="row in deadlineSummary"
+                :key="`${row.family}|${row.part_of_day}|${row.deadline}`"
+                class="border-t border-gray-100 dark:border-gray-700"
+              >
+                <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ row.family }}</td>
+                <td class="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs">{{ row.part_of_day }}</td>
+                <td class="px-3 py-2 text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ row.deadline ? formatDateShort(row.deadline) : '—' }}</td>
+                <td class="px-3 py-2 text-right text-gray-600 dark:text-gray-400">{{ row.planned }}</td>
+                <td class="px-3 py-2 text-right text-amber-600 dark:text-amber-400">{{ row.provisional }}</td>
+                <td class="px-3 py-2 text-right font-semibold" :class="row.not_scheduled > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400'">{{ row.not_scheduled }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div v-else-if="!hasData" class="text-sm text-gray-500">
         Nog geen resultaten. Klik op Herberekenen om de capaciteit in te zien.
       </div>
 
       <div v-else class="my-3">
-        <!-- Legend dependent on view -->
+        <!-- Week view legend -->
         <div class="text-xs mb-2">
-          <template v-if="viewMode === 'deadline'">
-              <span class="font-medium">Legenda: niet-inplanbaar (gepland).</span>
-              <span class="ml-1">Kolommen zijn bezoek eind datums.</span>
-              <span class="ml-1 text-red-600">Rood = tekort</span>
-          </template>
-          <template v-else>
-              <span class="font-medium">Legenda: vrije capaciteit (gebruikte capaciteit).</span>
-              <span class="ml-1 text-red-600">Rood = weinig vrije capaciteit </span>
-          </template>
+          <span class="font-medium">Legenda: vrije capaciteit (gebruikte capaciteit).</span>
+          <span class="ml-1 text-red-600">Rood = weinig vrije capaciteit</span>
         </div>
 
         <div class="border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 overflow-x-auto">
@@ -247,6 +303,20 @@
     visit_id: number
     reason_nl: string
     reason_code: string
+    project_code?: string | null
+    cluster_address?: string | null
+    to_date?: string | null
+    part_of_day?: string | null
+    family?: string | null
+  }
+
+  type DeadlineSummaryRow = {
+    family: string
+    part_of_day: string
+    deadline: string | null
+    planned: number
+    provisional: number
+    not_scheduled: number
   }
 
   type CapacitySimulationResponse = {
@@ -257,13 +327,21 @@
     grid: Record<string, Record<string, Record<string, FamilyDaypartCapacity>>>
     week_view?: WeekViewData | null
     unschedulable_visits?: UnschedulableVisitInfo[]
+    deadline_summary?: DeadlineSummaryRow[]
   }
 
   type SeasonPlannerStatusResponse = {
     last_run_at: string | null
   }
 
-  const simulateWithQuotes = ref(false)
+  type InputMenuItem = {
+    label: string
+    value: number
+  }
+
+  const quoteProjectOptions = ref<InputMenuItem[]>([])
+  const selectedQuoteProjects = ref<InputMenuItem[]>([])
+  const simulateWithQuotes = computed(() => selectedQuoteProjects.value.length > 0)
 
   const viewMode = ref<ViewMode>('week')
 
@@ -528,11 +606,7 @@
          return notPlannableVisits.value.length > 0
      }
      if (!response.value) return false
-     if (viewMode.value === 'week') {
-         return !!response.value.week_view
-     }
-     const grid = response.value.grid
-     return !!grid && Object.keys(grid).length > 0
+     return !!response.value.week_view
   })
 
   function openVisit(visitId: number): void {
@@ -597,24 +671,8 @@
     return response.value?.unschedulable_visits ?? []
   })
 
-  const REASON_LABELS: Record<string, string> = {
-    geen_venster: 'Geen tijdvenster beschikbaar',
-    geen_kwalificatie: 'Geen gekwalificeerde medewerker',
-    capaciteitsgebrek: 'Onvoldoende capaciteit',
-  }
-
-  function reasonLabel(code: string): string {
-    return REASON_LABELS[code] ?? code
-  }
-
-  const simulatedUnschedulableByReason = computed<{ code: string; label: string; count: number }[]>(() => {
-    const map = new Map<string, number>()
-    for (const item of simulatedUnschedulable.value) {
-      map.set(item.reason_code, (map.get(item.reason_code) ?? 0) + 1)
-    }
-    return Array.from(map.entries())
-      .map(([code, count]) => ({ code, label: reasonLabel(code), count }))
-      .sort((a, b) => b.count - a.count)
+  const deadlineSummary = computed<DeadlineSummaryRow[]>(() => {
+    return response.value?.deadline_summary ?? []
   })
 
   async function loadNotPlannableVisits(): Promise<void> {
@@ -767,11 +825,24 @@
     return [...base, ...weekCols]
   })
 
+  async function loadQuoteProjects(): Promise<void> {
+    try {
+      type ProjectRead = { id: number; code: string; location: string; quote: boolean }
+      const projects = await $api<ProjectRead[]>('/projects')
+      quoteProjectOptions.value = projects
+        .filter(p => p.quote)
+        .map(p => ({ label: `${p.code} — ${p.location}`, value: p.id }))
+    } catch {
+      // Non-critical, ignore
+    }
+  }
+
   async function loadCapacity(): Promise<void> {
     loading.value = true
     try {
-      const query = simulateWithQuotes.value
-        ? { include_quotes: true, simulate: true }
+      const selectedIds = selectedQuoteProjects.value.map(p => p.value)
+      const query = selectedIds.length > 0
+        ? { quote_project_ids: selectedIds, simulate: true }
         : undefined
       const result = await $api<CapacitySimulationResponse>(
         '/admin/capacity/visits/families',
@@ -805,8 +876,9 @@
 
       loading.value = true
       try {
-          const query = simulateWithQuotes.value
-            ? { include_quotes: true, simulate: true }
+          const selectedIds = selectedQuoteProjects.value.map(p => p.value)
+          const query = selectedIds.length > 0
+            ? { quote_project_ids: selectedIds, simulate: true }
             : undefined
           // Trigger POST
           const result = await $api<CapacitySimulationResponse>(
@@ -831,12 +903,13 @@
   }
 
   onMounted(() => {
+     void loadQuoteProjects()
      void loadCapacity()
      void loadNotPlannableVisits()
   })
 
-  watch(simulateWithQuotes, () => {
+  function applyQuoteSimulation(): void {
     void loadCapacity()
     void loadNotPlannableVisits()
-  })
+  }
 </script>
