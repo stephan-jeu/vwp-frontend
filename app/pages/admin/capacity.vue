@@ -15,24 +15,52 @@
             >
                 {{ hasData ? 'Herberekenen' : 'Bereken' }}
             </UButton>
-            <div class="flex items-center gap-1">
-              <UInputMenu
-                v-model="selectedQuoteProjects"
-                :items="quoteProjectOptions"
-                multiple
-                searchable
-                placeholder="Offerte projecten simuleren..."
-                class="w-72"
-              />
+            <UPopover v-model:open="quotePopoverOpen" :ui="{ content: 'w-80' }">
               <UButton
-                icon="i-heroicons-arrow-right-circle"
-                variant="ghost"
+                variant="outline"
                 color="neutral"
-                :disabled="selectedQuoteProjects.length === 0"
-                title="Simuleer met geselecteerde offerte projecten"
-                @click="applyQuoteSimulation"
-              />
-            </div>
+                trailing-icon="i-heroicons-chevron-down"
+              >
+                {{ quoteButtonLabel }}
+              </UButton>
+
+              <template #content>
+                <div class="p-2 space-y-2">
+                  <!-- Search -->
+                  <UInput
+                    v-model="quoteSearch"
+                    placeholder="Zoeken..."
+                    icon="i-heroicons-magnifying-glass"
+                    size="sm"
+                    autofocus
+                  />
+                  <!-- Select all / deselect all -->
+                  <div class="flex gap-2">
+                    <UButton size="xs" variant="ghost" color="primary" @click="selectAllQuoteProjects">Alles selecteren</UButton>
+                    <UButton size="xs" variant="ghost" color="neutral" @click="deselectAllQuoteProjects">Wis selectie</UButton>
+                  </div>
+                  <!-- Checkbox list -->
+                  <div class="max-h-60 overflow-y-auto space-y-1 border-t border-gray-100 dark:border-gray-700 pt-2">
+                    <label
+                      v-for="option in filteredQuoteOptions"
+                      :key="option.value"
+                      class="flex items-center gap-2 px-2 py-1 rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
+                    >
+                      <UCheckbox
+                        :model-value="isQuoteProjectSelected(option.value)"
+                        @update:model-value="toggleQuoteProject(option)"
+                      />
+                      <span>{{ option.label }}</span>
+                    </label>
+                    <p v-if="filteredQuoteOptions.length === 0" class="text-xs text-gray-400 px-2 py-1">Geen resultaten</p>
+                  </div>
+                  <!-- Apply button -->
+                  <div class="border-t border-gray-100 dark:border-gray-700 pt-2">
+                    <UButton size="sm" color="primary" class="w-full justify-center" @click="applyAndClosePopover">Toepassen</UButton>
+                  </div>
+                </div>
+              </template>
+            </UPopover>
             <span v-if="lastCalculatedLabel" class="text-xs text-gray-500">
                 {{ lastCalculatedLabel }}
             </span>
@@ -342,6 +370,49 @@
   const quoteProjectOptions = ref<InputMenuItem[]>([])
   const selectedQuoteProjects = ref<InputMenuItem[]>([])
   const simulateWithQuotes = computed(() => selectedQuoteProjects.value.length > 0)
+
+  // Popover state
+  const quotePopoverOpen = ref(false)
+  const quoteSearch = ref('')
+
+  const filteredQuoteOptions = computed(() => {
+    const q = quoteSearch.value.toLowerCase()
+    if (!q) return quoteProjectOptions.value
+    return quoteProjectOptions.value.filter(o => o.label.toLowerCase().includes(q))
+  })
+
+  const quoteButtonLabel = computed(() => {
+    const n = selectedQuoteProjects.value.length
+    if (n === 0) return 'Offerte projecten'
+    return `${n} offerte project${n === 1 ? '' : 'en'}`
+  })
+
+  function isQuoteProjectSelected(id: number): boolean {
+    return selectedQuoteProjects.value.some(p => p.value === id)
+  }
+
+  function toggleQuoteProject(option: InputMenuItem): void {
+    if (isQuoteProjectSelected(option.value)) {
+      selectedQuoteProjects.value = selectedQuoteProjects.value.filter(p => p.value !== option.value)
+    } else {
+      selectedQuoteProjects.value = [...selectedQuoteProjects.value, option]
+    }
+  }
+
+  function selectAllQuoteProjects(): void {
+    selectedQuoteProjects.value = [...quoteProjectOptions.value]
+  }
+
+  function deselectAllQuoteProjects(): void {
+    selectedQuoteProjects.value = []
+  }
+
+  function applyAndClosePopover(): void {
+    quotePopoverOpen.value = false
+    quoteSearch.value = ''
+    void loadCapacity()
+    void loadNotPlannableVisits()
+  }
 
   const viewMode = ref<ViewMode>('week')
 
@@ -908,8 +979,4 @@
      void loadNotPlannableVisits()
   })
 
-  function applyQuoteSimulation(): void {
-    void loadCapacity()
-    void loadNotPlannableVisits()
-  }
 </script>
