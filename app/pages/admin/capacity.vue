@@ -55,63 +55,101 @@
       </div>
 
       <div v-else-if="viewMode === 'not_plannable'">
-        <div v-if="notPlannableVisitsLoading" class="text-sm text-gray-500">
-          Bezoeken worden geladen...
-        </div>
-        <div v-else-if="notPlannableVisits.length === 0" class="text-sm text-gray-500">
-          Geen bezoeken gevonden.
-        </div>
-        <div v-else class="space-y-6">
-          <!-- Summary table grouped by end date -->
-          <div>
-            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 mt-4">
-              Overzicht per bezoek einddatum
-              <span class="ml-1 font-normal text-red-600 dark:text-red-400">({{ notPlannableVisits.length }} bezoeken niet inplanbaar)</span>
+        <!-- Simulatiemodus: toon resultaat van de simulatie (geen volledige bezoekkaarten) -->
+        <template v-if="simulateWithQuotes">
+          <div v-if="loading" class="text-sm text-gray-500">
+            Simulatie wordt geladen...
+          </div>
+          <div v-else-if="simulatedUnschedulable.length === 0" class="text-sm text-gray-500">
+            Geen niet-inplanbare bezoeken gevonden in de simulatie.
+          </div>
+          <div v-else class="space-y-4">
+            <p class="text-sm text-amber-700 dark:text-amber-400">
+              Simulatieresultaat: <strong>{{ simulatedUnschedulable.length }} bezoeken</strong> kunnen niet worden ingepland als offerteprojecten worden meegenomen.
             </p>
             <div class="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
               <table class="w-full text-sm">
                 <thead>
                   <tr class="bg-gray-50 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400">
-                    <th class="text-left px-3 py-2 font-medium">Bezoek einddatum</th>
-                    <th class="text-left px-3 py-2 font-medium">Type</th>
-                    <th class="text-left px-3 py-2 font-medium">Familie</th>
-                    <th class="text-left px-3 py-2 font-medium">Dagdeel</th>
+                    <th class="text-left px-3 py-2 font-medium">Reden</th>
                     <th class="text-right px-3 py-2 font-medium">Aantal</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr
-                    v-for="row in notPlannableSummary"
-                    :key="`${row.dateKey}|${row.functionLabel}|${row.speciesLabel}|${row.partLabel}`"
+                    v-for="row in simulatedUnschedulableByReason"
+                    :key="row.code"
                     class="border-t border-gray-100 dark:border-gray-700"
                   >
-                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ row.dateLabel }}</td>
-                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ row.functionLabel }}</td>
-                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ row.speciesLabel }}</td>
-                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ row.partLabel }}</td>
+                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ row.label }}</td>
                     <td class="px-3 py-2 text-right font-semibold text-red-600 dark:text-red-400">{{ row.count }}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </div>
+        </template>
 
-          <!-- Individual visit cards -->
-          <div>
-            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Individuele bezoeken</p>
-            <div class="space-y-4">
-              <div v-for="visit in notPlannableVisits" :key="visit.id">
-                <VisitPreviewCard
-                  :visit="visit"
-                  @open="openVisit(visit.id)"
-                />
-                <p v-if="planningReasons[String(visit.id)]" class="mt-1 text-xs text-amber-700 dark:text-amber-400 px-1">
-                  {{ planningReasons[String(visit.id)] }}
-                </p>
+        <!-- Normale modus: bezoeken uit de database met volledige kaarten -->
+        <template v-else>
+          <div v-if="notPlannableVisitsLoading" class="text-sm text-gray-500">
+            Bezoeken worden geladen...
+          </div>
+          <div v-else-if="notPlannableVisits.length === 0" class="text-sm text-gray-500">
+            Geen bezoeken gevonden.
+          </div>
+          <div v-else class="space-y-6">
+            <!-- Summary table grouped by end date -->
+            <div>
+              <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 mt-4">
+                Overzicht per bezoek einddatum
+                <span class="ml-1 font-normal text-red-600 dark:text-red-400">({{ notPlannableVisits.length }} bezoeken niet inplanbaar)</span>
+              </p>
+              <div class="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="bg-gray-50 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400">
+                      <th class="text-left px-3 py-2 font-medium">Bezoek einddatum</th>
+                      <th class="text-left px-3 py-2 font-medium">Type</th>
+                      <th class="text-left px-3 py-2 font-medium">Familie</th>
+                      <th class="text-left px-3 py-2 font-medium">Dagdeel</th>
+                      <th class="text-right px-3 py-2 font-medium">Aantal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="row in notPlannableSummary"
+                      :key="`${row.dateKey}|${row.functionLabel}|${row.speciesLabel}|${row.partLabel}`"
+                      class="border-t border-gray-100 dark:border-gray-700"
+                    >
+                      <td class="px-3 py-2 text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ row.dateLabel }}</td>
+                      <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ row.functionLabel }}</td>
+                      <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ row.speciesLabel }}</td>
+                      <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ row.partLabel }}</td>
+                      <td class="px-3 py-2 text-right font-semibold text-red-600 dark:text-red-400">{{ row.count }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Individual visit cards -->
+            <div>
+              <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Individuele bezoeken</p>
+              <div class="space-y-4">
+                <div v-for="visit in notPlannableVisits" :key="visit.id">
+                  <VisitPreviewCard
+                    :visit="visit"
+                    @open="openVisit(visit.id)"
+                  />
+                  <p v-if="planningReasons[String(visit.id)]" class="mt-1 text-xs text-amber-700 dark:text-amber-400 px-1">
+                    {{ planningReasons[String(visit.id)] }}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </template>
       </div>
 
       <div v-else-if="!hasData" class="text-sm text-gray-500">
@@ -205,6 +243,12 @@
       rows: Record<string, Record<string, WeekResultCell>>
   }
 
+  type UnschedulableVisitInfo = {
+    visit_id: number
+    reason_nl: string
+    reason_code: string
+  }
+
   type CapacitySimulationResponse = {
     horizon_start: string
     horizon_end: string
@@ -212,6 +256,7 @@
     updated_at?: string | null
     grid: Record<string, Record<string, Record<string, FamilyDaypartCapacity>>>
     week_view?: WeekViewData | null
+    unschedulable_visits?: UnschedulableVisitInfo[]
   }
 
   type SeasonPlannerStatusResponse = {
@@ -547,6 +592,31 @@
     })
   })
 
+  const simulatedUnschedulable = computed<UnschedulableVisitInfo[]>(() => {
+    if (!simulateWithQuotes.value) return []
+    return response.value?.unschedulable_visits ?? []
+  })
+
+  const REASON_LABELS: Record<string, string> = {
+    geen_venster: 'Geen tijdvenster beschikbaar',
+    geen_kwalificatie: 'Geen gekwalificeerde medewerker',
+    capaciteitsgebrek: 'Onvoldoende capaciteit',
+  }
+
+  function reasonLabel(code: string): string {
+    return REASON_LABELS[code] ?? code
+  }
+
+  const simulatedUnschedulableByReason = computed<{ code: string; label: string; count: number }[]>(() => {
+    const map = new Map<string, number>()
+    for (const item of simulatedUnschedulable.value) {
+      map.set(item.reason_code, (map.get(item.reason_code) ?? 0) + 1)
+    }
+    return Array.from(map.entries())
+      .map(([code, count]) => ({ code, label: reasonLabel(code), count }))
+      .sort((a, b) => b.count - a.count)
+  })
+
   async function loadNotPlannableVisits(): Promise<void> {
     notPlannableVisitsLoading.value = true
     try {
@@ -767,5 +837,6 @@
 
   watch(simulateWithQuotes, () => {
     void loadCapacity()
+    void loadNotPlannableVisits()
   })
 </script>
