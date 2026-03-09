@@ -184,7 +184,11 @@
                     {{ formatAvWeekLabel(item.week) }}
                   </div>
                   <div class="flex flex-wrap gap-4 text-sm">
+                    <div v-if="item.parts.length === 0" class="text-gray-500 dark:text-gray-400 italic">
+                      Geen beschikbaarheid
+                    </div>
                     <div
+                      v-else
                       v-for="part in item.parts"
                       :key="part.label"
                       class="flex items-center gap-2"
@@ -563,24 +567,36 @@
   const availabilityList = computed(() => {
     if (!avData.value) return []
     const list = []
-    for (const weekData of avData.value) {
-      if (
-        weekData.morning_days === 0 &&
-        weekData.daytime_days === 0 &&
-        weekData.nighttime_days === 0 &&
-        weekData.flex_days === 0
-      ) {
+    
+    // Create a map for quick lookup
+    const weekDataMap = new Map(avData.value.map(item => [item.week, item]))
+    
+    const currentWeek = getIsoWeekNumber(effectiveToday.value)
+    const endWeek = currentWeek + 30
+    
+    for (let w = currentWeek; w <= endWeek; w++) {
+      const weekData = weekDataMap.get(w)
+      
+      const hasAvailability = weekData && (
+        weekData.morning_days > 0 ||
+        weekData.daytime_days > 0 ||
+        weekData.nighttime_days > 0 ||
+        weekData.flex_days > 0
+      )
+
+      if (featureStrictAvailability.value && !hasAvailability) {
         continue
       }
 
       const parts = []
-      if (weekData.morning_days > 0) parts.push({ label: 'Ochtend', value: weekData.morning_days })
-      if (weekData.daytime_days > 0) parts.push({ label: 'Dag', value: weekData.daytime_days })
-      if (weekData.nighttime_days > 0)
-        parts.push({ label: 'Avond', value: weekData.nighttime_days })
-      if (weekData.flex_days > 0 && !featureStrictAvailability.value) parts.push({ label: 'Flex', value: weekData.flex_days })
+      if (weekData) {
+        if (weekData.morning_days > 0) parts.push({ label: 'Ochtend', value: weekData.morning_days })
+        if (weekData.daytime_days > 0) parts.push({ label: 'Dag', value: weekData.daytime_days })
+        if (weekData.nighttime_days > 0) parts.push({ label: 'Avond', value: weekData.nighttime_days })
+        if (weekData.flex_days > 0 && !featureStrictAvailability.value) parts.push({ label: 'Flex', value: weekData.flex_days })
+      }
 
-      list.push({ week: weekData.week, parts })
+      list.push({ week: w, parts })
     }
     return list
   })
