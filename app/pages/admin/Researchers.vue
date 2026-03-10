@@ -80,9 +80,36 @@
     </UCard>
 
     <UCard>
-      <div class="mt-4 flex items-center gap-2">
-        <UInput v-model="query" placeholder="Filter op naam" class="w-full" />
-        <UButton icon="i-heroicons-arrow-path" color="neutral" variant="soft" @click="loadUsers" />
+      <div class="mt-4 flex flex-col gap-3">
+        <div class="flex items-center gap-2">
+          <UInput v-model="query" placeholder="Filter op naam of e-mail" class="w-full md:w-96" />
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <USelectMenu
+            v-model="selectedContracts"
+            :items="contractOptions"
+            multiple
+            value-key="value"
+            placeholder="Contract"
+            class="w-48"
+          />
+          <USelectMenu
+            v-model="selectedExperience"
+            :items="experienceOptions"
+            multiple
+            value-key="value"
+            placeholder="Ervaring"
+            class="w-48"
+          />
+          <USelectMenu
+            v-model="selectedFlags"
+            :items="flagOptions"
+            multiple
+            value-key="value"
+            placeholder="Kenmerken"
+            class="w-64"
+          />
+        </div>
       </div>
 
       <div class="mt-6 space-y-3">
@@ -245,6 +272,9 @@
 
   const users = ref<User[]>([])
   const query = ref('')
+  const selectedContracts = ref<string[]>([])
+  const selectedExperience = ref<string[]>([])
+  const selectedFlags = ref<string[]>([])
   const expanded = ref<Set<number>>(new Set())
   const creating = ref(false)
   const savingId = ref<number | null>(null)
@@ -285,6 +315,28 @@
     { label: 'Engels', value: 'EN' }
   ]
 
+  const flagOptions = [
+    { label: 'WBC', value: 'wbc' },
+    { label: 'VOG', value: 'vog' },
+    { label: 'Fiets', value: 'fiets' },
+    { label: 'HUB', value: 'hub' },
+    { label: 'DVP', value: 'dvp' },
+    { label: 'VR/FG', value: 'vrfg' },
+    { label: 'SMP huismus', value: 'smp_huismus' },
+    { label: 'SMP vleermuis', value: 'smp_vleermuis' },
+    { label: 'SMP gierzwaluw', value: 'smp_gierzwaluw' },
+    { label: 'Vleermuis', value: 'vleermuis' },
+    { label: 'Roofvogel', value: 'roofvogel' },
+    { label: 'Zwaluw', value: 'zwaluw' },
+    { label: 'Vlinder (Grote vos/Iepenpage)', value: 'vlinder' },
+    { label: 'Teunisbloempijlstaart', value: 'teunisbloempijlstaart' },
+    { label: 'Huismus/Spreeuw', value: 'zangvogel' },
+    { label: 'Langoor', value: 'langoor' },
+    { label: 'Rugstreeppad', value: 'pad' },
+    { label: 'Biggenkruid', value: 'biggenkruid' },
+    { label: 'Schijfhoren', value: 'schijfhoren' }
+  ]
+
   const createForm = reactive<UserCreate>({
     email: '',
     full_name: '',
@@ -316,11 +368,37 @@
   })
 
   const filteredUsers = computed(() => {
+    let result = users.value
+
     const q = query.value.trim().toLowerCase()
-    if (!q) return users.value
-    return users.value.filter(
-      (u) => (u.full_name || '').toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-    )
+    if (q) {
+      result = result.filter(
+        (u) => (u.full_name || '').toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+      )
+    }
+
+    if (selectedContracts.value.length > 0) {
+      result = result.filter((u) => u.contract && selectedContracts.value.includes(u.contract))
+    }
+
+    if (selectedExperience.value.length > 0) {
+      result = result.filter(
+        (u) => u.experience_bat && selectedExperience.value.includes(u.experience_bat)
+      )
+    }
+
+    if (selectedFlags.value.length > 0) {
+      const flags = selectedFlags.value
+      result = result.filter((u) => {
+        // Must have ALL selected flags (AND logic)
+        return flags.every((flag: string) => {
+          // Type assertion to bypass TS index signature error since flag comes from our trusted options
+          return !!(u as any)[flag]
+        })
+      })
+    }
+
+    return result
   })
 
   function headerText(u: User): string {
