@@ -123,7 +123,7 @@
 
   const goToMS365 = async () => {
     loading.value = true
-    const frontendRedirectUri = `${window.location.origin}/auth/callback-ms365`
+    const frontendRedirectUri = `${window.location.origin}/auth/callback/ms365`
     const { data } = await useFetch<{ authorization_url: string }>('/auth/login/ms365', {
       baseURL: backendApiBase,
       query: { redirect_uri: frontendRedirectUri }
