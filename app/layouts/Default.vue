@@ -227,7 +227,11 @@
       const clonedAdmin: NavigationMenuItem = {
         ...adminGroup,
         children: adminGroup.children
-          ?.filter(c => !(strictAvailability && c.label === 'Beschikbaarheid'))
+          ?.filter(c => {
+            if (c.label === 'Beschikbaarheid') return !strictAvailability
+            if (c.label === 'Vrije dagen') return strictAvailability
+            return true
+          })
           .map((c) => ({ ...c }))
       }
       items.push(clonedAdmin)
