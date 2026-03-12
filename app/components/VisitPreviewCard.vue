@@ -13,7 +13,7 @@
         <span v-if="visit.project_location" class="mr-1">{{ visit.project_location }} -</span>
         {{ visit.project_code }}
         <span class="text-gray-500 font-normal ml-1 text-xs">
-          C{{ visit.cluster_number }} {{ visit.visit_nr ? `- ${visit.visit_nr}` : '' }}
+          {{ visit.cluster_number }} {{ visit.visit_nr ? `- ${visit.visit_nr}` : '' }}
           <span v-if="visit.cluster_address">({{ visit.cluster_address }})</span>
         </span>
       </div>
