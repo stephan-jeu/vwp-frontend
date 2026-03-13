@@ -24,6 +24,8 @@
       return
     }
 
+    const redirectUri = `${window.location.origin}/auth/callback`
+
     try {
       // Exchange the code with our backend
       const response = await $api<{
@@ -32,7 +34,7 @@
         token_type: string
       }>('/auth/callback', {
         method: 'POST',
-        body: { code } // Send the code to the backend
+        body: { code, redirect_uri: redirectUri } // Send the code to the backend
       })
 
       if (response.access_token && response.refresh_token) {
