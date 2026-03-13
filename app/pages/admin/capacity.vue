@@ -255,21 +255,12 @@
         </div>
 
         <div class="border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 overflow-x-auto">
-          <UTable :key="tableKey" :columns="columns" :data="rows" class="max-h-[600px]">
+          <UTable :key="tableKey" :columns="columns" :data="rows" class="max-h-[600px]" sticky :column-pinning="{ left: ['family'] }">
              <!-- Custom Cell Rendering -->
 
             <template #family-cell="{ row }">
-               <span
-                class="text-sm font-medium text-gray-800 dark:text-gray-100"
-                :class="{ 'font-bold': isRowTotal(row) }"
-               >
-                {{ getFamily(row) }}
-              </span>
-            </template>
-
-            <template #part-cell="{ row }">
-               <span class="text-xs text-gray-700 dark:text-gray-200">
-                {{ getPart(row) }}
+              <span class="text-sm font-medium text-gray-800 dark:text-gray-100 whitespace-nowrap" :class="{ 'font-bold': isRowTotal(row) }">
+                {{ getFamily(row) }}<span v-if="getPart(row)" class="text-xs text-gray-500 dark:text-gray-400 font-normal"> – {{ getPart(row) }}</span>
               </span>
             </template>
 
@@ -887,8 +878,7 @@
 
   const columns = computed<TableColumn[]>(() => {
     const base: TableColumn[] = [
-      { accessorKey: 'family', header: '', sortable: true },
-      { accessorKey: 'part', header: '' }
+      { accessorKey: 'family', header: '' }
     ]
     const weekCols = activeWeekKeys.value.map((wk) => {
       return { accessorKey: wk, header: getWeekColumnLabel(wk) } satisfies TableColumn
