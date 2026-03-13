@@ -1829,7 +1829,7 @@
       const payload = {
         required_researchers: row.required_researchers,
         visit_nr: row.visit_nr,
-        planned_week: plannedWeek,
+        planned_week: featureDailyPlanning.value ? null : plannedWeek,
         planned_date: row.planned_date || null,
         planning_locked: row.planning_locked,
         provisional_week: provisionalWeek,
@@ -1928,7 +1928,7 @@
         cluster_id: row.cluster_id,
         required_researchers: row.required_researchers,
         visit_nr: row.visit_nr,
-        planned_week: plannedWeek,
+        planned_week: featureDailyPlanning.value ? null : plannedWeek,
         planned_date: row.planned_date || null,
         planning_locked: row.planning_locked,
         provisional_week: provisionalWeek,
