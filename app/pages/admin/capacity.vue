@@ -566,14 +566,15 @@
          if (!wv) return []
 
          const sortedLabels = Object.keys(wv.rows).sort((a,b) => {
-             if (a === 'Totalen') return -1
-             if (b === 'Totalen') return 1
+             if (a.startsWith('Totalen') && !b.startsWith('Totalen')) return -1
+             if (b.startsWith('Totalen') && !a.startsWith('Totalen')) return 1
+             if (a.startsWith('Totalen') && b.startsWith('Totalen')) return a.localeCompare(b)
              return a.localeCompare(b)
          })
 
          for (const label of sortedLabels) {
              const rowData = wv.rows[label] ?? {}
-             const isTotal = label === 'Totalen'
+             const isTotal = label.startsWith('Totalen')
 
              // Calculate total planned visits for this row across all relevant weeks
              // activeWeekKeys are already filtered to existing weeks
