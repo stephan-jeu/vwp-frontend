@@ -1082,15 +1082,14 @@
       })
     }
 
-    // 2. Subtract assigned visits
-    // We use 'visits' and 'isInSelectedWeek' to ensure we only count what's visible/relevant
-    // for this week tab.
+    // 2. Subtract assigned capacity slots.
+    // We count unique (researcher, date, daypart) slots rather than raw visit counts so
+    // that paired visits sharing the same slot (e.g. Huismus pairs) count as 1 unit.
+    // Falls back to per-visit counting when planned_date is absent.
+    const seenSlots = new Set<string>()
 
     for (const v of visits.value) {
       if (['cancelled', 'rejected'].includes(v.status)) continue
-
-      // The tab logic already filters by week for display, but let's double check logic match.
-      // isInSelectedWeek uses date ranges. visitWeekNumber is more direct for planning logic.
       if (visitWeekNumber(v) !== targetWeek) continue
 
       const part = v.part_of_day
@@ -1098,6 +1097,11 @@
       for (const r of v.researchers) {
         const cap = map.get(r.id)
         if (!cap) continue
+
+        // Deduplicate by (researcher, date, daypart): two visits in the same slot count as 1.
+        const slotKey = `${r.id}|${v.planned_date ?? v.id}|${part ?? 'flex'}`
+        if (seenSlots.has(slotKey)) continue
+        seenSlots.add(slotKey)
 
         if (part === 'Ochtend' || part === 'ochtend') {
           cap.remaining.ochtend--
@@ -1183,11 +1187,18 @@
       })
     }
 
+    const seenOverplanningSlots = new Set<string>()
+
     for (const v of visits.value) {
       if (!statuses.includes(v.status)) continue
       if (visitWeekNumber(v) !== targetWeek) continue
 
       for (const r of v.researchers) {
+        // Deduplicate by (researcher, date, daypart) so paired visits count as 1 slot.
+        const slotKey = `${r.id}|${v.planned_date ?? v.id}|${v.part_of_day ?? 'flex'}`
+        if (seenOverplanningSlots.has(slotKey)) continue
+        seenOverplanningSlots.add(slotKey)
+
         const name = r.full_name ?? `#${r.id}`
         const existing = map.get(r.id)
         if (!existing) {
