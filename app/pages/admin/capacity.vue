@@ -537,11 +537,9 @@
           if (!isCellValue(cell)) return 'text-gray-300'
           const c = cell as WeekResultCell
           if (c.spare === 0 && c.planned === 0) return 'text-gray-300'
-          const isTotal = isRowTotal(rowRaw)
-          const shortageThreshold = isTotal ? 6 : 3
-          const spareValue = Number(c.spare ?? 0)
-          if (Number.isNaN(spareValue)) return 'text-gray-700 dark:text-gray-300'
-          if (spareValue <= shortageThreshold) {
+          const supply = (c.spare ?? 0) + (c.planned ?? 0)
+          const isRed = supply > 0 && (c.spare ?? 0) / supply <= 0.20
+          if (isRed) {
             return 'text-red-600 dark:text-red-400 font-bold'
           }
           return 'text-gray-700 dark:text-gray-300'
