@@ -537,8 +537,9 @@
           if (!isCellValue(cell)) return 'text-gray-300'
           const c = cell as WeekResultCell
           if (c.spare === 0 && c.planned === 0) return 'text-gray-300'
-          const supply = (c.spare ?? 0) + (c.planned ?? 0)
-          const isRed = supply > 0 && (c.spare ?? 0) / supply <= 0.20
+          const spare = c.spare ?? 0
+          const supply = spare + (c.planned ?? 0)
+          const isRed = supply > 0 && spare / supply <= 0.20 && (spare > 0 || (c.shortage ?? 0) > 2)
           if (isRed) {
             return 'text-red-600 dark:text-red-400 font-bold'
           }
