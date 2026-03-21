@@ -249,9 +249,23 @@
 
       <div v-else class="my-3">
         <!-- Week view legend -->
-        <div class="text-xs mb-2">
-          <span class="font-medium">Legenda: vrije capaciteit (gebruikte capaciteit).</span>
-          <span class="ml-1 text-red-600">Rood = weinig vrije capaciteit</span>
+        <div class="text-xs mb-2 flex items-center gap-2">
+          <span class="font-medium">Legenda: vrije capaciteit (ingepland).</span>
+          <span class="text-red-600">Rood = weinig of geen ruimte over</span>
+          <UPopover :ui="{ content: 'w-80' }">
+            <UButton icon="i-heroicons-question-mark-circle" size="xs" color="neutral" variant="ghost" class="p-0" />
+            <template #content>
+              <div class="p-3 text-xs space-y-2 text-gray-700 dark:text-gray-300">
+                <p class="font-semibold text-sm">Uitleg capaciteitsgrid</p>
+                <p>Elke cel toont de capaciteit voor een specifieke categorie (soortgroep + dagdeel) in een week:</p>
+                <ul class="space-y-1 list-none">
+                  <li><span class="font-medium">Vrije capaciteit</span> — het aantal slots dat nog beschikbaar is voor nieuwe inplanningen.</li>
+                  <li><span class="font-medium">Ingepland</span> — het aantal slots dat al aan bezoeken is toegewezen.</li>
+                </ul>
+                <p><span class="text-red-600 font-medium">Rood</span> betekent dat er weinig of geen ruimte meer over is: minder dan 20% van de capaciteit is nog vrij, of de vraag overstijgt wat beschikbaar is.</p>
+              </div>
+            </template>
+          </UPopover>
         </div>
 
         <div class="border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 overflow-x-auto">
