@@ -15,10 +15,11 @@
     const backendApiBase = String(runtime.public.apiBase ?? '')
 
     try {
+      const redirectUri = `${window.location.origin}/auth/callback/ms365`
       const { data, error: apiError } = await useFetch<{ access_token: string, refresh_token: string }>('/auth/callback/ms365', {
         baseURL: backendApiBase,
         method: 'POST',
-        body: { code }
+        body: { code, redirect_uri: redirectUri }
       })
 
       if (apiError.value) {
