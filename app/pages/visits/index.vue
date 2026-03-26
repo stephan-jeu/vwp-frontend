@@ -458,6 +458,7 @@
                 </div>
 
                 <VisitActivityLog :visit-id="row.original.id" />
+                <VisitAuditSection :visit-id="row.original.id" />
               </div>
 
               <div v-else class="px-3 pb-3">
@@ -739,6 +740,7 @@
                   </UButton>
                 </div>
                 <VisitActivityLog :visit-id="row.original.id" />
+                <VisitAuditSection :visit-id="row.original.id" />
               </div>
             </div>
           </template>
@@ -857,6 +859,8 @@
     | 'rejected'
     | 'cancelled'
     | 'missed'
+    | 'needs_action'
+    | 'provisional'
 
   type CompactFunction = { id: number; name: string }
   type CompactSpecies = {
@@ -1041,7 +1045,9 @@
     { label: 'Niet uitgevoerd', value: 'not_executed' },
     { label: 'Goedgekeurd', value: 'approved' },
     { label: 'Afgekeurd', value: 'rejected' },
-    { label: 'Geannuleerd', value: 'cancelled' }
+    { label: 'Geannuleerd', value: 'cancelled' },
+    { label: 'Actie nodig', value: 'needs_action' },
+    { label: 'Voorlopig afgekeurd', value: 'provisional' }
   ] satisfies { label: string; value: VisitStatusCode }[]
 
   const columns = computed<TableColumn<VisitListRow>[]>(() => {

@@ -190,6 +190,7 @@
         </div>
 
         <VisitActivityLog :visit-id="visit.id" />
+        <VisitAuditSection :visit-id="visit.id" />
       </div>
     </UCard>
 
@@ -223,6 +224,8 @@
     | 'rejected'
     | 'cancelled'
     | 'missed'
+    | 'needs_action'
+    | 'provisional'
 
   type CompactFunction = { id: number; name: string }
   type CompactSpecies = { id: number; name: string; abbreviation?: string | null }
@@ -284,7 +287,9 @@
     approved: 'success',
     rejected: 'error',
     cancelled: 'neutral',
-    missed: 'warning'
+    missed: 'warning',
+    needs_action: 'warning',
+    provisional: 'warning'
   }
 
   type ResearcherOption = { label: string; value: number }
@@ -432,6 +437,10 @@
         return 'Afgekeurd'
       case 'cancelled':
         return 'Geannuleerd'
+      case 'needs_action':
+        return 'Actie nodig'
+      case 'provisional':
+        return 'Voorlopig afgekeurd'
       default:
         return code
     }

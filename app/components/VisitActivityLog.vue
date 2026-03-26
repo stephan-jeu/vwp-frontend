@@ -217,6 +217,10 @@
         return 'heeft het bezoek goedgekeurd'
       case 'visit_rejected':
         return 'heeft het bezoek afgekeurd'
+      case 'visit_needs_action':
+        return 'heeft het bezoek gemarkeerd als actie nodig'
+      case 'visit_provisional':
+        return 'heeft het bezoek voorlopig afgekeurd'
       case 'visit_cancelled':
         return 'heeft het bezoek geannuleerd'
       case 'visit_advertised':

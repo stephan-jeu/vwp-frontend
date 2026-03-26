@@ -193,6 +193,7 @@
       { label: 'Beschikbaarheid', to: '/admin/availability', icon: 'i-lucide-calendar-days' },
       { label: 'Vrije dagen', to: '/admin/free-days', icon: 'i-lucide-calendar-off' },
       { label: 'Controle', to: '/admin/audit', icon: 'i-lucide-list-checks' },
+      { label: 'Controle-overzicht', to: '/admin/audit-overview', icon: 'i-lucide-clipboard-list' },
       { label: 'Capaciteitsplanning', to: '/admin/capacity', icon: 'i-lucide-square-chart-gantt' },
       { label: 'Archief', to: '/visits?archive=1', icon: 'i-lucide-archive' },
       { label: 'Prullenbak', to: '/admin/trash', icon: 'i-lucide-trash-2' }

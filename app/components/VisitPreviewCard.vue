@@ -113,6 +113,8 @@
     | 'rejected'
     | 'cancelled'
     | 'missed'
+    | 'needs_action'
+    | 'provisional'
 
   type CompactFunction = { id: number; name: string }
 
@@ -222,7 +224,9 @@
       approved: 'Goedgekeurd',
       rejected: 'Afgekeurd',
       cancelled: 'Geannuleerd',
-      missed: 'Gemist'
+      missed: 'Gemist',
+      needs_action: 'Actie nodig',
+      provisional: 'Voorlopig afgekeurd'
     }
     return map[code]
   }
