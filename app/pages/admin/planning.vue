@@ -450,6 +450,7 @@
         :visits="selectedVisitsData"
         :open="bulkStatusModalOpen"
         :is-admin="true"
+        :researcher-options="researcherOptions"
         @update:open="bulkStatusModalOpen = $event"
         @saved="onBulkSaved"
       />
@@ -835,6 +836,12 @@
 
     // Initial visits load
     void loadVisits()
+
+    // Load researchers for status modal
+    const users = await $api<Array<{ id: number; full_name: string | null }>>('/admin/users')
+    researcherOptions.value = users
+      .map((u) => ({ label: u.full_name ?? `Gebruiker #${u.id}`, value: u.id }))
+      .sort((a, b) => a.label.localeCompare(b.label))
   })
 
   /*
@@ -1409,6 +1416,7 @@
   // --- Bulk Selection ---
   const selectedVisitIds = reactive(new Set<number>())
   const bulkStatusModalOpen = ref(false)
+  const researcherOptions = ref<{ label: string; value: number }[]>([])
 
   function toggleSelection(id: number, selected: boolean) {
     if (selected) {
