@@ -26,6 +26,15 @@
               >
                 {{ tightVisits.length }}
               </UBadge>
+              <UBadge
+                v-if="item.key === 'warnings' && planningWarnings.length > 0"
+                color="warning"
+                variant="subtle"
+                size="xs"
+                class="rounded-full"
+              >
+                {{ planningWarnings.length }}
+              </UBadge>
             </div>
           </template>
 
@@ -75,6 +84,60 @@
                    </div>
                  </div>
               </div>
+          </template>
+
+          <template #warnings>
+            <UCard class="mt-2">
+              <template #header>
+                <div class="flex items-center justify-between">
+                  <h2 class="text-sm font-semibold">Onplanbare bezoeken (seizoensplanning)</h2>
+                </div>
+              </template>
+
+              <div v-if="planningWarningsPending" class="text-sm text-gray-500">Laden…</div>
+              <div v-else-if="planningWarnings.length === 0" class="text-sm text-gray-500">
+                Geen planningswaarschuwingen gevonden.
+              </div>
+              <div v-else class="space-y-3">
+                <div
+                  v-for="w in planningWarnings"
+                  :key="w.visit_id"
+                  class="flex items-start gap-3 p-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                  @click="navigateTo(`/visits/${w.visit_id}`)"
+                >
+                  <UIcon
+                    name="i-heroicons-exclamation-triangle"
+                    class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5"
+                  />
+                  <div class="min-w-0 flex-1">
+                    <div class="font-semibold text-gray-900 dark:text-white text-sm">
+                      {{ w.project_code }}
+                      <span class="font-normal text-gray-500 ml-1">
+                        Cluster {{ w.cluster_number }}
+                        <span v-if="w.visit_nr"> · bezoek {{ w.visit_nr }}</span>
+                      </span>
+                    </div>
+                    <div v-if="w.project_location" class="text-xs text-gray-500 mt-0.5">
+                      {{ w.project_location }}
+                    </div>
+                    <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      {{ w.reason_nl }}
+                    </div>
+                    <div v-if="w.from_date || w.to_date" class="text-xs text-gray-400 mt-1">
+                      Venster: {{ formatDate(w.from_date) }} – {{ formatDate(w.to_date) }}
+                    </div>
+                  </div>
+                  <UBadge
+                    :color="w.reason_code === 'protocol_gap_infeasible' ? 'error' : 'warning'"
+                    variant="subtle"
+                    size="xs"
+                    class="flex-shrink-0"
+                  >
+                    {{ warningLabel(w.reason_code) }}
+                  </UBadge>
+                </div>
+              </div>
+            </UCard>
           </template>
 
           <template #tight>
@@ -769,6 +832,43 @@
     return map[code]
   }
 
+  // --- Planning Warnings (unschedulable visits) ---
+
+  interface PlanningDiagnosticDetail {
+    visit_id: number
+    action: string
+    reason_nl: string
+    reason_code: string | null
+    cluster_id: number | null
+    cluster_number: string | null
+    project_code: string | null
+    project_location: string | null
+    visit_nr: number | null
+    from_date: string | null
+    to_date: string | null
+  }
+
+  const { data: planningWarningsData, pending: planningWarningsPending } = useAsyncData(
+    'admin-planning-warnings',
+    () => {
+      if (!isAdmin.value) return Promise.resolve([])
+      return $api<PlanningDiagnosticDetail[]>('/admin/planning-diagnostics')
+    },
+    { immediate: isAdmin.value }
+  )
+
+  const planningWarnings = computed<PlanningDiagnosticDetail[]>(
+    () => planningWarningsData.value ?? []
+  )
+
+  function warningLabel(code: string | null): string {
+    if (code === 'protocol_gap_infeasible') return 'Venster te krap'
+    if (code === 'geen_venster') return 'Geen venster'
+    if (code === 'geen_kwalificatie') return 'Geen kwalificatie'
+    if (code === 'capaciteitsgebrek') return 'Capaciteitsgebrek'
+    return 'Onplanbaar'
+  }
+
   // --- Tight Visits ---
 
   interface TightVisit {
@@ -808,6 +908,11 @@
       label: 'Krappe planning',
       key: 'tight',
       slot: 'tight'
+    },
+    {
+      label: 'Planningswaarschuwingen',
+      key: 'warnings',
+      slot: 'warnings'
     }
   ])
 
