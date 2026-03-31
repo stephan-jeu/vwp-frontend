@@ -244,13 +244,13 @@
               </span>
             </div>
             <div class="flex items-center gap-1">
-              <UModal>
-                <UButton
-                  color="neutral"
-                  variant="ghost"
-                  icon="i-heroicons-document-duplicate"
-                  @click="openDuplicate(cluster)"
-                />
+              <UButton
+                color="neutral"
+                variant="ghost"
+                icon="i-heroicons-document-duplicate"
+                @click="openDuplicate(cluster)"
+              />
+              <UModal v-model:open="showDuplicateModal">
                 <template #content>
                   <UCard>
                     <template #header
@@ -265,7 +265,7 @@
                     </div>
                     <template #footer>
                       <div class="flex justify-end gap-2">
-                        <UButton color="neutral" variant="ghost">Annuleer</UButton>
+                        <UButton color="neutral" variant="ghost" @click="showDuplicateModal = false">Annuleer</UButton>
                         <UButton :loading="duplicating" @click="confirmDuplicate"
                           >Dupliceer</UButton
                         >
@@ -1062,6 +1062,7 @@
   }
 
   // Duplicate modal
+  const showDuplicateModal = ref(false)
   const duplicating = ref(false)
   const duplicateSource = ref<{ id: number; cluster_number: string } | null>(null)
   const duplicateClusterNumber = ref('')
@@ -1071,6 +1072,7 @@
     duplicateSource.value = { id: cluster.id, cluster_number: cluster.cluster_number }
     duplicateClusterNumber.value = cluster.cluster_number ?? ''
     duplicateAddress.value = cluster.address
+    showDuplicateModal.value = true
   }
 
   // Cluster delete
@@ -1110,6 +1112,7 @@
         body: { cluster_number: duplicateClusterNumber.value!, address: duplicateAddress.value }
       })
       toast.add({ title: 'Cluster gedupliceerd', color: 'success' })
+      showDuplicateModal.value = false
       await loadClusters()
       await validateAddressWarning(duplicateAddress.value, null)
     } finally {
