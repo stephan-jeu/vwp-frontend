@@ -95,6 +95,9 @@
               </template>
 
               <div v-if="planningWarningsPending" class="text-sm text-gray-500">Laden…</div>
+              <div v-else-if="planningWarningsError" class="text-sm text-red-500">
+                Kon planningswaarschuwingen niet laden.
+              </div>
               <div v-else-if="planningWarnings.length === 0" class="text-sm text-gray-500">
                 Geen planningswaarschuwingen gevonden.
               </div>
@@ -848,13 +851,17 @@
     to_date: string | null
   }
 
-  const { data: planningWarningsData, pending: planningWarningsPending } = useAsyncData(
+  const {
+    data: planningWarningsData,
+    pending: planningWarningsPending,
+    error: planningWarningsError
+  } = useAsyncData(
     'admin-planning-warnings',
     () => {
       if (!isAdmin.value) return Promise.resolve([])
       return $api<PlanningDiagnosticDetail[]>('/admin/planning-diagnostics')
     },
-    { immediate: isAdmin.value }
+    { immediate: isAdmin.value, watch: [isAdmin] }
   )
 
   const planningWarnings = computed<PlanningDiagnosticDetail[]>(
