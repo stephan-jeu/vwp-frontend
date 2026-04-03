@@ -1125,7 +1125,7 @@
 
   function durationHours(minutes: number | null | undefined): number | null {
     if (minutes == null) return null
-    return Math.round((minutes / 60) * 10) / 10
+    return Math.round((minutes / 60) * 100) / 100
   }
 
   function isoWeekRange(week: number | null): { start: Date; end: Date } | null {
