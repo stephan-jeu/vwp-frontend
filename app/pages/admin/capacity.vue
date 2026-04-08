@@ -250,7 +250,7 @@
       <div v-else class="my-3">
         <!-- Week view legend -->
         <div class="text-xs mb-2 flex items-center gap-2">
-          <span class="font-medium">Legenda: vrije capaciteit (ingepland).</span>
+          <span class="font-medium">Legenda: vrije capaciteit (ingepland). Bij overboeking: vrije capaciteit (inpasbaar/gevraagd).</span>
           <span class="text-red-600">Rood = weinig of geen ruimte over</span>
           <UPopover :ui="{ content: 'w-80' }">
             <UButton icon="i-heroicons-question-mark-circle" size="xs" color="neutral" variant="ghost" class="p-0" />
@@ -259,8 +259,9 @@
                 <p class="font-semibold text-sm">Uitleg capaciteitsgrid</p>
                 <p>Elke cel toont de capaciteit voor een specifieke categorie (soortgroep + dagdeel) in een week:</p>
                 <ul class="space-y-1 list-none">
-                  <li><span class="font-medium">Vrije capaciteit</span> — het aantal slots dat nog beschikbaar is voor nieuwe inplanningen.</li>
-                  <li><span class="font-medium">Ingepland</span> — het aantal slots dat al aan bezoeken is toegewezen.</li>
+                  <li><span class="font-medium">Vrije capaciteit</span> — beschikbare onderzoekersdagen min de ingeplande onderzoekersslots. Minimaal 0.</li>
+                  <li><span class="font-medium">Ingepland</span> — het aantal onderzoekersslots dat binnen de beschikbare capaciteit past (voorlopig of definitief ingepland).</li>
+                  <li><span class="font-medium">Inpasbaar/Gevraagd</span> — verschijnt alleen bij overboeking. Het eerste getal is wat binnen de capaciteit past; het tweede is de totale vraag. Bijv. <span class="font-mono">0 (49/109)</span> betekent: geen vrije ruimte, 49 slots passen in de capaciteit maar er zijn 109 slots gevraagd.</li>
                 </ul>
                 <p><span class="text-red-600 font-medium">Rood</span> betekent dat er weinig of geen ruimte meer over is: minder dan 20% van de capaciteit is nog vrij, of de vraag overstijgt wat beschikbaar is.</p>
               </div>
@@ -324,6 +325,7 @@
   type WeekResultCell = {
       spare: number
       planned: number
+      demand: number
       shortage: number
   }
 
@@ -534,8 +536,11 @@
 
       if (viewMode.value === 'week') {
          const c = cell as WeekResultCell
-         if (c.spare === 0 && c.planned === 0) return '-'
-         return `${c.spare} (${c.planned})`
+         if (c.spare === 0 && c.planned === 0 && (c.demand ?? 0) === 0) return '-'
+         const demandStr = (c.demand ?? 0) > c.planned
+           ? `${c.planned}/${c.demand}`
+           : `${c.planned}`
+         return `${c.spare} (${demandStr})`
       } else {
          const c = cell as FamilyDaypartCapacity
          if (c.required === 0) return ''

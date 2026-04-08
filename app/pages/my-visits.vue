@@ -188,8 +188,8 @@
                       Geen beschikbaarheid
                     </div>
                     <div
-                      v-else
                       v-for="part in item.parts"
+                      v-else
                       :key="part.label"
                       class="flex items-center gap-2"
                     >

@@ -97,6 +97,7 @@
             :items="clusterOptions"
             placeholder="Cluster"
             :disabled="!selectedProject"
+            class="w-64"
           />
           <p v-if="selectedClusterDetails" class="mt-1 text-xs text-gray-500">
             {{ selectedClusterDetails.address }}
@@ -481,6 +482,31 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs mb-1">Project</label>
+                    <USelectMenu
+                      :model-value="projectOptions.find((o) => o.value === row.original.project_id)"
+                      :items="projectOptions"
+                      searchable
+                      searchable-placeholder="Zoek projectcode"
+                      placeholder="Project"
+                      class="w-2xs"
+                      @update:model-value="(opt) => onEditProjectChange(row.original, opt)"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1">Cluster</label>
+                    <USelectMenu
+                      :model-value="getEditClusterOption(row.original)"
+                      :items="getEditClusterOptions(row.original)"
+                      placeholder="Cluster"
+                      class="w-64"
+                      @update:model-value="(opt) => onEditClusterChange(row.original, opt)"
+                    />
+                    <p v-if="getEditClusterDetails(row.original)" class="mt-1 text-xs text-gray-500">
+                      {{ getEditClusterDetails(row.original)?.address }}
+                    </p>
+                  </div>
                   <div>
                     <div class="flex justify-between items-center mb-1">
                       <label class="block text-xs">Functies</label>
@@ -873,6 +899,7 @@
 
   type VisitListRow = {
     id: number
+    project_id: number
     project_code: string
     project_location: string
     project_customer: string | null
@@ -1224,7 +1251,7 @@
     const query: Record<string, unknown> = {}
     const term = search.value.trim()
     if (term) query.search = term
-    
+
     if (selectedStatuses.value.length > 0) {
       query.statuses = selectedStatuses.value.map(s => s.value)
     }
@@ -1232,11 +1259,11 @@
     if (filterClusterNumber.value.trim()) {
       query.cluster_number = filterClusterNumber.value.trim()
     }
-    
+
     if (filterFunctionIds.value.length > 0) {
       query.function_ids = filterFunctionIds.value
     }
-    
+
     if (filterSpeciesIds.value.length > 0) {
       query.species_ids = filterSpeciesIds.value
     }
@@ -1477,10 +1504,59 @@
       { query: { project_id: opt.value } }
     )
     clusterOptions.value = clusters.map((c) => ({
-      label: `Cluster ${c.cluster_number}`,
+      label: c.cluster_number,
       value: c.id,
       address: c.address
     }))
+  }
+
+  // --- Edit form project/cluster selection ---
+  const editClusterOptionsMap = reactive(new Map<number, ClusterOption[]>())
+
+  async function onEditProjectChange(row: VisitListRow, opt: ProjectOption | undefined): Promise<void> {
+    if (!opt || opt.value === null) return
+    row.project_id = opt.value
+    row.cluster_id = 0
+    row.cluster_number = ''
+    row.cluster_address = ''
+    editClusterOptionsMap.delete(row.id)
+    const clusters = await $api<Array<{ id: number; cluster_number: string; address: string }>>(
+      '/clusters',
+      { query: { project_id: opt.value } }
+    )
+    const options = clusters.map((c) => ({
+      label: c.cluster_number,
+      value: c.id,
+      address: c.address
+    }))
+    editClusterOptionsMap.set(row.id, options)
+  }
+
+  function getEditClusterOptions(row: VisitListRow): ClusterOption[] {
+    const cached = editClusterOptionsMap.get(row.id)
+    if (cached) return cached
+    // Return current cluster as the only option until project changes
+    if (row.cluster_id) {
+      return [{ label: row.cluster_number, value: row.cluster_id, address: row.cluster_address }]
+    }
+    return []
+  }
+
+  function getEditClusterOption(row: VisitListRow): ClusterOption | undefined {
+    if (!row.cluster_id) return undefined
+    return { label: row.cluster_number, value: row.cluster_id, address: row.cluster_address }
+  }
+
+  function onEditClusterChange(row: VisitListRow, opt: ClusterOption | undefined): void {
+    if (!opt || opt.value === null) return
+    row.cluster_id = opt.value
+    row.cluster_number = opt.label
+    row.cluster_address = opt.address ?? ''
+  }
+
+  function getEditClusterDetails(row: VisitListRow): { address: string } | null {
+    if (!row.cluster_id) return null
+    return { address: row.cluster_address }
   }
 
   // --- Create visit form state ---
@@ -1833,6 +1909,7 @@
     savingId.value = row.id
     try {
       const payload = {
+        cluster_id: row.cluster_id,
         required_researchers: row.required_researchers,
         visit_nr: row.visit_nr,
         planned_week: featureDailyPlanning.value ? null : plannedWeek,
@@ -2016,7 +2093,7 @@
 
     // Default: show all visits except approved/cancelled.
     // Users can clear this filter to see truly all visits.
-    selectedStatuses.value = isArchiveMode.value 
+    selectedStatuses.value = isArchiveMode.value
       ? statusOptions
       : statusOptions.filter(
           (s) => s.value !== 'approved' && s.value !== 'cancelled' && s.value !== 'overdue'

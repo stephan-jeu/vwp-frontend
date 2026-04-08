@@ -189,6 +189,17 @@
   const { $api } = useNuxtApp()
   const toast = useToast()
 
+  interface ApiError {
+    response?: { _data?: { detail?: string } }
+  }
+  function getErrorMessage(e: unknown): string {
+    if (typeof e === 'object' && e !== null && 'response' in e) {
+      const apiErr = e as ApiError
+      return apiErr.response?._data?.detail || String(e)
+    }
+    return String(e)
+  }
+
   const selectedYear = ref(new Date().getFullYear())
   const entries = ref<OrgUnavailability[]>([])
   const expanded = ref<Set<number>>(new Set())
@@ -265,8 +276,7 @@
       showCreate.value = false
       toast.add({ title: 'Vrije dag toegevoegd', color: 'success' })
     } catch (e: unknown) {
-      const msg = (e as any)?.response?._data?.detail || String(e)
-      toast.add({ title: 'Toevoegen mislukt', description: msg, color: 'error' })
+      toast.add({ title: 'Toevoegen mislukt', description: getErrorMessage(e), color: 'error' })
     } finally {
       creating.value = false
     }
@@ -298,8 +308,7 @@
       toggle(entry.id)
       toast.add({ title: 'Opgeslagen', color: 'success' })
     } catch (e: unknown) {
-      const msg = (e as any)?.response?._data?.detail || String(e)
-      toast.add({ title: 'Opslaan mislukt', description: msg, color: 'error' })
+      toast.add({ title: 'Opslaan mislukt', description: getErrorMessage(e), color: 'error' })
     } finally {
       savingId.value = null
     }
@@ -333,8 +342,7 @@
         color: 'success',
       })
     } catch (e: unknown) {
-      const msg = (e as any)?.response?._data?.detail || String(e)
-      toast.add({ title: 'Inladen mislukt', description: msg, color: 'error' })
+      toast.add({ title: 'Inladen mislukt', description: getErrorMessage(e), color: 'error' })
     } finally {
       seeding.value = false
     }

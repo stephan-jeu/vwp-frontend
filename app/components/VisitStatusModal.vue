@@ -121,6 +121,8 @@ type VisitStatusCode =
   | 'rejected'
   | 'cancelled'
   | 'missed'
+  | 'needs_action'
+  | 'provisional'
 
 type VisitDetail = {
   id: number

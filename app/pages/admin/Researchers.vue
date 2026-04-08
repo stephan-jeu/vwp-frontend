@@ -389,11 +389,11 @@
 
     if (selectedFlags.value.length > 0) {
       const flags = selectedFlags.value
+      type FlagKey = 'wbc' | 'vog' | 'fiets' | 'hub' | 'dvp' | 'vrfg' | 'smp_huismus' | 'smp_vleermuis' | 'smp_gierzwaluw' | 'vleermuis' | 'roofvogel' | 'zwaluw' | 'vlinder' | 'teunisbloempijlstaart' | 'zangvogel' | 'langoor' | 'pad' | 'biggenkruid' | 'schijfhoren'
       result = result.filter((u) => {
         // Must have ALL selected flags (AND logic)
-        return flags.every((flag: string) => {
-          // Type assertion to bypass TS index signature error since flag comes from our trusted options
-          return !!(u as any)[flag]
+        return flags.every((flag) => {
+          return !!(u[flag as FlagKey])
         })
       })
     }

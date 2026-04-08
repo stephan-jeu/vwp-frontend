@@ -49,10 +49,18 @@
             </div>
             <div class="flex flex-col items-end gap-2">
               <div class="flex items-center gap-2">
-              <div class="flex items-center gap-2">
                 <UBadge :color="statusBadgeColor(visit.status)" variant="solid">
                   {{ statusLabel(visit.status) }}
                 </UBadge>
+                <UButton
+                  v-if="isAdmin"
+                  size="sm"
+                  icon="i-lucide-edit"
+                  class="dark:text-gray-300"
+                  @click="editModalOpen = true"
+                >
+                  Bewerken
+                </UButton>
                 <UButton
                   v-if="canEditStatus"
                   size="sm"
@@ -62,7 +70,6 @@
                 >
                   Status aanpassen
                 </UButton>
-              </div>
               </div>
             </div>
           </div>
@@ -189,6 +196,13 @@
           </p>
         </div>
 
+        <div v-if="visit.remarks_planning" class="border-t pt-3">
+          <div class="font-medium mb-1 text-sm">Opmerkingen planning</div>
+          <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">
+            {{ visit.remarks_planning }}
+          </p>
+        </div>
+
         <VisitActivityLog :visit-id="visit.id" />
         <VisitAuditSection :visit-id="visit.id" />
       </div>
@@ -201,6 +215,13 @@
       :is-admin="isAdmin"
       :researcher-options="adminPlanningResearcherOptions"
       @saved="refresh"
+    />
+
+    <VisitEditModal
+      v-if="visit"
+      v-model:open="editModalOpen"
+      :visit-id="visit.id"
+      @saved="onEditSaved"
     />
   </div>
 </template>
@@ -531,6 +552,7 @@
   }
 
   const statusModalOpen = ref(false)
+  const editModalOpen = ref(false)
   const adminPlanningResearcherOptions = ref<ResearcherOption[]>([])
   const adminPlanningOptionsLoaded = ref(false)
   const adminPlanningLoading = ref(false)
@@ -561,6 +583,10 @@
     } finally {
       adminPlanningLoading.value = false
     }
+  }
+
+  async function onEditSaved(): Promise<void> {
+    await refresh()
   }
 
 
