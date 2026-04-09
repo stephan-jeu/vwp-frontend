@@ -2,7 +2,14 @@
   <div>
     <UPageHeader title="Projecten" />
 
+    <div ref="formCard">
     <UCard class="mt-6">
+      <template v-if="isEditing" #header>
+        <div class="flex items-center gap-2">
+          <UIcon name="i-lucide-pencil" class="text-primary-500" />
+          <span class="font-medium text-primary-600 dark:text-primary-400">Project bewerken: {{ form.code }}</span>
+        </div>
+      </template>
       <UForm :state="form" :schema="schema" data-testid="project-form" @submit="onSubmit">
         <div class="grid grid-cols-1 xl:grid-cols-4 gap-4">
           <UFormField label="Projectcode" name="code" required>
@@ -44,6 +51,7 @@
         </div>
       </UForm>
     </UCard>
+    </div>
 
     <UCard class="mt-8">
       <div class="flex items-center justify-between mb-4">
@@ -212,6 +220,7 @@
   definePageMeta({ middleware: 'admin' })
 
   const store = useProjectsStore()
+  const formCard = ref<HTMLDivElement | null>(null)
   const globalFilter = ref('')
   const saving = ref(false)
   const deleting = ref(false)
@@ -339,6 +348,12 @@
 
   function edit(row: Project) {
     Object.assign(form, row)
+    nextTick(() => {
+      if (formCard.value) {
+        const top = formCard.value.getBoundingClientRect().top + window.scrollY - 60
+        window.scrollTo({ top, behavior: 'smooth' })
+      }
+    })
   }
 
   // removed; handled inline in UModal trigger
