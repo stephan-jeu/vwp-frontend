@@ -16,6 +16,28 @@
           {{ visit.cluster_number }} {{ visit.visit_nr ? `- ${visit.visit_nr}` : '' }}
           <span v-if="visit.cluster_address">({{ visit.cluster_address }})</span>
         </span>
+        <UPopover v-if="hasRemarks" mode="click">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            icon="i-heroicons-information-circle"
+            class="ml-1 -my-0.5 text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
+            @click.stop
+          />
+          <template #content>
+            <div class="p-3 max-w-xs space-y-2 text-xs" @click.stop>
+              <div v-if="visit.remarks_field">
+                <div class="font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Veld opmerking</div>
+                <div class="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{{ visit.remarks_field }}</div>
+              </div>
+              <div v-if="visit.remarks_planning">
+                <div class="font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Planning opmerking</div>
+                <div class="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{{ visit.remarks_planning }}</div>
+              </div>
+            </div>
+          </template>
+        </UPopover>
       </div>
       <UCheckbox
         v-if="selectable"
@@ -149,6 +171,8 @@
     sleutel: boolean
     priority: boolean
     visit_code: string | null
+    remarks_field?: string | null
+    remarks_planning?: string | null
   }
 
   const props = withDefaults(
@@ -167,6 +191,10 @@
     open: []
     'update:selected': [value: boolean]
   }>()
+
+  const hasRemarks = computed<boolean>(
+    () => !!(props.visit.remarks_field || props.visit.remarks_planning)
+  )
 
   const hasFlags = computed<boolean>(
     () =>
