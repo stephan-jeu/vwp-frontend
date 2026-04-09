@@ -157,6 +157,15 @@
               class="w-3xs"
               @update:model-value="onResearchersChange"
             />
+            <div class="mt-1">
+              <UTooltip text="Weekplanner gebruikt exact deze onderzoekers (hard constraint) en verwijdert ze niet bij reset">
+                <UCheckbox
+                  v-model="visit.researchers_locked"
+                  label="Onderzoekers vastzetten"
+                  class="text-xs"
+                />
+              </UTooltip>
+            </div>
           </div>
 
           <div>
@@ -311,6 +320,7 @@ type VisitEditRow = {
   part_of_day: string | null
   start_time_text: string | null
   planning_locked: boolean
+  researchers_locked: boolean
   researchers: UserName[]
   researcher_ids: number[]
 }
@@ -347,6 +357,13 @@ const configuredCustomFunctionNames = computed<string[]>(() => {
   if (typeof raw !== 'string' || !raw.trim()) return []
   return raw.split(',').map(s => s.trim()).filter(Boolean)
 })
+
+function apiErrorMessage(e: unknown): string | undefined {
+  if (typeof e === 'object' && e !== null && 'response' in e) {
+    const detail = (e as { response?: { _data?: { detail?: unknown } } }).response?._data?.detail
+    if (typeof detail === 'string') return detail
+  }
+}
 
 function isConfiguredCustomName(name: string | null | undefined): boolean {
   if (!name) return false
@@ -671,6 +688,18 @@ async function onSave(): Promise<void> {
     }
   }
 
+  if (visit.value.researchers_locked) {
+    const researcherIds = visit.value.researcher_ids ?? visit.value.researchers.map((r) => r.id)
+    if (researcherIds.length === 0) {
+      toast.add({
+        title: 'Opslaan mislukt',
+        description: 'Als onderzoekers zijn vastgezet, moet je minimaal één onderzoeker kiezen.',
+        color: 'error'
+      })
+      return
+    }
+  }
+
   saving.value = true
   try {
     const payload = {
@@ -680,6 +709,7 @@ async function onSave(): Promise<void> {
       planned_week: featureDailyPlanning.value ? null : plannedWeek,
       planned_date: visit.value.planned_date || null,
       planning_locked: visit.value.planning_locked,
+      researchers_locked: visit.value.researchers_locked,
       provisional_week: provisionalWeek,
       provisional_locked: visit.value.provisional_locked,
       from_date: visit.value.from_date,
@@ -709,10 +739,29 @@ async function onSave(): Promise<void> {
     
     await $api(`/visits/${visit.value.id}`, { method: 'PUT', body: payload })
     toast.add({ title: 'Bezoek opgeslagen', color: 'success' })
+
+    if (visit.value.researchers_locked) {
+      const researcherIds = visit.value.researcher_ids ?? visit.value.researchers.map((r) => r.id)
+      if (researcherIds.length > 0) {
+        const qualResult = await $api<{ unqualified: { id: number; full_name: string | null }[] }>(
+          `/visits/${visit.value.id}/researcher-qualification`,
+          { query: { researcher_ids: researcherIds } }
+        )
+        if (qualResult.unqualified.length > 0) {
+          const names = qualResult.unqualified.map((r) => r.full_name ?? `#${r.id}`).join(', ')
+          toast.add({
+            title: 'Waarschuwing: onderzoeker niet gekwalificeerd',
+            description: `Onderzoeker(s) ${names} zijn niet gekwalificeerd voor dit bezoek.`,
+            color: 'warning'
+          })
+        }
+      }
+    }
+
     emit('saved')
     emit('update:open', false)
-  } catch {
-    toast.add({ title: 'Opslaan mislukt', color: 'error' })
+  } catch (e) {
+    toast.add({ title: 'Opslaan mislukt', description: apiErrorMessage(e), color: 'error' })
   } finally {
     saving.value = false
   }

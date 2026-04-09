@@ -630,6 +630,15 @@
                         }
                       "
                     />
+                    <div class="mt-1">
+                      <UTooltip text="Weekplanner gebruikt exact deze onderzoekers (hard constraint) en verwijdert ze niet bij reset">
+                        <UCheckbox
+                          v-model="row.original.researchers_locked"
+                          label="Onderzoekers vastzetten"
+                          class="text-xs"
+                        />
+                      </UTooltip>
+                    </div>
                   </div>
 
                   <div>
@@ -937,6 +946,7 @@
     part_of_day: string | null
     start_time_text: string | null
     planning_locked: boolean
+    researchers_locked: boolean
     researchers: UserName[]
     researcher_ids?: number[]
     advertized: boolean
@@ -1827,6 +1837,13 @@
   const savingId = ref<number | null>(null)
   const duplicatingId = ref<number | null>(null)
 
+  function apiErrorMessage(e: unknown): string | undefined {
+    if (typeof e === 'object' && e !== null && 'response' in e) {
+      const detail = (e as { response?: { _data?: { detail?: unknown } } }).response?._data?.detail
+      if (typeof detail === 'string') return detail
+    }
+  }
+
   async function onSaveVisit(row: VisitListRow): Promise<void> {
     const rawPlannedWeek = row.planned_week as unknown
     const plannedWeek =
@@ -1915,6 +1932,7 @@
         planned_week: featureDailyPlanning.value ? null : plannedWeek,
         planned_date: row.planned_date || null,
         planning_locked: row.planning_locked,
+        researchers_locked: row.researchers_locked,
         provisional_week: provisionalWeek,
         provisional_locked: row.provisional_locked,
         from_date: row.from_date,
@@ -1944,8 +1962,26 @@
       await $api(`/visits/${row.id}`, { method: 'PUT', body: payload })
       await loadVisits()
       toast.add({ title: 'Bezoek opgeslagen', color: 'success' })
-    } catch {
-      toast.add({ title: 'Opslaan mislukt', color: 'error' })
+
+      if (row.researchers_locked) {
+        const researcherIds = row.researcher_ids ?? row.researchers.map((r) => r.id)
+        if (researcherIds.length > 0) {
+          const qualResult = await $api<{ unqualified: { id: number; full_name: string | null }[] }>(
+            `/visits/${row.id}/researcher-qualification`,
+            { query: { researcher_ids: researcherIds } }
+          )
+          if (qualResult.unqualified.length > 0) {
+            const names = qualResult.unqualified.map((r) => r.full_name ?? `#${r.id}`).join(', ')
+            toast.add({
+              title: 'Waarschuwing: onderzoeker niet gekwalificeerd',
+              description: `Onderzoeker(s) ${names} zijn niet gekwalificeerd voor dit bezoek.`,
+              color: 'warning'
+            })
+          }
+        }
+      }
+    } catch (e) {
+      toast.add({ title: 'Opslaan mislukt', description: apiErrorMessage(e), color: 'error' })
     } finally {
       savingId.value = null
     }
