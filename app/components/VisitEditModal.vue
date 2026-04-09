@@ -466,18 +466,21 @@ function mapIdsToOptions(ids: number[] | undefined, options: Option[]): Option[]
 // Load visit data
 async function loadVisit(): Promise<void> {
   if (!props.visitId) return
-  
+
   loading.value = true
   error.value = false
   clusterOptions.value = []
-  
+
   try {
-    const data = await $api<VisitEditRow>(`/visits/${props.visitId}`)
+    const [data] = await Promise.all([
+      $api<VisitEditRow>(`/visits/${props.visitId}`),
+      loadStaticOptions()
+    ])
     visit.value = {
       ...data,
       researcher_ids: data.researchers.map(r => r.id)
     }
-    
+
     // Load cluster options for current project
     if (data.project_id) {
       const clusters = await $api<Array<{ id: number; cluster_number: string; address: string }>>(
@@ -774,8 +777,7 @@ watch(() => props.open, (isOpen) => {
   }
 })
 
-// Load options on mount
-onMounted(async () => {
-  await loadStaticOptions()
+onMounted(() => {
+  // Static options are loaded in loadVisit to guarantee they are ready before the form renders
 })
 </script>
