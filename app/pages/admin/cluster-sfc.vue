@@ -160,6 +160,24 @@
         </template>
       </UModal>
 
+      <UModal v-model:open="showDuplicateModal" title="Cluster dupliceren">
+        <template #content>
+          <UCard>
+            <template #header>Dupliceer cluster {{ duplicateSource?.cluster_number }}</template>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <UInput v-model="duplicateClusterNumber" label="Nieuw cluster nummer" />
+              <UInput v-model="duplicateAddress" label="Adres" />
+            </div>
+            <template #footer>
+              <div class="flex justify-end gap-2">
+                <UButton color="neutral" variant="ghost" @click="showDuplicateModal = false">Annuleer</UButton>
+                <UButton :loading="duplicating" @click="confirmDuplicate">Dupliceer</UButton>
+              </div>
+            </template>
+          </UCard>
+        </template>
+      </UModal>
+
       <UModal v-model:open="showDeleteClusterConfirm" title="Cluster verwijderen">
         <template #content>
           <UCard>
@@ -250,30 +268,6 @@
                 icon="i-heroicons-document-duplicate"
                 @click="openDuplicate(cluster)"
               />
-              <UModal v-model:open="showDuplicateModal">
-                <template #content>
-                  <UCard>
-                    <template #header
-                      >Dupliceer cluster {{ duplicateSource?.cluster_number }}</template
-                    >
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <UInput
-                        v-model="duplicateClusterNumber"
-                        label="Nieuw cluster nummer"
-                      />
-                      <UInput v-model="duplicateAddress" label="Adres" />
-                    </div>
-                    <template #footer>
-                      <div class="flex justify-end gap-2">
-                        <UButton color="neutral" variant="ghost" @click="showDuplicateModal = false">Annuleer</UButton>
-                        <UButton :loading="duplicating" @click="confirmDuplicate"
-                          >Dupliceer</UButton
-                        >
-                      </div>
-                    </template>
-                  </UCard>
-                </template>
-              </UModal>
 
               <UButton
                 color="error"
