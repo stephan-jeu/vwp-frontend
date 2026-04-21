@@ -2127,13 +2127,7 @@
   onMounted(async () => {
     await auth.ensureLoaded()
 
-    // Default: show all visits except approved/cancelled.
-    // Users can clear this filter to see truly all visits.
-    selectedStatuses.value = isArchiveMode.value
-      ? statusOptions
-      : statusOptions.filter(
-          (s) => s.value !== 'approved' && s.value !== 'cancelled' && s.value !== 'overdue'
-        )
+    selectedStatuses.value = statusOptions
 
     if (isAdmin.value) {
       await loadStaticOptions()
