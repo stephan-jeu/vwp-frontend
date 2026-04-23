@@ -925,15 +925,17 @@
   const showPlanModal = ref(false)
   const selectedVisit = ref<VisitListRow | null>(null)
 
-  // Inbox: Visits provisionally planned for this week that are not yet planned.
+  // Inbox: Visits associated with this week that are not yet fully planned.
+  // A visit is "fully planned" only when it has both a planned_week and researchers.
   const inboxVisits = computed(() => {
     const w = activeWeekNumber.value
     return visits.value.filter((v) => {
-      if (v.provisional_week !== w) return false
+      // Fully planned → belongs in Schedule, not Inbox
+      if (v.planned_week != null && v.researchers.length > 0) return false
 
-      if (v.planned_week != null) return false
+      // Must be associated with this week (provisional or planned without researchers)
+      if (v.provisional_week !== w && v.planned_week !== w) return false
 
-      // If it's executed/cancelled, ignore
       if (['executed', 'executed_with_deviation', 'cancelled', 'rejected'].includes(v.status))
         return false
 
