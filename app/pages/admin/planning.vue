@@ -976,9 +976,9 @@
     if (!weekRange.value) return []
     const dayNames = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
     const formatter = new Intl.DateTimeFormat('nl-NL', { day: '2-digit', month: 'short' })
-    
+
     const allVisits = [...plannedVisits.value, ...completedVisits.value]
-    
+
     const dates = Array.from({ length: 7 }, (_, i) => {
       const date = new Date(weekRange.value!.start)
       date.setDate(date.getDate() + i)
@@ -988,19 +988,19 @@
         iso: toLocalISODate(date)
       }
     })
-    
+
     const sat = dates[5]
     const sun = dates[6]
-    
+
     if (!sat || !sun) return dates.slice(0, 5)
-    
+
     const hasSat = allVisits.some((v) => v.planned_date && v.planned_date.startsWith(sat.iso))
     const hasSun = allVisits.some((v) => v.planned_date && v.planned_date.startsWith(sun.iso))
-    
+
     const result = dates.slice(0, 5)
     if (hasSat) result.push(sat)
     if (hasSun) result.push(sun)
-    
+
     return result
   })
 
@@ -1311,7 +1311,7 @@
       }
 
       // Retrieve response to get count
-      const result = await $api<{ selected_visit_ids: number[] }>(`/planning/generate`, {
+      const result = await $api<{ selected_visit_ids: number[]; planning_warning?: string | null }>(`/planning/generate`, {
         method: 'POST',
         query,
         body: { week: w }
@@ -1324,6 +1324,14 @@
         description: `Planning gegenereerd voor week ${w}, ${count} bezoeken ingepland.`,
         color: 'success'
       })
+
+      if (result.planning_warning) {
+        toast.add({
+          title: 'Waarschuwing: probleem bij aanmaken planning',
+          description: result.planning_warning,
+          color: 'warning'
+        })
+      }
 
       // 2. Refresh available weeks (in case this week wasn't there before)
       await loadWeeks()
