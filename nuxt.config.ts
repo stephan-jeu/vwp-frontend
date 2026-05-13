@@ -26,7 +26,9 @@ export default defineNuxtConfig({
       featureStrictAvailability: false, // Overridden by NUXT_PUBLIC_FEATURE_STRICT_AVAILABILITY
       featureLanguageSupport: false, // Overridden by NUXT_PUBLIC_FEATURE_LANGUAGE_SUPPORT
       enableVisitCode: false, // Overridden by NUXT_PUBLIC_ENABLE_VISIT_CODE
+      icalEnabled: false, // Overridden by NUXT_PUBLIC_ICAL_ENABLED
       featureAdvertise: true, // Overridden by NUXT_PUBLIC_FEATURE_ADVERTISE
+      auditOverviewPublic: false, // Overridden by NUXT_PUBLIC_AUDIT_OVERVIEW_PUBLIC
       customFunctionNames: '', // Overridden by NUXT_PUBLIC_CUSTOM_FUNCTION_NAMES (comma-separated)
 
       // Branding

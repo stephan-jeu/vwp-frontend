@@ -6,9 +6,8 @@
 
     <UTable
       v-else
-      :data="rows"
+      :data="sortedRows"
       :columns="columns"
-      :sorting="[{ id: 'execution_date', desc: true }]"
       :ui="{ tr: 'data-[expanded=true]:bg-elevated/50' }"
     >
       <template #expand-cell="{ row }">
@@ -50,11 +49,16 @@
       </template>
 
       <template #weather-cell="{ row }">
-        <span class="text-[11px] text-gray-700 dark:text-gray-200">
-          Min {{ row.original.min_temperature_celsius ?? '-' }},
-          max wind {{ row.original.max_wind_force_bft ?? '-' }}, max neerslag
-          {{ row.original.max_precipitation || '-' }}
-        </span>
+        <UTooltip
+          :text="`Min ${row.original.min_temperature_celsius ?? '-'}, max wind ${row.original.max_wind_force_bft ?? '-'}, max neerslag ${row.original.max_precipitation || '-'}`"
+          :delay-duration="300"
+        >
+          <span class="text-[11px] text-gray-700 dark:text-gray-200 block max-w-[40ch] truncate">
+            Min {{ row.original.min_temperature_celsius ?? '-' }},
+            max wind {{ row.original.max_wind_force_bft ?? '-' }}, max neerslag
+            {{ row.original.max_precipitation || '-' }}
+          </span>
+        </UTooltip>
       </template>
 
       <template #period-cell="{ row }">
@@ -244,6 +248,7 @@
               </div>
 
               <UButton
+                v-if="isAdmin"
                 size="xs"
                 variant="outline"
                 color="neutral"
@@ -300,7 +305,7 @@
               </div>
 
               <USelectMenu
-                v-if="availableOptionalSpeciesFor(row.original.id).length > 0"
+                v-if="isAdmin && availableOptionalSpeciesFor(row.original.id).length > 0"
                 :model-value="undefined"
                 :items="availableOptionalSpeciesFor(row.original.id)"
                 value-key="value"
@@ -333,7 +338,7 @@
             </div>
 
             <!-- Statusknopppen -->
-            <div class="flex flex-wrap gap-2 pt-1">
+            <div v-if="isAdmin" class="flex flex-wrap gap-2 pt-1">
               <UButton
                 size="xs"
                 color="success"
@@ -376,6 +381,9 @@
 </template>
 
 <script setup lang="ts">
+  import { h } from 'vue'
+  import { storeToRefs } from 'pinia'
+  import { useAuthStore } from '~~/stores/auth'
   import type { TableColumn } from '#ui/types'
   import type { Row } from '@tanstack/vue-table'
   import type {
@@ -421,32 +429,88 @@
     submitted: []
   }>()
 
+  const sortBy = ref<string | null>('execution_date')
+  const sortDir = ref<'asc' | 'desc'>('desc')
+
+  function onSort(key: string): void {
+    if (sortBy.value === key) {
+      sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+    } else {
+      sortBy.value = key
+      sortDir.value = 'asc'
+    }
+  }
+
+  function sortableHeader(label: string, key: string) {
+    return () =>
+      h('button', {
+        class: 'flex items-center gap-1 cursor-pointer select-none hover:text-primary-600',
+        onClick: () => onSort(key)
+      }, [
+        label,
+        sortBy.value === key
+          ? h('span', { class: 'text-primary-600' }, sortDir.value === 'asc' ? ' ↑' : ' ↓')
+          : h('span', { class: 'opacity-30' }, ' ↕')
+      ])
+  }
+
+  const sortedRows = computed(() => {
+    const key = sortBy.value
+    if (!key) return props.rows
+    const dir = sortDir.value === 'asc' ? 1 : -1
+    return [...props.rows].sort((a, b) => {
+      switch (key) {
+        case 'pcb':
+          return pcbLabel(a).localeCompare(pcbLabel(b)) * dir
+        case 'execution_date':
+          return (a.execution_date ?? '').localeCompare(b.execution_date ?? '') * dir
+        case 'status':
+          return a.status.localeCompare(b.status) * dir
+        case 'start_time':
+          return (a.start_time_text ?? '').localeCompare(b.start_time_text ?? '') * dir
+        case 'researchers':
+          return a.researchers.map((r) => r.full_name ?? '').join(', ')
+            .localeCompare(b.researchers.map((r) => r.full_name ?? '').join(', ')) * dir
+        case 'period':
+          return (a.from_date ?? '').localeCompare(b.from_date ?? '') * dir
+        case 'species':
+          return a.species.map((s) => s.abbreviation ?? s.name).join(', ')
+            .localeCompare(b.species.map((s) => s.abbreviation ?? s.name).join(', ')) * dir
+        case 'functions':
+          return a.functions.map((f) => f.name).join(', ')
+            .localeCompare(b.functions.map((f) => f.name).join(', ')) * dir
+        default:
+          return 0
+      }
+    })
+  })
+
   const baseColumns: TableColumn<VisitAuditRow>[] = [
     { id: 'expand', header: '', enableSorting: false, cell: 'expand' },
-    { id: 'pcb', header: 'PCB' },
-    { id: 'researchers', header: 'Onderzoekers' },
-    { id: 'start_time', header: 'Starttijd' },
-    { id: 'duration', header: 'Duur' },
-    { id: 'weather', header: 'Weercondities' },
-    { id: 'period', header: 'Periode' },
-    { id: 'execution_date', accessorKey: 'execution_date', header: 'Uitvoerdatum' }
+    { id: 'pcb', header: sortableHeader('PCB', 'pcb'), enableSorting: false },
+    { id: 'researchers', header: sortableHeader('Onderzoekers', 'researchers'), enableSorting: false },
+    { id: 'start_time', header: sortableHeader('Starttijd', 'start_time'), enableSorting: false },
+    { id: 'duration', header: 'Duur', enableSorting: false },
+    { id: 'weather', header: 'Weercondities', enableSorting: false },
+    { id: 'period', header: sortableHeader('Periode', 'period'), enableSorting: false },
+    { id: 'execution_date', accessorKey: 'execution_date', header: sortableHeader('Uitvoerdatum', 'execution_date'), enableSorting: false }
   ]
 
   const columns = computed<TableColumn<VisitAuditRow>[]>(() => {
     if (props.mode === 'actions') {
       return [
         ...baseColumns,
-        { id: 'status', header: 'Status' },
-        { id: 'species', header: 'Soorten' },
-        { id: 'functions', header: 'Functies' },
-        { id: 'encountered_functions', header: 'Aangetroffen functies' }
+        { id: 'status', header: sortableHeader('Status', 'status'), enableSorting: false },
+        { id: 'species', header: sortableHeader('Soorten', 'species'), enableSorting: false },
+        { id: 'functions', header: sortableHeader('Functies', 'functions'), enableSorting: false },
+        { id: 'encountered_functions', header: 'Aangetroffen functies', enableSorting: false }
       ]
     }
     return [
       ...baseColumns,
-      { id: 'deviation', header: 'Geen afwijking' },
-      { id: 'species', header: 'Soorten' },
-      { id: 'functions', header: 'Functies' }
+      { id: 'deviation', header: 'Geen afwijking', enableSorting: false },
+      { id: 'species', header: sortableHeader('Soorten', 'species'), enableSorting: false },
+      { id: 'functions', header: sortableHeader('Functies', 'functions'), enableSorting: false }
     ]
   })
 
@@ -544,6 +608,9 @@
 
   const { $api } = useNuxtApp()
   const toast = useToast()
+
+  const auth = useAuthStore()
+  const { isAdmin } = storeToRefs(auth)
 
   // --- Audit form state ---
 

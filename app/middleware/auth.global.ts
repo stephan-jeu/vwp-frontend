@@ -25,8 +25,14 @@ export default defineNuxtRouteMiddleware(async (to) => {
   }
 
   // If navigating to admin routes, ensure the user is admin
-  if (to.path.startsWith('/admin')) {
-    if (!auth.isAdmin) {
+  if (to.path.startsWith('/admin') && !auth.isAdmin) {
+    const runtimeConfig = useRuntimeConfig()
+    const auditOverviewPublicRaw = runtimeConfig.public.auditOverviewPublic
+    const auditOverviewPublic =
+      typeof auditOverviewPublicRaw === 'string'
+        ? auditOverviewPublicRaw === 'true' || auditOverviewPublicRaw === '1'
+        : Boolean(auditOverviewPublicRaw)
+    if (!(auditOverviewPublic && to.path === '/admin/audit-overview')) {
       return navigateTo('/')
     }
   }

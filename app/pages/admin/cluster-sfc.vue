@@ -335,14 +335,18 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label class="block text-xs mb-1">Functies</label>
+                    <UInput
+                      v-if="visit.custom_function_name !== null && visit.custom_function_name !== undefined && !isConfiguredCustomName(visit.custom_function_name)"
+                      v-model="visit.custom_function_name"
+                      placeholder="Maatwerk functie"
+                    />
                     <UInputMenu
-                      :model-value="mapIdsToOptions(visit.function_ids, functionOptions)"
-                      :items="functionOptions"
+                      v-else
+                      :model-value="getEditFunctionOptions(visit)"
+                      :items="combinedFunctionOptions"
                       multiple
                       class="w-2xs"
-                      @update:model-value="
-                        (sel) => (visit.function_ids = sel.map((o) => o.value as number))
-                      "
+                      @update:model-value="(sel) => onEditFunctionSelect(visit, sel)"
                     />
                   </div>
                   <div>
@@ -565,6 +569,50 @@
   const speciesOptions = ref<Option[]>([])
   const researcherOptions = ref<Option[]>([])
 
+  const configuredCustomFunctionNames = computed<string[]>(() => {
+    const raw = (runtimeConfig.public as Record<string, unknown>).customFunctionNames
+    if (typeof raw !== 'string' || !raw.trim()) return []
+    return raw.split(',').map(s => s.trim()).filter(Boolean)
+  })
+
+  function isConfiguredCustomName(name: string | null | undefined): boolean {
+    if (!name) return false
+    return configuredCustomFunctionNames.value.includes(name)
+  }
+
+  const customFunctionOptions = computed<Option[]>(() =>
+    configuredCustomFunctionNames.value.map((name, index) => ({
+      label: name,
+      value: -(index + 1)
+    }))
+  )
+
+  const combinedFunctionOptions = computed<Option[]>(() => [
+    ...functionOptions.value,
+    ...customFunctionOptions.value
+  ])
+
+  function getEditFunctionOptions(visit: CompactVisit): Option[] {
+    if (visit.custom_function_name && isConfiguredCustomName(visit.custom_function_name)) {
+      const opt = customFunctionOptions.value.find(o => o.label === visit.custom_function_name)
+      return opt ? [opt] : []
+    }
+    return mapIdsToOptions(visit.function_ids, functionOptions.value)
+  }
+
+  function onEditFunctionSelect(visit: CompactVisit, sel: Option[]): void {
+    const customSel = sel.find(o => o.value !== null && (o.value as number) < 0)
+    if (customSel) {
+      visit.custom_function_name = customSel.label
+      visit.function_ids = []
+    } else {
+      if (isConfiguredCustomName(visit.custom_function_name)) {
+        visit.custom_function_name = null
+      }
+      visit.function_ids = sel.map(o => o.value as number)
+    }
+  }
+
   const experienceLevelOptionsArr: StringOption[] = [
     { label: '\u00A0', value: null },
     { label: 'Medior', value: 'Medior' },
@@ -610,6 +658,7 @@
     researcher_ids: number[]
     researchers: Array<{ id: number; full_name?: string | null }>
     visit_code?: string | null
+    custom_function_name?: string | null
   }
 
   type ApiErrorShape = {
@@ -1040,6 +1089,7 @@
       remarks_field: visit.remarks_field,
       function_ids: visit.function_ids,
       species_ids: visit.species_ids,
+      custom_function_name: visit.custom_function_name ?? null,
       part_of_day: visit.part_of_day,
       start_time_text: visit.start_time_text,
       priority: visit.priority,

@@ -70,6 +70,16 @@
                 >
                   Status aanpassen
                 </UButton>
+                <UButton
+                  v-if="showIcalButton"
+                  size="sm"
+                  icon="i-lucide-calendar-plus"
+                  color="neutral"
+                  variant="outline"
+                  @click="downloadCalendar"
+                >
+                  Agenda
+                </UButton>
               </div>
             </div>
           </div>
@@ -350,6 +360,40 @@
     }
     return Boolean(raw)
   })
+
+  const enableIcal = computed<boolean>(() => {
+    const raw = runtimeConfig.public.icalEnabled
+    if (typeof raw === 'string') {
+      return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
+
+  const showIcalButton = computed<boolean>(() => {
+    if (!enableIcal.value || !visit.value) return false
+    return featureDailyPlanning.value
+      ? !!visit.value.planned_date
+      : !!visit.value.planned_week
+  })
+
+  async function downloadCalendar(): Promise<void> {
+    if (!visit.value) return
+    try {
+      const blob = await $api<Blob>(`/visits/${visit.value.id}/ical`, {
+        responseType: 'blob'
+      } as any)
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `bezoek-${visit.value.id}.ics`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch {
+      toast.add({ title: 'Kan kalenderbestand niet downloaden', color: 'error' })
+    }
+  }
 
   const visitId = computed(() => Number(route.params.id))
 

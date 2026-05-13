@@ -785,12 +785,8 @@
     const allWeeks = new Set(availableWeeks.value)
     allWeeks.add(currentWeekNumber.value)
 
-    // Filter out past weeks
-    const current = currentWeekNumber.value
-    const futureWeeks = Array.from(allWeeks).filter((w) => w >= current)
-
-    // Sort logically
-    const sorted = futureWeeks.sort((a, b) => a - b)
+    // Sort all weeks chronologically (past → present → future)
+    const sorted = Array.from(allWeeks).sort((a, b) => a - b)
 
     const tabs: WeekTab[] = []
 
@@ -823,11 +819,6 @@
     const route = useRoute()
     const queryWeek = Number(route.query.week)
     if (queryWeek && !Number.isNaN(queryWeek)) {
-      // Even if past week, if explicit query param, we might want to respect it?
-      // Or just filter. The user said "not display weeks past".
-      // Let's rely on weekTabs filter.
-      // But if user requested week 10 and we are in week 20, weekTabs won't have it.
-      // So we fallback to current.
       const found = weekTabs.value.find((w) => w.week === queryWeek)
       if (found) {
         selectedWeekTab.value = found
@@ -916,7 +907,7 @@
       result.push({ label: 'Status', slot: 'status' })
     }
     result.push({ label: 'Planbord', slot: 'plan' })
-    if (plannedVisits.value.length > 0) {
+    if (plannedVisits.value.length > 0 || completedVisits.value.length > 0) {
       result.push({ label: 'Onderzoekers', slot: 'researchers' })
     }
     return result

@@ -25,6 +25,21 @@
               </div>
 
               <div
+                v-if="enableIcal && visitsForActiveWeek.length > 0"
+                class="flex justify-end"
+              >
+                <UButton
+                  size="sm"
+                  icon="i-lucide-calendar-plus"
+                  color="neutral"
+                  variant="outline"
+                  @click="downloadWeekCalendar"
+                >
+                  Agenda downloaden
+                </UButton>
+              </div>
+
+              <div
                 v-if="visitsForActiveWeek.length === 0"
                 class="text-sm text-gray-700 dark:text-gray-300"
               >
@@ -306,6 +321,14 @@
 
   const featureDailyPlanning = computed<boolean>(() => {
     const raw = runtimeConfig.public.featureDailyPlanning
+    if (typeof raw === 'string') {
+      return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
+
+  const enableIcal = computed<boolean>(() => {
+    const raw = runtimeConfig.public.icalEnabled
     if (typeof raw === 'string') {
       return raw === 'true' || raw === '1'
     }
@@ -654,5 +677,28 @@
       path: `/visits/${id}`,
       query: { back: 'my-visits' }
     })
+  }
+
+  const toast = useToast()
+
+  async function downloadWeekCalendar(): Promise<void> {
+    const week = activeWeekNumber.value
+    const year = effectiveToday.value.getFullYear()
+    try {
+      const blob = await $api<Blob>('/visits/ical', {
+        query: { week, year },
+        responseType: 'blob'
+      } as any)
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `planning-week-${week}.ics`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch {
+      toast.add({ title: 'Kan kalenderbestand niet downloaden', color: 'error' })
+    }
   }
 </script>

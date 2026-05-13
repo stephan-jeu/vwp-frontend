@@ -222,15 +222,33 @@
       }
     }
 
+    const auditOverviewPublicRaw = runtimeConfig.public.auditOverviewPublic
+    const auditOverviewPublic =
+      typeof auditOverviewPublicRaw === 'string'
+        ? auditOverviewPublicRaw === 'true' || auditOverviewPublicRaw === '1'
+        : Boolean(auditOverviewPublicRaw)
+
+    if (auditOverviewPublic) {
+      const allVisitsIdx = items.findIndex((i) => i.to === '/visits')
+      if (allVisitsIdx !== -1) {
+        items.splice(allVisitsIdx + 1, 0, {
+          label: 'Controle-overzicht',
+          to: '/admin/audit-overview',
+          icon: 'i-lucide-clipboard-list'
+        })
+      }
+    }
+
     if (isAdmin.value) {
       const strictAvailability = runtimeConfig.public.featureStrictAvailability
-      
+
       const clonedAdmin: NavigationMenuItem = {
         ...adminGroup,
         children: adminGroup.children
           ?.filter(c => {
             if (c.label === 'Beschikbaarheid') return !strictAvailability
             if (c.label === 'Vrije dagen') return strictAvailability
+            if (c.label === 'Controle-overzicht') return !auditOverviewPublic
             return true
           })
           .map((c) => ({ ...c }))

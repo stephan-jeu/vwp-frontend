@@ -28,6 +28,15 @@
           class="w-20"
         />
 
+        <UInput
+          v-model.number="filterWeek"
+          :placeholder="featureDailyPlanning ? 'Week (datum)' : 'Week'"
+          type="number"
+          min="1"
+          max="53"
+          class="w-24"
+        />
+
         <UInputMenu
           :model-value="selectedFunctionFilters"
           :items="functionOptions"
@@ -284,6 +293,19 @@
               @click.stop
               @update:model-value="toggleBulkSelection(row.original.id, $event as boolean)"
             />
+          </template>
+
+          <template #project_location-cell="{ row }">
+            <span
+              class="text-xs text-gray-700 dark:text-gray-300"
+              :title="row.original.project_location?.length > 25 ? row.original.project_location : undefined"
+            >
+              {{
+                row.original.project_location?.length > 25
+                  ? row.original.project_location.slice(0, 25) + '…'
+                  : row.original.project_location
+              }}
+            </span>
           </template>
 
           <template #status-cell="{ row }">
@@ -872,6 +894,7 @@
 </template>
 
 <script setup lang="ts">
+  import { h } from 'vue'
   import type { TableColumn } from '#ui/types'
   import { storeToRefs } from 'pinia'
   import { useAuthStore } from '~~/stores/auth'
@@ -1022,7 +1045,35 @@
 
   const search = ref('')
 
+  const sortBy = ref<string | null>(null)
+  const sortDir = ref<'asc' | 'desc'>('asc')
+
+  function onSort(key: string): void {
+    if (sortBy.value === key) {
+      sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+    } else {
+      sortBy.value = key
+      sortDir.value = 'asc'
+    }
+    page.value = 1
+    void loadVisits()
+  }
+
+  function sortableHeader(label: string, key: string) {
+    return () =>
+      h('button', {
+        class: 'flex items-center gap-1 cursor-pointer select-none hover:text-primary-600',
+        onClick: () => onSort(key)
+      }, [
+        label,
+        sortBy.value === key
+          ? h('span', { class: 'text-primary-600' }, sortDir.value === 'asc' ? ' ↑' : ' ↓')
+          : h('span', { class: 'opacity-30' }, ' ↕')
+      ])
+  }
+
   const filterClusterNumber = ref('')
+  const filterWeek = ref<number | null>(null)
   const filterFunctionIds = ref<number[]>([])
   const filterSpeciesIds = ref<number[]>([])
 
@@ -1095,23 +1146,23 @@
       cols.push({ id: 'select', header: '', enableSorting: false })
     }
     cols.push(
-      // { accessorKey: 'id', header: 'ID' },
-      { accessorKey: 'project_code', header: 'Projectcode' },
-      { accessorKey: 'project_location', header: 'Locatie' },
-      { accessorKey: 'cluster_number', header: 'Cluster' }
+      { accessorKey: 'project_code', header: sortableHeader('Projectcode', 'project_code'), enableSorting: false },
+      { accessorKey: 'project_location', header: sortableHeader('Locatie', 'project_location'), enableSorting: false },
+      { accessorKey: 'cluster_number', header: sortableHeader('Cluster', 'cluster_number'), enableSorting: false }
     )
 
     if (!enableVisitCode.value) {
-      cols.push({ accessorKey: 'visit_nr', header: 'Bezoek nr' })
+      cols.push({ accessorKey: 'visit_nr', header: sortableHeader('Bezoek nr', 'visit_nr'), enableSorting: false })
     }
 
-    cols.push({ id: 'status', header: 'Status' })
+    cols.push({ id: 'status', header: sortableHeader('Status', 'status'), enableSorting: false })
 
     if (featureDailyPlanning.value) {
       cols.push({
         id: 'date',
-        header: 'Datum',
+        header: sortableHeader('Datum', 'date'),
         accessorKey: 'planned_date',
+        enableSorting: false,
         cell: ({ row }) => {
           if (row.original.planned_date) {
             return formatDate(row.original.planned_date)
@@ -1123,22 +1174,22 @@
         }
       })
     } else {
-      cols.push({ id: 'week', header: 'Week' })
+      cols.push({ id: 'week', header: sortableHeader('Week', 'week'), enableSorting: false })
     }
 
     if (enableVisitCode.value) {
-      cols.push({ id: 'visit_code', header: 'Bezoekcode' })
+      cols.push({ id: 'visit_code', header: 'Bezoekcode', enableSorting: false })
     } else {
       cols.push(
-        { id: 'functions', header: 'Functies' },
-        { id: 'species', header: 'Soorten' }
+        { id: 'functions', header: sortableHeader('Functies', 'functions'), enableSorting: false },
+        { id: 'species', header: sortableHeader('Soorten', 'species'), enableSorting: false }
       )
     }
 
     cols.push(
-      { id: 'period', header: 'Periode' },
-      { accessorKey: 'part_of_day', header: 'Dagdeel' },
-      { id: 'researchers', header: 'Onderzoekers' }
+      { id: 'period', header: sortableHeader('Periode', 'period'), enableSorting: false },
+      { accessorKey: 'part_of_day', header: sortableHeader('Dagdeel', 'part_of_day'), enableSorting: false },
+      { id: 'researchers', header: sortableHeader('Onderzoekers', 'researchers'), enableSorting: false }
     )
     return cols
   })
@@ -1215,6 +1266,9 @@
       if (filterClusterNumber.value.trim()) {
         query.cluster_number = filterClusterNumber.value.trim()
       }
+      if (filterWeek.value != null) {
+        query.week = filterWeek.value
+      }
       if (filterFunctionIds.value.length > 0) {
         query.function_ids = filterFunctionIds.value
       }
@@ -1229,6 +1283,11 @@
 
       if (testModeEnabled.value && simulatedDate.value) {
         query.simulated_today = simulatedDate.value
+      }
+
+      if (sortBy.value) {
+        query.sort_by = sortBy.value
+        query.sort_dir = sortDir.value
       }
 
       const data = await $api<VisitListResponse>('/visits', { query })
@@ -1270,6 +1329,10 @@
       query.cluster_number = filterClusterNumber.value.trim()
     }
 
+    if (filterWeek.value != null) {
+      query.week = filterWeek.value
+    }
+
     if (filterFunctionIds.value.length > 0) {
       query.function_ids = filterFunctionIds.value
     }
@@ -1285,6 +1348,11 @@
 
     if (testModeEnabled.value && simulatedDate.value) {
       query.simulated_today = simulatedDate.value
+    }
+
+    if (sortBy.value) {
+      query.sort_by = sortBy.value
+      query.sort_dir = sortDir.value
     }
 
     try {
@@ -1351,6 +1419,14 @@
 
   watch(
     () => filterClusterNumber.value,
+    () => {
+      page.value = 1
+      void loadVisits()
+    }
+  )
+
+  watch(
+    () => filterWeek.value,
     () => {
       page.value = 1
       void loadVisits()
