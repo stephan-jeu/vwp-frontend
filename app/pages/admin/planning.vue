@@ -325,7 +325,41 @@
                           v-for="day in weekDays"
                           :key="day.iso"
                           class="px-3 py-2 align-top border-l border-gray-100 dark:border-gray-800"
+                          :class="{
+                            'bg-gray-50 dark:bg-gray-800/50':
+                              featureStrictAvailability &&
+                              researcherUnavailabilityOnDay(row.id, day.iso) !== null &&
+                              (row.visitsByDay[day.iso] ?? []).length === 0
+                          }"
                         >
+                          <!-- NA badge when researcher is unavailable and has no visits -->
+                          <template
+                            v-if="
+                              featureStrictAvailability &&
+                              (row.visitsByDay[day.iso] ?? []).length === 0
+                            "
+                          >
+                            <span
+                              v-if="researcherUnavailabilityOnDay(row.id, day.iso) !== null"
+                              class="text-xs font-medium px-1.5 py-0.5 rounded"
+                              :class="
+                                isFullyUnavailable(researcherUnavailabilityOnDay(row.id, day.iso)!)
+                                  ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                                  : 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+                              "
+                              :title="
+                                isFullyUnavailable(researcherUnavailabilityOnDay(row.id, day.iso)!)
+                                  ? 'Niet beschikbaar'
+                                  : 'Gedeeltelijk niet beschikbaar'
+                              "
+                            >
+                              {{
+                                isFullyUnavailable(researcherUnavailabilityOnDay(row.id, day.iso)!)
+                                  ? 'N/A'
+                                  : '~'
+                              }}
+                            </span>
+                          </template>
                           <div
                             v-for="visit in row.visitsByDay[day.iso] ?? []"
                             :key="visit.id"
@@ -995,6 +1029,56 @@
     return result
   })
 
+  // --- Unavailability types (strict availability mode) ---
+  interface UnavailabilityDayInfo {
+    morning: boolean
+    daytime: boolean
+    nighttime: boolean
+  }
+  interface UserWeekUnavailability {
+    user_id: number
+    user_name: string
+    dates: Record<string, UnavailabilityDayInfo>
+  }
+
+  const weekUnavailabilities = ref<UserWeekUnavailability[]>([])
+
+  // Map for O(1) lookup: userId -> { dateISO -> UnavailabilityDayInfo }
+  const unavailabilityMap = computed<Map<number, Record<string, UnavailabilityDayInfo>>>(() => {
+    const map = new Map<number, Record<string, UnavailabilityDayInfo>>()
+    for (const u of weekUnavailabilities.value) {
+      map.set(u.user_id, u.dates)
+    }
+    return map
+  })
+
+  function researcherUnavailabilityOnDay(
+    userId: number,
+    dateISO: string
+  ): UnavailabilityDayInfo | null {
+    return unavailabilityMap.value.get(userId)?.[dateISO] ?? null
+  }
+
+  function isFullyUnavailable(info: UnavailabilityDayInfo): boolean {
+    return info.morning && info.daytime && info.nighttime
+  }
+
+  async function loadWeekUnavailabilities(): Promise<void> {
+    if (!featureStrictAvailability.value) {
+      weekUnavailabilities.value = []
+      return
+    }
+    try {
+      const response = await $api<{ week: number; users: UserWeekUnavailability[] }>(
+        '/admin/unavailabilities/week',
+        { query: { week: activeWeekNumber.value } }
+      )
+      weekUnavailabilities.value = response.users
+    } catch (e) {
+      console.error('Failed to load week unavailabilities', e)
+    }
+  }
+
   type ResearcherRow = {
     id: number
     name: string
@@ -1271,6 +1355,7 @@
 
       // Load availability for the initial active week
       void loadAvailability()
+      void loadWeekUnavailabilities()
     } finally {
       loading.value = false
     }
@@ -1286,10 +1371,11 @@
     }
   }
 
-  // Refetch availability and planning reasons when switching tabs (weeks)
+  // Refetch availability, planning reasons and unavailabilities when switching tabs (weeks)
   watch(activeWeekNumber, (w) => {
     void loadAvailability()
     void loadPlanningReasons(w)
+    void loadWeekUnavailabilities()
   })
 
   async function runPlanning(): Promise<void> {

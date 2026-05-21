@@ -26,7 +26,7 @@
                   Terug
                 </UButton>
               </div>
-              <div class="text-xs text-gray-700 dark:text-gray-300">Project {{ visit.project_code }}</div>
+              <div class="text-sm text-gray-700 dark:text-gray-300">Project {{ visit.project_code }}</div>
               <div v-if="visit.project_customer" class="mt-1 text-sm text-gray-700 dark:text-gray-300">
                 Klant: {{ visit.project_customer }}
               </div>
@@ -43,7 +43,13 @@
                   <UIcon name="i-lucide-map-pin" class="w-6 h-6" />
                 </a>
               </div>
-              <div class="mt-1 text-xs text-gray-700 dark:text-gray-300">
+              <div
+                v-if="enableVisitCode && visit.visit_code"
+                class="mt-1 text-sm text-gray-700 dark:text-gray-300"
+              >
+                Bezoekcode: {{ visit.visit_code }}
+              </div>
+              <div class="mt-1 text-sm text-gray-700 dark:text-gray-300">
                 Bezoek nr {{ visit.visit_nr ?? '-' }}
               </div>
             </div>
@@ -355,6 +361,14 @@
 
   const featureAdvertise = computed<boolean>(() => {
     const raw = runtimeConfig.public.featureAdvertise
+    if (typeof raw === 'string') {
+      return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
+
+  const enableVisitCode = computed<boolean>(() => {
+    const raw = (runtimeConfig.public as Record<string, unknown>).enableVisitCode
     if (typeof raw === 'string') {
       return raw === 'true' || raw === '1'
     }
