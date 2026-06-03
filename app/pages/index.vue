@@ -131,7 +131,7 @@
                     </div>
                   </div>
                   <UBadge
-                    :color="w.reason_code === 'protocol_gap_infeasible' ? 'error' : 'warning'"
+                    :color="['protocol_gap_infeasible', 'venster_ongeldig'].includes(w.reason_code ?? '') ? 'error' : 'warning'"
                     variant="subtle"
                     size="xs"
                     class="flex-shrink-0"
@@ -870,6 +870,7 @@
 
   function warningLabel(code: string | null): string {
     if (code === 'protocol_gap_infeasible') return 'Venster te krap'
+    if (code === 'venster_ongeldig') return 'Ongeldig venster'
     if (code === 'geen_venster') return 'Geen venster'
     if (code === 'geen_kwalificatie') return 'Geen kwalificatie'
     if (code === 'capaciteitsgebrek') return 'Capaciteitsgebrek'
