@@ -18,7 +18,7 @@
     <ul v-else class="space-y-1 text-xs">
       <li v-for="item in entries" :key="item.id" class="flex gap-2">
         <div class="text-[10px] text-gray-500 w-24 shrink-0">
-          {{ formatDateTime(logTimestamp(item)) }}
+          {{ formatLogTimestamp(item) }}
         </div>
         <div class="flex-1">
           <div v-if="item.action !== 'visit_status_cleared'">
@@ -176,6 +176,12 @@
 
   const entries = computed(() => data.value ?? [])
 
+  const EXECUTED_ACTIONS = new Set([
+    'visit_executed',
+    'visit_executed_with_deviation',
+    'visit_not_executed',
+  ])
+
   function formatDateTime(iso: string): string {
     const dt = new Date(iso)
     if (Number.isNaN(dt.getTime())) return ''
@@ -187,6 +193,15 @@
     }).format(dt)
   }
 
+  function formatDate(iso: string): string {
+    const dt = new Date(iso)
+    if (Number.isNaN(dt.getTime())) return ''
+    return new Intl.DateTimeFormat('nl-NL', {
+      day: '2-digit',
+      month: 'short'
+    }).format(dt)
+  }
+
   function logTimestamp(entry: ActivityLogEntry): string {
     const details = entry.details as ActivityDetails
     const raw =
@@ -194,6 +209,11 @@
       entry.created_at
     if (typeof raw !== 'string' || !raw) return entry.created_at
     return raw
+  }
+
+  function formatLogTimestamp(entry: ActivityLogEntry): string {
+    const ts = logTimestamp(entry)
+    return EXECUTED_ACTIONS.has(entry.action) ? formatDate(ts) : formatDateTime(ts)
   }
 
   function actorNames(entry: ActivityLogEntry): string {

@@ -455,12 +455,27 @@
     return `${dateFormatter.format(dt)}, ${timeFormatter.format(dt)}`
   }
 
+  function formatActivityDateOnly(iso: string): string {
+    const dt = new Date(iso)
+    if (Number.isNaN(dt.getTime())) return ''
+    return new Intl.DateTimeFormat('nl-NL', { day: '2-digit', month: 'short' }).format(dt)
+  }
+
+  const EXECUTED_ACTIVITY_ACTIONS = new Set([
+    'visit_executed',
+    'visit_executed_with_deviation',
+    'visit_not_executed',
+  ])
+
   function formatActivitySentence(entry: ActivityLogEntry): string {
     const actor = entry.actor?.full_name ?? 'Systeem'
     const action = entry.action
     const details = entry.details ?? {}
     const rawExecution = (details.execution_date as string | undefined) ?? null
-    const when = formatActivityDate(rawExecution ?? entry.created_at)
+    const ts = rawExecution ?? entry.created_at
+    const when = EXECUTED_ACTIVITY_ACTIONS.has(action)
+      ? formatActivityDateOnly(ts)
+      : formatActivityDate(ts)
 
     const projectCode = (details.project_code as string | undefined) ?? null
     const clusterNumber = (details.cluster_number as string | number | undefined) ?? null
