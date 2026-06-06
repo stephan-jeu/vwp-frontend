@@ -507,6 +507,7 @@
                               class="font-medium"
                             >{{ r.full_name ?? `#${r.id}` }}</span>
                             <span v-if="visit.researchers.length === 0" class="text-gray-400 italic">—</span>
+                            <span class="text-gray-500">{{ enableVisitCode ? (visit.visit_code ?? '-') : (visit.part_of_day ?? '-') }}</span>
                             <UIcon
                               :name="visitStatusIcon(visit.status)"
                               :class="visitStatusIconColor(visit.status)"
@@ -564,6 +565,7 @@
                                 class="font-medium"
                               >{{ r.full_name ?? `#${r.id}` }}</span>
                               <span v-if="visit.researchers.length === 0" class="text-gray-400 italic">—</span>
+                              <span class="text-gray-500">{{ enableVisitCode ? (visit.visit_code ?? '-') : (visit.part_of_day ?? '-') }}</span>
                               <UIcon
                                 :name="visitStatusIcon(visit.status)"
                                 :class="visitStatusIconColor(visit.status)"
