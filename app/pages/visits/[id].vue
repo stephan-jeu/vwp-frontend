@@ -90,7 +90,7 @@
             </div>
           </div>
 
-          <div v-if="isVisitResearcher && featureAdvertise" class="mt-3 flex items-center gap-2">
+          <div v-if="(isVisitResearcher || isAdmin) && featureAdvertise" class="mt-3 flex items-center gap-2">
             <USwitch
               v-model="advertizedLocal"
               :disabled="advertizedUpdating || !canEditAdvertised"
@@ -395,6 +395,7 @@
     try {
       const blob = await $api<Blob>(`/visits/${visit.value.id}/ical`, {
         responseType: 'blob'
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any)
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -476,7 +477,7 @@
     return visit.value.researchers.some((r) => r.id === userId)
   })
 
-  const canEditAdvertised = computed(() => isVisitResearcher.value && featureAdvertise.value)
+  const canEditAdvertised = computed(() => (isVisitResearcher.value || isAdmin.value) && featureAdvertise.value)
 
   const canResearcherEditStatus = computed(() => {
     if (!visit.value) return false

@@ -239,6 +239,19 @@
       }
     }
 
+    // Planning is accessible to all authenticated users; insert after Controle-overzicht (or Alle bezoeken)
+    const auditOverviewIdx = items.findIndex((i) => i.to === '/admin/audit-overview')
+    const planningInsertAfter = auditOverviewIdx !== -1
+      ? auditOverviewIdx
+      : items.findIndex((i) => i.to === '/visits')
+    if (planningInsertAfter !== -1) {
+      items.splice(planningInsertAfter + 1, 0, {
+        label: 'Planning',
+        to: '/admin/planning',
+        icon: 'i-lucide-list-check'
+      })
+    }
+
     if (isAdmin.value) {
       const strictAvailability = runtimeConfig.public.featureStrictAvailability
 
@@ -249,6 +262,7 @@
             if (c.label === 'Beschikbaarheid') return !strictAvailability
             if (c.label === 'Vrije dagen') return strictAvailability
             if (c.label === 'Controle-overzicht') return !auditOverviewPublic
+            if (c.label === 'Planning') return false
             return true
           })
           .map((c) => ({ ...c }))

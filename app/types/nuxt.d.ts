@@ -1,8 +1,8 @@
-import type { FetchOptions } from 'ofetch'
+import type { FetchOptions, ResponseType } from 'ofetch'
 
 export {}
 
-type ApiClient = <T>(request: string, options?: FetchOptions<'json'>) => Promise<T>
+type ApiClient = <T>(request: string, options?: FetchOptions<ResponseType>) => Promise<T>
 
 declare module '#app' {
   interface NuxtApp {

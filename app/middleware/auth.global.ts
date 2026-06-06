@@ -32,7 +32,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
       typeof auditOverviewPublicRaw === 'string'
         ? auditOverviewPublicRaw === 'true' || auditOverviewPublicRaw === '1'
         : Boolean(auditOverviewPublicRaw)
-    if (!(auditOverviewPublic && to.path === '/admin/audit-overview')) {
+    const allowedForAll = ['/admin/planning']
+    if (auditOverviewPublic) allowedForAll.push('/admin/audit-overview')
+    if (!allowedForAll.includes(to.path)) {
       return navigateTo('/')
     }
   }

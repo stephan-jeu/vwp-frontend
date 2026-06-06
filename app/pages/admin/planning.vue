@@ -19,6 +19,7 @@
               </div>
 
               <UButton
+                v-if="isAdmin"
                 icon="i-heroicons-sparkles"
                 color="primary"
                 variant="solid"
@@ -29,7 +30,7 @@
               </UButton>
 
               <UButton
-                v-if="plannedVisits.length > 0"
+                v-if="isAdmin && plannedVisits.length > 0"
                 icon="i-heroicons-trash"
                 color="error"
                 variant="soft"
@@ -40,7 +41,7 @@
               </UButton>
 
               <UButton
-                v-if="plannedVisits.length > 0"
+                v-if="isAdmin && plannedVisits.length > 0"
                 icon="i-heroicons-envelope"
                 color="primary"
                 variant="soft"
@@ -52,9 +53,9 @@
             </div>
           </div>
 
-          <!-- Capacity Header (Always Visible) -->
+          <!-- Capacity Header (admin only) -->
           <div
-            v-if="capacityData.researchers.length > 0"
+            v-if="isAdmin && capacityData.researchers.length > 0"
             class="mb-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden"
           >
             <!-- Capacity Collapsible (Same as before) -->
@@ -144,7 +145,7 @@
                       v-for="visit in completedVisits"
                       :key="visit.id"
                       :visit="visit"
-                      selectable
+                      :selectable="isAdmin"
                       :selected="selectedVisitIds.has(visit.id)"
                       @open="goToDetail(visit.id)"
                       @update:selected="toggleSelection(visit.id, $event)"
@@ -163,7 +164,7 @@
                       v-for="visit in plannedVisits"
                       :key="visit.id"
                       :visit="visit"
-                      selectable
+                      :selectable="isAdmin"
                       :selected="selectedVisitIds.has(visit.id)"
                       @open="goToDetail(visit.id)"
                       @update:selected="toggleSelection(visit.id, $event)"
@@ -226,7 +227,7 @@
               </div>
 
               <UAlert
-                v-if="overplanningMessages.length > 0"
+                v-if="isAdmin && overplanningMessages.length > 0"
                 class="mb-4 mt-2"
                 color="warning"
                 variant="soft"
@@ -248,7 +249,7 @@
                     <div v-for="visit in inboxVisits" :key="visit.id" class="space-y-2">
                       <VisitPreviewCard
                         :visit="visit"
-                        selectable
+                        :selectable="isAdmin"
                         :selected="selectedVisitIds.has(visit.id)"
                         @open="goToDetail(visit.id)"
                         @update:selected="toggleSelection(visit.id, $event)"
@@ -276,7 +277,7 @@
                     <div v-for="visit in scheduleVisits" :key="visit.id" class="space-y-2">
                       <VisitPreviewCard
                         :visit="visit"
-                        selectable
+                        :selectable="isAdmin"
                         :selected="selectedVisitIds.has(visit.id)"
                         @open="goToDetail(visit.id)"
                         @update:selected="toggleSelection(visit.id, $event)"
@@ -454,6 +455,132 @@
                 </template>
               </div>
             </template>
+
+            <template #clusters>
+              <!-- CLUSTERS TAB CONTENT -->
+              <div class="mt-4 overflow-x-auto">
+                <template v-if="featureDailyPlanning">
+                  <!-- Daily Planning Grid: rows = clusters, columns = Mon-Fri -->
+                  <table class="min-w-full border-collapse text-sm">
+                    <thead>
+                      <tr class="border-b border-gray-200 dark:border-gray-700">
+                        <th
+                          class="text-left px-3 py-2 font-semibold text-gray-700 dark:text-gray-300 min-w-[160px] max-w-[220px] sticky left-0 bg-white dark:bg-gray-900 z-10"
+                        >
+                          Cluster
+                        </th>
+                        <th
+                          v-for="day in weekDays"
+                          :key="day.iso"
+                          class="px-3 py-2 font-semibold text-gray-700 dark:text-gray-300 min-w-[160px] text-center border-l border-gray-100 dark:border-gray-800"
+                        >
+                          <div>{{ day.short }}</div>
+                          <div class="text-xs font-normal text-gray-400">{{ day.dateStr }}</div>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                      <tr
+                        v-for="row in clusterGrid"
+                        :key="row.clusterId"
+                        class="hover:bg-gray-50 dark:hover:bg-gray-800/30"
+                      >
+                        <td
+                          class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100 align-top sticky left-0 bg-white dark:bg-gray-900 z-10 max-w-[220px]"
+                        >
+                          {{ row.label }}
+                        </td>
+                        <td
+                          v-for="day in weekDays"
+                          :key="day.iso"
+                          class="px-3 py-2 align-top border-l border-gray-100 dark:border-gray-800"
+                        >
+                          <div
+                            v-for="visit in row.visitsByDay[day.iso] ?? []"
+                            :key="visit.id"
+                            class="mb-1 cursor-pointer text-xs rounded px-1.5 py-0.5 inline-flex flex-wrap items-center gap-1 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/40 max-w-[180px]"
+                            @click="goToDetail(visit.id)"
+                          >
+                            <span
+                              v-for="r in visit.researchers"
+                              :key="r.id"
+                              class="font-medium"
+                            >{{ r.full_name ?? `#${r.id}` }}</span>
+                            <span v-if="visit.researchers.length === 0" class="text-gray-400 italic">—</span>
+                            <UIcon
+                              :name="visitStatusIcon(visit.status)"
+                              :class="visitStatusIconColor(visit.status)"
+                              class="w-3.5 h-3.5 flex-shrink-0"
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div v-if="clusterGrid.length === 0" class="text-sm text-gray-400 italic py-4">
+                    Geen clusters gevonden.
+                  </div>
+                </template>
+
+                <template v-else>
+                  <!-- Condensed List: rows = clusters, one cell with all researchers -->
+                  <table class="min-w-full border-collapse text-sm">
+                    <thead>
+                      <tr class="border-b border-gray-200 dark:border-gray-700">
+                        <th
+                          class="text-left px-3 py-2 font-semibold text-gray-700 dark:text-gray-300 min-w-[160px] max-w-[220px]"
+                        >
+                          Cluster
+                        </th>
+                        <th
+                          class="text-left px-3 py-2 font-semibold text-gray-700 dark:text-gray-300"
+                        >
+                          Bezoeken
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                      <tr
+                        v-for="row in clusterGrid"
+                        :key="row.clusterId"
+                        class="hover:bg-gray-50 dark:hover:bg-gray-800/30"
+                      >
+                        <td
+                          class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100 align-top max-w-[220px]"
+                        >
+                          {{ row.label }}
+                        </td>
+                        <td class="px-3 py-2">
+                          <div class="flex flex-wrap gap-1">
+                            <div
+                              v-for="visit in row.visits"
+                              :key="visit.id"
+                              class="cursor-pointer text-xs rounded px-1.5 py-0.5 inline-flex flex-wrap items-center gap-1 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/40 max-w-[200px]"
+                              @click="goToDetail(visit.id)"
+                            >
+                              <span
+                                v-for="r in visit.researchers"
+                                :key="r.id"
+                                class="font-medium"
+                              >{{ r.full_name ?? `#${r.id}` }}</span>
+                              <span v-if="visit.researchers.length === 0" class="text-gray-400 italic">—</span>
+                              <UIcon
+                                :name="visitStatusIcon(visit.status)"
+                                :class="visitStatusIconColor(visit.status)"
+                                class="w-3.5 h-3.5 flex-shrink-0"
+                              />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div v-if="clusterGrid.length === 0" class="text-sm text-gray-400 italic py-4">
+                    Geen clusters gevonden.
+                  </div>
+                </template>
+              </div>
+            </template>
           </UTabs>
         </div>
       </UCard>
@@ -479,8 +606,9 @@
         </UCard>
       </UModal>
 
-      <!-- Bulk Status Modal -->
+      <!-- Bulk Status Modal (admin only) -->
       <VisitStatusModal
+        v-if="isAdmin"
         :visits="selectedVisitsData"
         :open="bulkStatusModalOpen"
         :is-admin="true"
@@ -500,7 +628,7 @@
           leave-to-class="translate-y-full opacity-0"
         >
           <div
-            v-if="selectedVisitIds.size > 0"
+            v-if="isAdmin && selectedVisitIds.size > 0"
             class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-4 py-2.5"
           >
             <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -524,12 +652,13 @@
   import VisitStatusModal from '../../components/VisitStatusModal.vue'
   import { storeToRefs } from 'pinia'
   import { useTestModeStore } from '~~/stores/testMode'
-
-  definePageMeta({ middleware: 'admin' })
+  import { useAuthStore } from '~~/stores/auth'
 
   const { $api } = useNuxtApp()
   const testModeStore = useTestModeStore()
   const { simulatedDate } = storeToRefs(testModeStore)
+  const auth = useAuthStore()
+  const { isAdmin } = storeToRefs(auth)
 
   const runtimeConfig = useRuntimeConfig()
 
@@ -862,11 +991,13 @@
     // Initial visits load
     void loadVisits()
 
-    // Load researchers for status modal
-    const users = await $api<Array<{ id: number; full_name: string | null }>>('/admin/users')
-    researcherOptions.value = users
-      .map((u) => ({ label: u.full_name ?? `Gebruiker #${u.id}`, value: u.id }))
-      .sort((a, b) => a.label.localeCompare(b.label))
+    // Load researchers for status modal (admin only)
+    if (isAdmin.value) {
+      const users = await $api<Array<{ id: number; full_name: string | null }>>('/admin/users')
+      researcherOptions.value = users
+        .map((u) => ({ label: u.full_name ?? `Gebruiker #${u.id}`, value: u.id }))
+        .sort((a, b) => a.label.localeCompare(b.label))
+    }
   })
 
   /*
@@ -943,6 +1074,7 @@
     result.push({ label: 'Planbord', slot: 'plan' })
     if (plannedVisits.value.length > 0 || completedVisits.value.length > 0) {
       result.push({ label: 'Onderzoekers', slot: 'researchers' })
+      result.push({ label: 'Clusters', slot: 'clusters' })
     }
     return result
   })
@@ -1064,7 +1196,7 @@
   }
 
   async function loadWeekUnavailabilities(): Promise<void> {
-    if (!featureStrictAvailability.value) {
+    if (!featureStrictAvailability.value || !isAdmin.value) {
       weekUnavailabilities.value = []
       return
     }
@@ -1082,6 +1214,13 @@
   type ResearcherRow = {
     id: number
     name: string
+    visits: VisitListRow[]
+    visitsByDay: Record<string, VisitListRow[]>
+  }
+
+  type ClusterRow = {
+    clusterId: number
+    label: string
     visits: VisitListRow[]
     visitsByDay: Record<string, VisitListRow[]>
   }
@@ -1110,6 +1249,30 @@
     }
 
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
+  })
+
+  const clusterGrid = computed<ClusterRow[]>(() => {
+    const allVisits = [...plannedVisits.value, ...completedVisits.value]
+    const map = new Map<number, ClusterRow>()
+
+    for (const visit of allVisits) {
+      if (!map.has(visit.cluster_id)) {
+        map.set(visit.cluster_id, {
+          clusterId: visit.cluster_id,
+          label: `${visit.project_code} ${visit.cluster_number}`,
+          visits: [],
+          visitsByDay: {}
+        })
+      }
+      const row = map.get(visit.cluster_id)!
+      row.visits.push(visit)
+
+      const dayKey = visit.planned_date ? visit.planned_date.slice(0, 10) : 'onbekend'
+      if (!row.visitsByDay[dayKey]) row.visitsByDay[dayKey] = []
+      row.visitsByDay[dayKey].push(visit)
+    }
+
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label))
   })
 
   function visitSpeciesAbbr(visit: VisitListRow): string {
@@ -1318,8 +1481,8 @@
   })
 
   async function loadAvailability(): Promise<void> {
+    if (!isAdmin.value) return
     try {
-      // Fetch for the active week tab
       const w = activeWeekNumber.value
       const response = await $api<ApiAvailabilityListResponse>('/admin/availability', {
         method: 'GET',
