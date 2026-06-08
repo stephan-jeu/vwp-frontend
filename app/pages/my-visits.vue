@@ -166,7 +166,7 @@
               </p>
               <AvailabilityPatternManager v-if="identity?.id" :user-id="identity.id" :readonly="!identity.admin" />
             </div>
-            
+
             <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
               <h3 class="font-semibold text-lg">Verlof / Uitzonderingen</h3>
               <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
@@ -469,7 +469,7 @@
     const allWeeks = new Set(availableWeeks.value)
     allWeeks.add(currentWeekNumber.value)
 
-    // Sort logically
+    // Sort all weeks chronologically (past → present → future)
     const sorted = Array.from(allWeeks).sort((a, b) => a - b)
 
     const tabs: WeekTab[] = []
@@ -590,16 +590,16 @@
   const availabilityList = computed(() => {
     if (!avData.value) return []
     const list = []
-    
+
     // Create a map for quick lookup
     const weekDataMap = new Map(avData.value.map(item => [item.week, item]))
-    
+
     const currentWeek = getIsoWeekNumber(effectiveToday.value)
     const endWeek = currentWeek + 30
-    
+
     for (let w = currentWeek; w <= endWeek; w++) {
       const weekData = weekDataMap.get(w)
-      
+
       const hasAvailability = weekData && (
         weekData.morning_days > 0 ||
         weekData.daytime_days > 0 ||
@@ -688,7 +688,7 @@
       const blob = await $api<Blob>('/visits/ical', {
         query: { week, year },
         responseType: 'blob'
-      } as any)
+      })
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
