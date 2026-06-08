@@ -889,6 +889,7 @@
     if (code === 'geen_venster') return 'Geen venster'
     if (code === 'geen_kwalificatie') return 'Geen kwalificatie'
     if (code === 'capaciteitsgebrek') return 'Capaciteitsgebrek'
+    if (code === 'handmatig_inplannen') return 'Handmatig inplannen'
     return 'Onplanbaar'
   }
 
