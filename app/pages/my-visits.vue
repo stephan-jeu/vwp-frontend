@@ -595,7 +595,7 @@
     const weekDataMap = new Map(avData.value.map(item => [item.week, item]))
 
     const currentWeek = getIsoWeekNumber(effectiveToday.value)
-    const endWeek = currentWeek + 30
+    const endWeek = Math.min(currentWeek + 30, 53)
 
     for (let w = currentWeek; w <= endWeek; w++) {
       const weekData = weekDataMap.get(w)
