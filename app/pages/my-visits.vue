@@ -581,7 +581,7 @@
     return await $api<AvailabilityWeekOut[]>('/availability/me', {
       query: {
         week_start: currentWeek,
-        week_end: currentWeek + 30
+        week_end: Math.min(currentWeek + 30, 53)
       }
     })
   })
