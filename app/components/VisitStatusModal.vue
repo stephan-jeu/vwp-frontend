@@ -329,6 +329,11 @@ function validateDate(dateStr: string): boolean {
   const d = new Date(dateStr)
   if (Number.isNaN(d.getTime())) return false
 
+  // Deviation executions are explicitly allowed to fall outside the
+  // protocol window: the mandatory deviation reason is where that gets
+  // documented, so we don't hard-block on the date here.
+  if (localStatus.value === 'executed_with_deviation') return true
+
   const visit = singleVisit.value
   if (!visit) return true
 
