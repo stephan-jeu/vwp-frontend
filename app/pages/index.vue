@@ -890,6 +890,7 @@
     if (code === 'geen_kwalificatie') return 'Geen kwalificatie'
     if (code === 'capaciteitsgebrek') return 'Capaciteitsgebrek'
     if (code === 'handmatig_inplannen') return 'Handmatig inplannen'
+    if (code === 'planned_week_buiten_venster') return 'Planning verschoven'
     return 'Onplanbaar'
   }
 
