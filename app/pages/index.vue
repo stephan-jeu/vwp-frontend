@@ -332,7 +332,7 @@
           class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-white dark:bg-gray-800 shadow-lg rounded-lg px-4 py-2 flex items-center gap-3 border border-gray-200 dark:border-gray-700"
         >
           <span class="text-sm font-medium">{{ selectedVisitIds.size }} bezoek(en) geselecteerd</span>
-          <UButton size="sm" @click="bulkStatusModalOpen = true">Status aanpassen</UButton>
+          <UButton size="sm" @click="openBulkStatusModal">Status aanpassen</UButton>
           <UButton size="sm" variant="ghost" color="neutral" @click="selectedVisitIds.clear()">Deselecteer</UButton>
         </div>
       </Transition>
@@ -810,6 +810,10 @@
     } else {
       selectedVisitIds.delete(id)
     }
+  }
+
+  function openBulkStatusModal(): void {
+    bulkStatusModalOpen.value = true
   }
 
   const selectedVisitsData = computed(() => {
