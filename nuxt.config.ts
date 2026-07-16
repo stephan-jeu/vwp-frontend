@@ -14,6 +14,13 @@ export default defineNuxtConfig({
 
   ssr: false,
 
+  experimental: {
+    // Force a full reload instead of a dead SPA when a client with an
+    // old build tries to lazy-load a route chunk that no longer exists
+    // on the server after a redeploy.
+    emitRouteChunkError: 'automatic'
+  },
+
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
