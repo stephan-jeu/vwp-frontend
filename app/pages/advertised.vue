@@ -46,6 +46,15 @@
             </div>
           </div>
 
+          <div v-if="featureDailyPlanning">
+            <span class="font-medium">Datum:</span>
+            <span class="ml-1">{{ formatDate(visit.planned_date) || '-' }}</span>
+          </div>
+          <div v-else>
+            <span class="font-medium">Week:</span>
+            <span class="ml-1">{{ weekLabel(visit) }}</span>
+          </div>
+
           <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1">
             <div>
               <span class="font-medium">Functies:</span>
@@ -75,18 +84,7 @@
             <div>
               <span class="font-medium">Periode:</span>
               <span class="ml-1">
-                <span
-                  v-if="featureDailyPlanning && visit.planned_date"
-                  class="text-primary-600 dark:text-primary-400 font-bold"
-                >
-                  {{ formatDate(visit.planned_date) }}
-                </span>
-                <span v-else>
-                  {{ formatDate(visit.from_date) }} – {{ formatDate(visit.to_date) }}
-                </span>
-                <span v-if="weekLabel(visit)" class="ml-1 text-gray-400">
-                  ({{ weekLabel(visit) }})
-                </span>
+                {{ formatDate(visit.from_date) }} – {{ formatDate(visit.to_date) }}
               </span>
             </div>
             <div v-if="visit.duration != null">
@@ -318,20 +316,13 @@
   }
 
   function weekLabel(visit: AdvertisedVisitRow): string {
-    if (featureDailyPlanning.value) {
-      if (visit.provisional_week != null) {
-        return `Voorlopige week: ${visit.provisional_week}`
-      }
-      return ''
-    }
-
     if (visit.planned_week != null) {
-      return `Geplande week: ${visit.planned_week}`
+      return `${visit.planned_week} (gepland)`
     }
     if (visit.provisional_week != null) {
-      return `Voorlopige week: ${visit.provisional_week}`
+      return `${visit.provisional_week} (voorlopig)`
     }
-    return 'Week: onbekend'
+    return 'onbekend'
   }
 
   function otherResearchersLabel(visit: AdvertisedVisitRow): string {
