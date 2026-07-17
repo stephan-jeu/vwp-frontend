@@ -373,6 +373,17 @@
     return new Date()
   })
 
+  function getIsoWeekNumber(date: Date): number {
+    const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+    const dayNum = tmp.getUTCDay() || 7
+    tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum)
+    const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1))
+    const diff = tmp.getTime() - yearStart.getTime()
+    return Math.ceil((diff / 86400000 + 1) / 7)
+  }
+
+  const currentWeekNumber = computed<number>(() => getIsoWeekNumber(effectiveToday.value))
+
   const authLoaded = computed(() => loaded.value)
 
   onMounted(async () => {
@@ -684,14 +695,18 @@
   } = useAsyncData(
     'admin-dashboard-visits',
     () => {
-      const query: Record<string, string | number> = { page: 1, page_size: 200 }
+      const query: Record<string, string | number> = {
+        page: 1,
+        page_size: 200,
+        week: currentWeekNumber.value
+      }
       if (testModeEnabled.value && simulatedDate.value) {
         query.simulated_today = simulatedDate.value
       }
       return $api<VisitListResponse>('/visits', { query })
     },
     {
-      watch: [() => simulatedDate.value, () => testModeEnabled.value]
+      watch: [() => simulatedDate.value, () => testModeEnabled.value, () => currentWeekNumber.value]
     }
   )
 
@@ -720,17 +735,6 @@
   )
 
   const pendingVisitsAll = computed<VisitListRow[]>(() => pendingVisitsData.value?.items ?? [])
-
-  function getIsoWeekNumber(date: Date): number {
-    const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
-    const dayNum = tmp.getUTCDay() || 7
-    tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum)
-    const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1))
-    const diff = tmp.getTime() - yearStart.getTime()
-    return Math.ceil((diff / 86400000 + 1) / 7)
-  }
-
-  const currentWeekNumber = computed<number>(() => getIsoWeekNumber(effectiveToday.value))
 
   function visitWeekNumber(visit: VisitListRow): number {
     if (visit.planned_week && Number.isInteger(visit.planned_week)) {
@@ -769,8 +773,9 @@
   const deviationThisWeek = computed<number>(
     () => visitsThisWeek.value.filter((v) => v.status === 'executed_with_deviation').length
   )
+  const stillToDoStatuses = new Set(['planned', 'missed', 'overdue'])
   const plannedThisWeek = computed<number>(
-    () => visitsThisWeek.value.filter((v) => v.status === 'planned').length
+    () => visitsThisWeek.value.filter((v) => stillToDoStatuses.has(v.status)).length
   )
 
   const pendingVisits = computed<VisitListRow[]>(() => pendingVisitsAll.value)

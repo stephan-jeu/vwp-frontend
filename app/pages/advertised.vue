@@ -75,7 +75,18 @@
             <div>
               <span class="font-medium">Periode:</span>
               <span class="ml-1">
-                {{ formatDate(visit.from_date) }} – {{ formatDate(visit.to_date) }}
+                <span
+                  v-if="featureDailyPlanning && visit.planned_date"
+                  class="text-primary-600 dark:text-primary-400 font-bold"
+                >
+                  {{ formatDate(visit.planned_date) }}
+                </span>
+                <span v-else>
+                  {{ formatDate(visit.from_date) }} – {{ formatDate(visit.to_date) }}
+                </span>
+                <span v-if="weekLabel(visit)" class="ml-1 text-gray-400">
+                  ({{ weekLabel(visit) }})
+                </span>
               </span>
             </div>
             <div v-if="visit.duration != null">
@@ -154,6 +165,9 @@
     species: CompactSpecies[]
     required_researchers: number | null
     visit_nr: number | null
+    planned_week: number | null
+    planned_date: string | null
+    provisional_week: number | null
     from_date: string | null
     to_date: string | null
     duration: number | null
@@ -197,6 +211,14 @@
 
   const featureAdvertise = computed<boolean>(() => {
     const raw = runtimeConfig.public.featureAdvertise
+    if (typeof raw === 'string') {
+      return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
+
+  const featureDailyPlanning = computed<boolean>(() => {
+    const raw = runtimeConfig.public.featureDailyPlanning
     if (typeof raw === 'string') {
       return raw === 'true' || raw === '1'
     }
@@ -293,6 +315,23 @@
     const dt = new Date(d)
     if (Number.isNaN(dt.getTime())) return ''
     return new Intl.DateTimeFormat('nl-NL', { day: '2-digit', month: 'short' }).format(dt)
+  }
+
+  function weekLabel(visit: AdvertisedVisitRow): string {
+    if (featureDailyPlanning.value) {
+      if (visit.provisional_week != null) {
+        return `Voorlopige week: ${visit.provisional_week}`
+      }
+      return ''
+    }
+
+    if (visit.planned_week != null) {
+      return `Geplande week: ${visit.planned_week}`
+    }
+    if (visit.provisional_week != null) {
+      return `Voorlopige week: ${visit.provisional_week}`
+    }
+    return 'Week: onbekend'
   }
 
   function otherResearchersLabel(visit: AdvertisedVisitRow): string {
