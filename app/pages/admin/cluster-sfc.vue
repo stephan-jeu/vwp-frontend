@@ -1069,6 +1069,20 @@
       }
     }
 
+    const requiredResearchers = cleanInt(visit.required_researchers)
+    const selectedResearcherCount = visit.researcher_ids?.length ?? 0
+    if (
+      selectedResearcherCount > 0 &&
+      requiredResearchers != null &&
+      selectedResearcherCount < requiredResearchers
+    ) {
+      toast.add({
+        title: 'Waarschuwing: te weinig onderzoekers',
+        description: `Het aantal vereiste onderzoekers is ${requiredResearchers}, je hebt maar ${selectedResearcherCount} onderzoeker${selectedResearcherCount === 1 ? '' : 's'} geselecteerd.`,
+        color: 'warning'
+      })
+    }
+
     const payload = {
       required_researchers: cleanInt(visit.required_researchers),
       visit_nr: cleanInt(visit.visit_nr),

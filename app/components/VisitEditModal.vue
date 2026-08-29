@@ -703,6 +703,26 @@ async function onSave(): Promise<void> {
     }
   }
 
+  const rawRequiredResearchers = visit.value.required_researchers as unknown
+  const requiredResearchers =
+    rawRequiredResearchers === '' || rawRequiredResearchers == null
+      ? null
+      : Number(rawRequiredResearchers)
+  const selectedResearcherCount = (
+    visit.value.researcher_ids ?? visit.value.researchers.map((r) => r.id)
+  ).length
+  if (
+    selectedResearcherCount > 0 &&
+    requiredResearchers != null &&
+    selectedResearcherCount < requiredResearchers
+  ) {
+    toast.add({
+      title: 'Waarschuwing: te weinig onderzoekers',
+      description: `Het aantal vereiste onderzoekers is ${requiredResearchers}, je hebt maar ${selectedResearcherCount} onderzoeker${selectedResearcherCount === 1 ? '' : 's'} geselecteerd.`,
+      color: 'warning'
+    })
+  }
+
   saving.value = true
   try {
     const payload = {

@@ -1999,6 +1999,24 @@
       }
     }
 
+    const rawRequiredResearchers = row.required_researchers as unknown
+    const requiredResearchers =
+      rawRequiredResearchers === '' || rawRequiredResearchers == null
+        ? null
+        : Number(rawRequiredResearchers)
+    const selectedResearcherCount = (row.researcher_ids ?? row.researchers.map((r) => r.id)).length
+    if (
+      selectedResearcherCount > 0 &&
+      requiredResearchers != null &&
+      selectedResearcherCount < requiredResearchers
+    ) {
+      toast.add({
+        title: 'Waarschuwing: te weinig onderzoekers',
+        description: `Het aantal vereiste onderzoekers is ${requiredResearchers}, je hebt maar ${selectedResearcherCount} onderzoeker${selectedResearcherCount === 1 ? '' : 's'} geselecteerd.`,
+        color: 'warning'
+      })
+    }
+
     savingId.value = row.id
     try {
       const payload = {
