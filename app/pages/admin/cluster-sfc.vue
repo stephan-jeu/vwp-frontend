@@ -148,7 +148,7 @@
             </div>
             <template #footer>
               <div class="flex justify-end gap-2">
-                <UButton color="neutral" variant="ghost" @click="showProjectModal = false"
+                <UButton color="neutral" variant="ghost" @click="() => { showProjectModal = false }"
                   >Annuleren</UButton
                 >
                 <UButton color="primary" :loading="projectModalSaving" @click="saveProject">
@@ -170,7 +170,7 @@
             </div>
             <template #footer>
               <div class="flex justify-end gap-2">
-                <UButton color="neutral" variant="ghost" @click="showDuplicateModal = false">Annuleer</UButton>
+                <UButton color="neutral" variant="ghost" @click="() => { showDuplicateModal = false }">Annuleer</UButton>
                 <UButton :loading="duplicating" @click="confirmDuplicate">Dupliceer</UButton>
               </div>
             </template>
@@ -186,7 +186,7 @@
             </div>
             <template #footer>
               <div class="flex justify-end gap-2">
-                <UButton color="neutral" variant="soft" @click="showDeleteClusterConfirm = false"
+                <UButton color="neutral" variant="soft" @click="() => { showDeleteClusterConfirm = false }"
                   >Annuleren</UButton
                 >
                 <UButton

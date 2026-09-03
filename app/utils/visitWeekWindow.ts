@@ -56,8 +56,10 @@ export function validateIsoWeekWithinDateWindow(params: IsoWeekWithinWindowParam
     return `${label}: week ${week} is geen geldige ISO-week voor jaar ${year}.`
   }
 
+  // Span the whole ISO week (Monday..Sunday) so a visit that is deliberately
+  // scheduled in the weekend still counts as "inside" its own week.
   const weekEnd = new Date(weekStart)
-  weekEnd.setUTCDate(weekEnd.getUTCDate() + 4)
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 6)
 
   const overlaps = weekStart.getTime() <= toTime && weekEnd.getTime() >= fromTime
   if (overlaps) return null

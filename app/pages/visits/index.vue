@@ -838,7 +838,7 @@
       :open="bulkStatusModalOpen"
       :is-admin="true"
       :researcher-options="researcherOptions"
-      @update:open="bulkStatusModalOpen = $event"
+      @update:open="(v: boolean) => { bulkStatusModalOpen = v }"
       @saved="onBulkSaved"
     />
 
@@ -859,7 +859,7 @@
           <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
             {{ bulkSelectedIds.size }} bezoek(en) geselecteerd
           </span>
-          <UButton size="sm" icon="i-lucide-shield-check" @click="bulkStatusModalOpen = true">
+          <UButton size="sm" icon="i-lucide-shield-check" @click="() => { bulkStatusModalOpen = true }">
             Status aanpassen
           </UButton>
           <UButton size="sm" variant="ghost" color="neutral" @click="bulkSelectedIds.clear()">
@@ -875,7 +875,7 @@
           <div>Weet je zeker dat je dit bezoek wilt verwijderen?</div>
           <template #footer>
             <div class="flex justify-end gap-2">
-              <UButton color="neutral" variant="ghost" @click="deleteModalOpen = false">
+              <UButton color="neutral" variant="ghost" @click="() => { deleteModalOpen = false }">
                 Annuleer
               </UButton>
               <UButton
