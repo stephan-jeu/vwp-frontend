@@ -76,19 +76,19 @@
                 :variant="viewMode === 'week' ? 'solid' : 'soft'"
                 :color="viewMode === 'week' ? 'primary' : 'neutral'"
                 size="sm"
-                @click="viewMode = 'week'"
+                @click="() => { viewMode = 'week' }"
             >Per week</UButton>
              <UButton
                 :variant="viewMode === 'deadline' ? 'solid' : 'soft'"
                 :color="viewMode === 'deadline' ? 'primary' : 'neutral'"
                 size="sm"
-                @click="viewMode = 'deadline'"
+                @click="() => { viewMode = 'deadline' }"
             >Per bezoek einddatum</UButton>
             <UButton
                 :variant="viewMode === 'not_plannable' ? 'solid' : 'soft'"
                 :color="viewMode === 'not_plannable' ? 'primary' : 'neutral'"
                 size="sm"
-                @click="viewMode = 'not_plannable'"
+                @click="() => { viewMode = 'not_plannable' }"
             >Niet in te plannen</UButton>
         </div>
       </div>
@@ -146,6 +146,43 @@
 
         <!-- Normale modus: bezoeken uit de database met volledige kaarten -->
         <template v-else>
+          <div v-if="capacityGapVisits.length > 0" class="mt-4 mb-6 space-y-2">
+            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">
+              Passen niet in de capaciteit
+              <span class="ml-1 font-normal text-red-600 dark:text-red-400">({{ capacityGapVisits.length }} {{ plural(capacityGapVisits.length, 'bezoek', 'bezoeken') }}<span v-if="bottlenecks?.unscheduled_days">, {{ bottlenecks.unscheduled_days }} {{ plural(bottlenecks.unscheduled_days, 'onderzoekersdag', 'onderzoekersdagen') }}</span>)</span>
+            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              Deze bezoeken hebben voor de weekplanner wel een voorlopige week gekregen, maar in hun uitvoeringsvenster zijn te weinig onderzoekers beschikbaar.
+            </p>
+            <div class="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="bg-gray-50 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400">
+                    <th class="text-left px-3 py-2 font-medium">Einddatum</th>
+                    <th class="text-left px-3 py-2 font-medium">Familie</th>
+                    <th class="text-left px-3 py-2 font-medium">Dagdeel</th>
+                    <th class="text-left px-3 py-2 font-medium">Project</th>
+                    <th class="text-left px-3 py-2 font-medium">Adres</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="item in capacityGapVisits"
+                    :key="item.visit_id"
+                    class="border-t border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+                    @click="openVisit(item.visit_id)"
+                  >
+                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ item.to_date ? formatDateShort(item.to_date) : '—' }}</td>
+                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ item.family ?? '—' }}</td>
+                    <td class="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs">{{ item.part_of_day ?? '—' }}</td>
+                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300 font-mono text-xs">{{ item.project_code ?? '—' }}</td>
+                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.cluster_address ?? '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <div v-if="notPlannableVisitsLoading" class="text-sm text-gray-500">
             Bezoeken worden geladen...
           </div>
@@ -248,6 +285,55 @@
       </div>
 
       <div v-else class="my-3">
+        <!-- Bottleneck analysis: independent of the weeks the season planner chose -->
+        <div
+          v-if="bottlenecks"
+          class="mb-3 rounded-md border px-3 py-2 text-sm"
+          :class="shortage && shortage.days > 0
+            ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950'
+            : 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'"
+        >
+          <p v-if="!shortage || shortage.days === 0" class="text-green-800 dark:text-green-300">
+            Geen tekort: er zijn genoeg onderzoekers om alle bezoeken binnen hun uitvoeringsvenster uit te voeren. Een volle week in de tabel kan werk nog naar een andere week verschuiven.
+          </p>
+          <template v-else>
+            <p class="font-medium text-red-800 dark:text-red-300">
+              <template v-if="shortage.fromPlanner">
+                Tekort van {{ shortage.days }} {{ plural(shortage.days, 'onderzoekersdag', 'onderzoekersdagen') }}<span v-if="shortage.visits > 0"> (er is geen capaciteit voor {{ shortage.visits }} {{ plural(shortage.visits, 'bezoek', 'bezoeken') }})</span>.
+              </template>
+              <template v-else>
+                Tekort van minimaal {{ shortage.days }} {{ plural(shortage.days, 'onderzoekersdag', 'onderzoekersdagen') }}.
+              </template>
+            </p>
+            <p class="text-xs text-gray-600 dark:text-gray-400">
+              <template v-if="shortage.fromPlanner">
+                Dit is wat de seizoensplanner bij de laatste berekening niet kon inplannen.
+              </template>
+              <template v-else>
+                Zonder rekening te houden met de minimale tussentijd tussen bezoeken: het werkelijke tekort kan hoger zijn. Klik op Herberekenen voor het volledige beeld.
+              </template>
+            </p>
+            <!-- Only split when part of the shortage is already committed; otherwise it repeats the headline -->
+            <ul v-if="bottlenecks.committed_overbooked_days > 0" class="mt-1 list-disc pl-5 text-red-700 dark:text-red-400">
+              <li>
+                {{ bottlenecks.committed_overbooked_days }} {{ plural(bottlenecks.committed_overbooked_days, 'dag', 'dagen') }}: bezoeken die al vastliggen (gepland, vergrendeld of maatwerk) in een week met te weinig onderzoekers. Verplaats deze bezoeken of zet extra onderzoekers in.
+              </li>
+              <li v-if="shortage.days > bottlenecks.committed_overbooked_days">
+                {{ shortage.days - bottlenecks.committed_overbooked_days }} {{ plural(shortage.days - bottlenecks.committed_overbooked_days, 'dag', 'dagen') }}: bezoeken waarvoor in hun hele uitvoeringsvenster te weinig onderzoekers beschikbaar zijn.
+              </li>
+            </ul>
+            <ul class="mt-1 space-y-0.5 text-red-700 dark:text-red-400">
+              <li v-for="period in bottlenecks.periods" :key="period.from_week">
+                <span class="font-medium">{{ formatPeriod(period) }}:</span>
+                extra capaciteit voor {{ period.skills.join(', ') }} kan dit oplossen.
+              </li>
+            </ul>
+            <p class="mt-1 text-xs text-gray-600 dark:text-gray-400">
+              Een <span class="text-red-600 font-semibold">●</span> bij een week betekent: extra onderzoekers in die week leveren meer ingeplande bezoeken op. Een volle week zonder ● kan werk nog naar een andere week verschuiven.
+            </p>
+          </template>
+        </div>
+
         <!-- Week view legend -->
         <div class="text-xs mb-2 flex items-center gap-2">
           <span class="font-medium">Legenda: vrije capaciteit (ingepland). Bij overboeking: vrije capaciteit (inpasbaar/gevraagd).</span>
@@ -259,11 +345,12 @@
                 <p class="font-semibold text-sm">Uitleg capaciteitsgrid</p>
                 <p>Elke cel toont de capaciteit voor een specifieke categorie (soortgroep + dagdeel) in een week:</p>
                 <ul class="space-y-1 list-none">
-                  <li><span class="font-medium">Vrije capaciteit</span> — beschikbare onderzoekersdagen min de ingeplande onderzoekersslots. Minimaal 0.</li>
+                  <li><span class="font-medium">Vrije capaciteit</span> — hoeveel onderzoekersdagen er voor dit type nog over zijn, na wat al is ingepland. Minimaal 0. Onderzoekers met meerdere kwalificaties kunnen in meerdere rijen meetellen: tel de vrije capaciteit van verschillende rijen dus niet bij elkaar op.</li>
                   <li><span class="font-medium">Ingepland</span> — het aantal onderzoekersslots dat binnen de beschikbare capaciteit past (voorlopig of definitief ingepland).</li>
                   <li><span class="font-medium">Inpasbaar/Gevraagd</span> — verschijnt alleen bij overboeking. Het eerste getal is wat binnen de capaciteit past; het tweede is de totale vraag. Bijv. <span class="font-mono">0 (49/109)</span> betekent: geen vrije ruimte, 49 slots passen in de capaciteit maar er zijn 109 slots gevraagd.</li>
                 </ul>
-                <p><span class="text-red-600 font-medium">Rood</span> betekent dat er weinig of geen ruimte meer over is: minder dan 20% van de capaciteit is nog vrij, of de vraag overstijgt wat beschikbaar is.</p>
+                <p><span class="text-red-600 font-medium">Rood</span> betekent dat er weinig of geen ruimte meer over is: minder dan 20% van de capaciteit is nog vrij, of de vraag overstijgt wat beschikbaar is. Een volle week is nog geen tekort: werk kan vaak naar een andere week verschuiven.</p>
+                <p>De samenvatting boven de tabel laat zien of er echt een tekort is, over alle uitvoeringsvensters heen. Een <span class="text-red-600 font-semibold">●</span> bij een weeknummer betekent dat extra onderzoekers in die week meer bezoeken inplanbaar maken.</p>
               </div>
             </template>
           </UPopover>
@@ -286,7 +373,13 @@
               #[`${week}-header`]
             >
               <div class="text-center leading-tight">
-                <div>{{ getWeekColumnLabel(week) }}</div>
+                <div>
+                  {{ getWeekColumnLabel(week) }}<span
+                    v-if="bottlenecks?.week_skills?.[week]"
+                    class="text-red-600 ml-0.5"
+                    :title="`Knelpunt: ${bottlenecks.week_skills[week]!.join(', ')}`"
+                  >●</span>
+                </div>
                 <div v-if="weekToMondayLabel(week)" class="text-[10px] text-gray-400 font-normal">{{ weekToMondayLabel(week) }}</div>
               </div>
             </template>
@@ -309,6 +402,8 @@
 </template>
 
 <script setup lang="ts">
+  import { storeToRefs } from 'pinia'
+  import { useTestModeStore } from '~~/stores/testMode'
   import VisitPreviewCard from '../../components/VisitPreviewCard.vue'
 
   definePageMeta({ middleware: 'admin' })
@@ -354,6 +449,23 @@
     not_scheduled: number
   }
 
+  type BottleneckPeriod = {
+    from_week: string
+    to_week: string
+    skills: string[]
+    unmet_days: number
+  }
+
+  type CapacityBottleneckReport = {
+    total_unmet_days: number
+    unscheduled_visits?: number | null
+    unscheduled_days?: number | null
+    committed_overbooked_days: number
+    committed_overbooked_visits?: number
+    week_skills: Record<string, string[]>
+    periods: BottleneckPeriod[]
+  }
+
   type CapacitySimulationResponse = {
     horizon_start: string
     horizon_end: string
@@ -363,6 +475,7 @@
     week_view?: WeekViewData | null
     unschedulable_visits?: UnschedulableVisitInfo[]
     deadline_summary?: DeadlineSummaryRow[]
+    bottlenecks?: CapacityBottleneckReport | null
   }
 
   type SeasonPlannerStatusResponse = {
@@ -658,6 +771,28 @@
   const { $api } = useNuxtApp()
   const toast = useToast()
 
+  const { simulatedDate } = storeToRefs(useTestModeStore())
+  const runtimeConfig = useRuntimeConfig()
+  const testModeEnabled = computed<boolean>(() => {
+    const raw = runtimeConfig.public.testModeEnabled
+    if (typeof raw === 'string') {
+      return raw === 'true' || raw === '1'
+    }
+    return Boolean(raw)
+  })
+
+  function capacityQuery(selectedIds: number[]): Record<string, unknown> | undefined {
+    const query: Record<string, unknown> = {}
+    if (selectedIds.length > 0) {
+      query.quote_project_ids = selectedIds
+      query.simulate = true
+    }
+    if (testModeEnabled.value && simulatedDate.value) {
+      query.simulated_today = simulatedDate.value
+    }
+    return Object.keys(query).length > 0 ? query : undefined
+  }
+
   type ApiErrorShape = {
     data?: { detail?: unknown } | null
     response?: { _data?: { detail?: unknown } | null } | null
@@ -761,7 +896,14 @@
     try {
       const [result, reasons] = await Promise.all([
         $api<VisitListResponse>('/visits', {
-          query: { page: 1, page_size: 200, unplanned_only: true }
+          query: {
+            page: 1,
+            page_size: 200,
+            unplanned_only: true,
+            ...(testModeEnabled.value && simulatedDate.value
+              ? { simulated_today: simulatedDate.value }
+              : {})
+          }
         }),
         $api<Record<string, string>>('/admin/capacity/planning-reasons').catch(() => ({})),
       ])
@@ -861,6 +1003,40 @@
     }
   })
 
+  const bottlenecks = computed(() => response.value?.bottlenecks ?? null)
+
+  // The season planner's result is the realistic shortage (it respects the minimum
+  // period between visits); the bottleneck analysis is a lower bound and is used
+  // for the weeks and qualifications, and as fallback for a stale planner run.
+  //
+  // Visits that are already fixed to a week (planned, locked, custom) are never
+  // "unscheduled" by the planner: they stay and overbook their week. Their
+  // shortage does not depend on the period between visits, so it is added.
+  const shortage = computed(() => {
+    const b = bottlenecks.value
+    if (!b) return null
+    const planner = (b.unscheduled_days ?? 0) + b.committed_overbooked_days
+    return {
+      days: Math.max(planner, b.total_unmet_days),
+      visits: (b.unscheduled_visits ?? 0) + (b.committed_overbooked_visits ?? 0),
+      fromPlanner: planner > 0 && planner >= b.total_unmet_days
+    }
+  })
+
+  function plural(n: number, one: string, many: string): string {
+    return n === 1 ? one : many
+  }
+
+  const capacityGapVisits = computed<UnschedulableVisitInfo[]>(() =>
+    (response.value?.unschedulable_visits ?? []).filter(v => v.reason_code === 'capaciteitsgebrek')
+  )
+
+  function formatPeriod(period: BottleneckPeriod): string {
+    const from = getWeekColumnLabel(period.from_week)
+    const to = getWeekColumnLabel(period.to_week)
+    return from === to ? `Week ${from.slice(1)}` : `Week ${from.slice(1)}–${to.slice(1)}`
+  }
+
   function getWeekColumnLabel(wk: string): string {
     if (viewMode.value === 'deadline') {
       if (wk === 'No Deadline') return 'Geen deadline'
@@ -921,9 +1097,7 @@
     loading.value = true
     try {
       const selectedIds = selectedQuoteProjects.value.map(p => p.value)
-      const query = selectedIds.length > 0
-        ? { quote_project_ids: selectedIds, simulate: true }
-        : undefined
+      const query = capacityQuery(selectedIds)
       const result = await $api<CapacitySimulationResponse>(
         '/admin/capacity/visits/families',
         { method: 'GET', query }
@@ -957,9 +1131,7 @@
       loading.value = true
       try {
           const selectedIds = selectedQuoteProjects.value.map(p => p.value)
-          const query = selectedIds.length > 0
-            ? { quote_project_ids: selectedIds, simulate: true }
-            : undefined
+          const query = capacityQuery(selectedIds)
           // Trigger POST
           const result = await $api<CapacitySimulationResponse>(
             '/admin/capacity/visits/families',
